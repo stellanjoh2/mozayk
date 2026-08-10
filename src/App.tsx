@@ -10,15 +10,24 @@ import {
 import {
   addColorToSettings,
   applyDensityChange,
+  applyPastedSettings,
   clampSettingsForOrientation,
   createInitialFrame,
+  activeIndexAfterReorder,
   duplicateFrame,
   regenerateFrameLayout,
-  randomizeFrameColors,
+  reorderFrames,
+  randomizeFrameCurrentColors,
+  randomizeFrameNewColors,
   randomizeFrameLayout,
   removeColorFromSettings,
   transposeFrameBlocks,
 } from "./state/frameUtils";
+import {
+  copySettings,
+  hasStoredSettings,
+  readSettingsClipboard,
+} from "./state/settingsClipboard";
 import type { Frame, FrameSettings, Orientation } from "./types";
 import "./App.css";
 
@@ -32,6 +41,8 @@ export default function App() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [exportPreset, setExportPreset] = useState<ExportPreset>("1080p");
+  const [canPasteSettings, setCanPasteSettings] = useState(hasStoredSettings);
+  const [toast, setToast] = useState<string | null>(null);
   const layoutRegenTimer = useRef<number | null>(null);
   const activeIndexRef = useRef(activeIndex);
   const orientationRef = useRef(orientation);
@@ -88,18 +99,29 @@ export default function App() {
 
   const mergeSettings = useCallback(
     (frame: Frame, patch: Partial<FrameSettings>): FrameSettings => {
+      const definedPatch = Object.fromEntries(
+        Object.entries(patch).filter(([, value]) => value !== undefined),
+      ) as Partial<FrameSettings>;
+
       let settings: FrameSettings = {
         ...frame.settings,
         scaleBlend: frame.settings.scaleBlend ?? 3,
+        colors: [...frame.settings.colors],
       };
-      if (patch.density !== undefined && patch.density !== settings.density) {
-        settings = applyDensityChange(settings, patch.density);
-        const { density: _, ...rest } = patch;
-        settings = { ...settings, ...rest };
+      if (
+        definedPatch.density !== undefined &&
+        definedPatch.density !== settings.density
+      ) {
+        settings = applyDensityChange(settings, definedPatch.density);
+        const { density: _, ...rest } = definedPatch;
+        settings = { ...settings, ...rest, colors: [...frame.settings.colors] };
       } else {
-        settings = { ...settings, ...patch };
+        settings = { ...settings, ...definedPatch, colors: [...frame.settings.colors] };
       }
-      return clampSettingsForOrientation(settings, orientationRef.current);
+      return clampSettingsForOrientation(
+        { ...settings, colors: [...frame.settings.colors] },
+        orientationRef.current,
+      );
     },
     [],
   );
@@ -160,6 +182,19 @@ export default function App() {
     });
   }, []);
 
+  const handleDuplicateCurrent = useCallback(() => {
+    setFrames((prev) => {
+      if (prev.length >= MAX_FRAMES) return prev;
+      const sourceIndex = activeIndexRef.current;
+      const source = prev[sourceIndex] ?? prev[0];
+      const copy = duplicateFrame(source);
+      const insertAt = sourceIndex + 1;
+      const next = [...prev.slice(0, insertAt), copy, ...prev.slice(insertAt)];
+      setActiveIndex(insertAt);
+      return next;
+    });
+  }, []);
+
   const handleRemoveFrame = useCallback(() => {
     setFrames((prev) => {
       if (prev.length <= 1) return prev;
@@ -167,6 +202,36 @@ export default function App() {
     });
     setActiveIndex((index) => Math.max(0, index - 1));
   }, []);
+
+  const handleReorderFrames = useCallback((fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+    setFrames((prev) => reorderFrames(prev, fromIndex, toIndex));
+    setActiveIndex((index) => activeIndexAfterReorder(index, fromIndex, toIndex));
+  }, []);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 2200);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+
+  const handleCopySettings = useCallback(async () => {
+    await copySettings(activeFrame.settings);
+    setCanPasteSettings(true);
+    setToast("Settings copied");
+  }, [activeFrame.settings]);
+
+  const handlePasteSettings = useCallback(async () => {
+    const pasted = await readSettingsClipboard();
+    if (!pasted) {
+      setToast("Nothing to paste");
+      return;
+    }
+    updateActiveFrame((frame) =>
+      applyPastedSettings(frame, pasted, orientationRef.current),
+    );
+    setToast("Settings pasted");
+  }, [updateActiveFrame]);
 
   useEffect(() => {
     if (!playing) return;
@@ -178,6 +243,7 @@ export default function App() {
 
   return (
     <div className="app">
+      {toast ? <div className="app-toast">{toast}</div> : null}
       <ControlsPanel
         frame={activeFrame}
         orientation={orientation}
@@ -185,12 +251,18 @@ export default function App() {
         onSettingsChange={handleSettingsChange}
         onRandomizeLayout={randomizeLayout}
         onRandomizeAll={randomizeAll}
-        onRandomizeColors={() =>
-          updateActiveFrame((frame) => randomizeFrameColors(frame))
+        onCopySettings={() => void handleCopySettings()}
+        onPasteSettings={() => void handlePasteSettings()}
+        canPasteSettings={canPasteSettings}
+        onRandomizeCurrentColors={() =>
+          updateActiveFrame((frame) => randomizeFrameCurrentColors(frame))
+        }
+        onRandomizeNewColors={() =>
+          updateActiveFrame((frame) => randomizeFrameNewColors(frame))
         }
         onAddColor={() =>
           updateActiveFrame((frame) =>
-            randomizeFrameColors({
+            randomizeFrameCurrentColors({
               ...frame,
               settings: addColorToSettings(frame.settings),
             }),
@@ -236,8 +308,11 @@ export default function App() {
           orientation={orientation}
           playing={playing}
           onSelect={setActiveIndex}
+          onReorder={handleReorderFrames}
           onAdd={handleAddFrame}
+          onDuplicateCurrent={handleDuplicateCurrent}
           onRemove={handleRemoveFrame}
+          canAddFrame={frames.length < MAX_FRAMES}
           onTogglePlay={() => setPlaying((value) => !value)}
         />
       </main>

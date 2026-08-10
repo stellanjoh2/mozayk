@@ -16,7 +16,11 @@ type ControlsPanelProps = {
   onSettingsChange: (patch: Partial<FrameSettings>, immediateLayout?: boolean) => void;
   onRandomizeLayout: () => void;
   onRandomizeAll: () => void;
-  onRandomizeColors: () => void;
+  onCopySettings: () => void;
+  onPasteSettings: () => void;
+  canPasteSettings: boolean;
+  onRandomizeCurrentColors: () => void;
+  onRandomizeNewColors: () => void;
   onAddColor: () => void;
   onRemoveColor: (index: number) => void;
   onColorChange: (index: number, hex: string) => void;
@@ -33,7 +37,11 @@ export function ControlsPanel({
   onSettingsChange,
   onRandomizeLayout,
   onRandomizeAll,
-  onRandomizeColors,
+  onCopySettings,
+  onPasteSettings,
+  canPasteSettings,
+  onRandomizeCurrentColors,
+  onRandomizeNewColors,
   onAddColor,
   onRemoveColor,
   onColorChange,
@@ -103,6 +111,19 @@ export function ControlsPanel({
         <p className="control-hint">
           Layout keeps your settings · All also randomizes sliders
         </p>
+        <div className="button-row">
+          <button type="button" className="panel-btn panel-btn--ghost" onClick={onCopySettings}>
+            Copy Settings
+          </button>
+          <button
+            type="button"
+            className="panel-btn panel-btn--ghost"
+            disabled={!canPasteSettings}
+            onClick={onPasteSettings}
+          >
+            Paste Settings
+          </button>
+        </div>
         <SliderRow
           label="Shape mix"
           value={settings.shapeMix}
@@ -195,8 +216,11 @@ export function ControlsPanel({
             />
           ))}
         </div>
-        <button type="button" className="panel-btn panel-btn--ghost" onClick={onRandomizeColors}>
-          Randomize Colours
+        <button type="button" className="panel-btn" onClick={onRandomizeCurrentColors}>
+          Randomize Current Colours
+        </button>
+        <button type="button" className="panel-btn panel-btn--ghost" onClick={onRandomizeNewColors}>
+          New Random Colours
         </button>
         <label className="control-row">
           <span className="control-row__label">Background</span>

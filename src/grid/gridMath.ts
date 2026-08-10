@@ -1,10 +1,11 @@
+import { REFERENCE_DENSITY } from "./density";
 import type { Density, GridDimensions, MosaicBlock, Orientation } from "../types";
 
 export function getThumbnailSize(
   orientation: Orientation,
-  density: Density,
   pixelsPerCell = 2,
 ): [number, number] {
+  const density = REFERENCE_DENSITY;
   if (orientation === "landscape") {
     return [16 * density * pixelsPerCell, 9 * density * pixelsPerCell];
   }

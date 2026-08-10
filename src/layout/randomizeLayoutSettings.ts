@@ -4,7 +4,7 @@ import {
   maxWidthSliderMax,
 } from "../grid/density";
 import type { FrameSettings, MosaicBlock, Orientation } from "../types";
-import type { Rng } from "./generateLayout";
+import { randomizeColors, type Rng } from "./generateLayout";
 
 function pickInt(rng: Rng, min: number, max: number): number {
   if (max <= min) return min;
@@ -50,18 +50,27 @@ export function randomizeLayoutSettings(
   };
 }
 
-/** Reassign previous block colours to a new layout without picking new swatches. */
+/** Reassign colours to a new layout, always honouring the full user palette. */
 export function carryOverBlockColors(
   newBlocks: MosaicBlock[],
   oldBlocks: MosaicBlock[],
   palette: string[],
   rng: Rng = Math.random,
 ): MosaicBlock[] {
-  const fallback = palette[0] ?? "#ffffff";
-  const pool = oldBlocks.map((block) => block.color || fallback).filter(Boolean);
+  if (newBlocks.length === 0) return newBlocks;
 
-  if (pool.length === 0) {
-    return newBlocks.map((block) => ({ ...block, color: fallback }));
+  const activePalette = palette.length > 0 ? palette : ["#ffffff"];
+  const blockColors = oldBlocks
+    .map((block) => block.color)
+    .filter((color): color is string => Boolean(color));
+
+  if (blockColors.length === 0) {
+    return randomizeColors(newBlocks, activePalette, rng);
+  }
+
+  const pool: string[] = [...activePalette];
+  for (const color of blockColors) {
+    pool.push(color);
   }
 
   const shuffled = shuffle(pool, rng);
@@ -72,6 +81,6 @@ export function carryOverBlockColors(
 
   return newBlocks.map((block, index) => ({
     ...block,
-    color: colors[index] ?? fallback,
+    color: colors[index] ?? activePalette[0],
   }));
 }

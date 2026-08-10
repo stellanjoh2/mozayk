@@ -1,3 +1,4 @@
+import { hsvToHex } from "../colorMath";
 import { getGridCounts } from "../grid/gridMath";
 import type {
   Density,
@@ -231,6 +232,25 @@ export function randomizeColors(
     ...block,
     color: colors[pickInt(rng, 0, colors.length - 1)] ?? colors[0],
   }));
+}
+
+export function generateRandomPalette(
+  count: number,
+  rng: Rng = Math.random,
+): string[] {
+  if (count <= 0) return ["#ffffff"];
+
+  const colors: string[] = [];
+  const hueOffset = rng() * 360;
+
+  for (let i = 0; i < count; i++) {
+    const h = (hueOffset + (360 / count) * i + rng() * 24) % 360;
+    const s = 0.55 + rng() * 0.4;
+    const v = 0.65 + rng() * 0.3;
+    colors.push(hsvToHex(h, s, v));
+  }
+
+  return colors;
 }
 
 export function defaultMaxSpan(

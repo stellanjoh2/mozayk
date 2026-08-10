@@ -3,6 +3,7 @@ import { scaleGridUnits } from "../grid/density";
 import { transposeBlocks } from "../grid/gridMath";
 import {
   generateLayout,
+  generateRandomPalette,
   randomizeColors,
 } from "../layout/generateLayout";
 import {
@@ -64,11 +65,23 @@ export function updateFrameSettings(
   };
 }
 
+export function applyPastedSettings(
+  frame: Frame,
+  pasted: FrameSettings,
+  orientation: Orientation,
+): Frame {
+  const settings = clampSettingsForOrientation(pasted, orientation);
+  let blocks = generateLayout(orientation, settings);
+  blocks = randomizeColors(blocks, settings.colors);
+  return { ...frame, settings, blocks };
+}
+
 export function regenerateFrameLayout(
   frame: Frame,
   orientation: Orientation,
 ): Frame {
-  const settings = clampSettingsForOrientation(frame.settings, orientation);
+  const clamped = clampSettingsForOrientation(frame.settings, orientation);
+  const settings = { ...clamped, colors: [...frame.settings.colors] };
   const blocks = carryOverBlockColors(
     generateLayout(orientation, settings),
     frame.blocks,
@@ -81,10 +94,9 @@ export function randomizeFrameLayout(
   frame: Frame,
   orientation: Orientation,
 ): Frame {
-  const settings = clampSettingsForOrientation(
-    randomizeLayoutSettings(frame.settings, orientation),
-    orientation,
-  );
+  const randomized = randomizeLayoutSettings(frame.settings, orientation);
+  const clamped = clampSettingsForOrientation(randomized, orientation);
+  const settings = { ...clamped, colors: [...frame.settings.colors] };
   const blocks = carryOverBlockColors(
     generateLayout(orientation, settings),
     frame.blocks,
@@ -93,9 +105,15 @@ export function randomizeFrameLayout(
   return { ...frame, settings, blocks };
 }
 
-export function randomizeFrameColors(frame: Frame): Frame {
+export function randomizeFrameCurrentColors(frame: Frame): Frame {
   const blocks = randomizeColors(frame.blocks, frame.settings.colors);
   return { ...frame, blocks };
+}
+
+export function randomizeFrameNewColors(frame: Frame): Frame {
+  const colors = generateRandomPalette(frame.settings.colors.length);
+  const blocks = randomizeColors(frame.blocks, colors);
+  return { ...frame, settings: { ...frame.settings, colors }, blocks };
 }
 
 export function transposeFrameBlocks(
@@ -174,4 +192,27 @@ export function clampSettingsForOrientation(
     maxCellSize: Math.min(settings.maxCellSize, Math.min(refMaxCell, Math.max(maxSpan, maxRow))),
     minCellSize: Math.min(settings.minCellSize, settings.maxCellSize),
   };
+}
+
+export function reorderFrames(
+  frames: Frame[],
+  fromIndex: number,
+  toIndex: number,
+): Frame[] {
+  if (fromIndex === toIndex) return frames;
+  const next = [...frames];
+  const [item] = next.splice(fromIndex, 1);
+  next.splice(toIndex, 0, item);
+  return next;
+}
+
+export function activeIndexAfterReorder(
+  activeIndex: number,
+  fromIndex: number,
+  toIndex: number,
+): number {
+  if (activeIndex === fromIndex) return toIndex;
+  if (fromIndex < activeIndex && toIndex >= activeIndex) return activeIndex - 1;
+  if (fromIndex > activeIndex && toIndex <= activeIndex) return activeIndex + 1;
+  return activeIndex;
 }
