@@ -22,10 +22,16 @@ function createId(): string {
   return crypto.randomUUID();
 }
 
+export function createDefaultShapePalette(): FrameSettings["shapes"] {
+  return { sphere: true, ring: false };
+}
+
 export function createDefaultSettings(): FrameSettings {
   return {
     density: 6,
     shapeMix: 50,
+    shapes: createDefaultShapePalette(),
+    ringThickness: 45,
     minCellSize: 1,
     maxCellSize: 12,
     maxHeight: 18,

@@ -14,6 +14,7 @@ import {
   clampSettingsForOrientation,
   createInitialFrame,
   activeIndexAfterReorder,
+  createDefaultShapePalette,
   duplicateFrame,
   regenerateFrameLayout,
   reorderFrames,
@@ -106,17 +107,33 @@ export default function App() {
       let settings: FrameSettings = {
         ...frame.settings,
         scaleBlend: frame.settings.scaleBlend ?? 3,
+        shapes: frame.settings.shapes ?? createDefaultShapePalette(),
+        ringThickness: frame.settings.ringThickness ?? 45,
         colors: [...frame.settings.colors],
       };
+
+      const shapePatch = definedPatch.shapes;
+      const { shapes: _shapes, ...restPatch } = definedPatch;
+
       if (
-        definedPatch.density !== undefined &&
-        definedPatch.density !== settings.density
+        restPatch.density !== undefined &&
+        restPatch.density !== settings.density
       ) {
-        settings = applyDensityChange(settings, definedPatch.density);
-        const { density: _, ...rest } = definedPatch;
-        settings = { ...settings, ...rest, colors: [...frame.settings.colors] };
+        settings = applyDensityChange(settings, restPatch.density);
+        const { density: _, ...rest } = restPatch;
+        settings = {
+          ...settings,
+          ...rest,
+          ...(shapePatch ? { shapes: { ...settings.shapes, ...shapePatch } } : {}),
+          colors: [...frame.settings.colors],
+        };
       } else {
-        settings = { ...settings, ...definedPatch, colors: [...frame.settings.colors] };
+        settings = {
+          ...settings,
+          ...restPatch,
+          ...(shapePatch ? { shapes: { ...settings.shapes, ...shapePatch } } : {}),
+          colors: [...frame.settings.colors],
+        };
       }
       return clampSettingsForOrientation(
         { ...settings, colors: [...frame.settings.colors] },
@@ -129,7 +146,8 @@ export default function App() {
   const handleSettingsChange = useCallback(
     (patch: Partial<FrameSettings>, immediateLayout = false) => {
       const needsLayout = patchNeedsLayoutRegen(patch);
-      const rerollsShape = "shapeMix" in patch;
+      const rerollsShape =
+        "shapeMix" in patch || "shapes" in patch;
 
       if (needsLayout && immediateLayout) {
         updateActiveFrame((frame) => {
@@ -147,7 +165,7 @@ export default function App() {
 
         let blocks = frame.blocks;
         if (rerollsShape && !needsLayout) {
-          blocks = rerollShapes(blocks, nextSettings.shapeMix);
+          blocks = rerollShapes(blocks, nextSettings);
         }
 
         return { ...frame, settings: nextSettings, blocks };

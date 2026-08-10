@@ -1,11 +1,11 @@
 import { hsvToHex } from "../colorMath";
 import { getGridCounts } from "../grid/gridMath";
+import { assignShape } from "../shapes/shapePalette";
 import type {
   Density,
   FrameSettings,
   MosaicBlock,
   Orientation,
-  ShapeType,
 } from "../types";
 
 export type Rng = () => number;
@@ -101,18 +101,14 @@ function markOccupied(
   }
 }
 
-function assignShape(rng: Rng, shapeMix: number): ShapeType {
-  return rng() * 100 < shapeMix ? "sphere" : "block";
-}
-
 export function rerollShapes(
   blocks: MosaicBlock[],
-  shapeMix: number,
+  settings: FrameSettings,
   rng: Rng = Math.random,
 ): MosaicBlock[] {
   return blocks.map((block) => ({
     ...block,
-    shape: assignShape(rng, shapeMix),
+    shape: assignShape(settings, rng),
   }));
 }
 
@@ -213,7 +209,7 @@ export function generateLayout(
         row,
         width,
         height,
-        shape: assignShape(rng, settings.shapeMix),
+        shape: assignShape(settings, rng),
         color: "",
       });
     }

@@ -51,6 +51,7 @@ export function ControlsPanel({
   onExportSequence,
 }: ControlsPanelProps) {
   const { settings } = frame;
+  const shapes = settings.shapes ?? { sphere: true, ring: false };
   const cellSizeMax = maxCellSizeSliderMax(settings.density, orientation);
   const widthMax = maxWidthSliderMax(settings.density, orientation);
   const heightMax = maxHeightSliderMax(settings.density, orientation);
@@ -124,11 +125,47 @@ export function ControlsPanel({
             Paste Settings
           </button>
         </div>
+        <p className="control-hint">Blocks always on · toggle extras to mix in</p>
+        <div className="button-row">
+          <button
+            type="button"
+            className={shapes.sphere ? "is-active" : ""}
+            onClick={() =>
+              onSettingsChange({
+                shapes: { ...shapes, sphere: !shapes.sphere },
+              })
+            }
+          >
+            Spheres
+          </button>
+          <button
+            type="button"
+            className={shapes.ring ? "is-active" : ""}
+            onClick={() =>
+              onSettingsChange({
+                shapes: { ...shapes, ring: !shapes.ring },
+              })
+            }
+          >
+            Rings
+          </button>
+        </div>
         <SliderRow
           label="Shape mix"
           value={settings.shapeMix}
           onChange={(shapeMix) => onSettingsChange({ shapeMix })}
         />
+        <p className="control-hint">0 = blocks only · 100 = mix all enabled</p>
+        {shapes.ring ? (
+          <>
+            <SliderRow
+              label="Ring thickness"
+              value={settings.ringThickness ?? 45}
+              onChange={(ringThickness) => onSettingsChange({ ringThickness })}
+            />
+            <p className="control-hint">0 = solid · 100 = thin ring</p>
+          </>
+        ) : null}
         <SliderRow
           label="Fill amount"
           value={settings.fillAmount}

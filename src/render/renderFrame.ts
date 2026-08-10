@@ -29,28 +29,80 @@ function drawCheckerboard(
   }
 }
 
+function drawRing(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  outerR: number,
+  ringThickness: number,
+  color: string,
+): void {
+  if (outerR <= 0) return;
+
+  if (ringThickness <= 0) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(cx, cy, outerR, 0, Math.PI * 2);
+    ctx.fill();
+    return;
+  }
+
+  const holeRatio = Math.min(0.95, Math.max(0.05, ringThickness / 100));
+  const innerR = outerR * holeRatio;
+  const bandWidth = outerR - innerR;
+
+  if (bandWidth < 2) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = Math.max(1, bandWidth);
+    ctx.beginPath();
+    ctx.arc(cx, cy, outerR - bandWidth / 2, 0, Math.PI * 2);
+    ctx.stroke();
+    return;
+  }
+
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(cx, cy, outerR, 0, Math.PI * 2);
+  ctx.arc(cx, cy, innerR, 0, Math.PI * 2, true);
+  ctx.fill("evenodd");
+}
+
 function drawBlock(
   ctx: CanvasRenderingContext2D,
   block: MosaicBlock,
   grid: GridDimensions,
+  ringThickness: number,
 ): void {
   const x = block.col * grid.cellSize;
   const y = block.row * grid.cellSize;
   const drawW = block.width * grid.cellSize;
   const drawH = block.height * grid.cellSize;
 
-  ctx.fillStyle = block.color;
+  if (block.shape === "ring") {
+    const diameter = Math.min(drawW, drawH);
+    drawRing(
+      ctx,
+      x + drawW / 2,
+      y + drawH / 2,
+      diameter / 2,
+      ringThickness,
+      block.color,
+    );
+    return;
+  }
 
   if (block.shape === "sphere") {
     const diameter = Math.min(drawW, drawH);
     const cx = x + drawW / 2;
     const cy = y + drawH / 2;
+    ctx.fillStyle = block.color;
     ctx.beginPath();
     ctx.arc(cx, cy, diameter / 2, 0, Math.PI * 2);
     ctx.fill();
     return;
   }
 
+  ctx.fillStyle = block.color;
   ctx.fillRect(x, y, drawW, drawH);
 }
 
@@ -78,7 +130,7 @@ export function renderMosaic(
 
   for (const block of blocks) {
     if (!block.color) continue;
-    drawBlock(ctx, block, grid);
+    drawBlock(ctx, block, grid, settings.ringThickness);
   }
 
   return grid;

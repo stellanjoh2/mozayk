@@ -1,7 +1,12 @@
 export type Orientation = "landscape" | "portrait";
-export type Density = 1 | 2 | 3 | 4 | 5 | 6;
-export type ShapeType = "block" | "sphere";
+export type Density = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+export type ShapeType = "block" | "sphere" | "ring";
 export type BackgroundMode = "black" | "transparent";
+
+export type ShapePalette = {
+  sphere: boolean;
+  ring: boolean;
+};
 
 export type MosaicBlock = {
   col: number;
@@ -15,6 +20,9 @@ export type MosaicBlock = {
 export type FrameSettings = {
   density: Density;
   shapeMix: number;
+  shapes: ShapePalette;
+  /** 0 = solid disc · 100 = thin ring */
+  ringThickness: number;
   minCellSize: number;
   maxCellSize: number;
   maxHeight: number;
