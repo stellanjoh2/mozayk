@@ -50,21 +50,96 @@ body {
   min-height: 0;
 }
 
+.app.is-fullscreen {
+  grid-template-columns: 1fr;
+  height: 100dvh;
+}
+
+.workspace.is-fullscreen {
+  height: 100dvh;
+}
+
 .canvas-stage {
+  position: relative;
   flex: 1;
   display: grid;
   place-items: center;
   padding: 24px;
   min-height: 0;
   overflow: hidden;
+  transition: padding 0.4s var(--ui-ease);
+}
+
+.canvas-stage.is-fullscreen {
+  padding: 0;
 }
 
 .mosaic-canvas {
-  max-width: 100%;
-  max-height: 100%;
-  width: auto;
-  height: auto;
+  display: block;
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.45);
+  transition: box-shadow 0.4s var(--ui-ease);
+}
+
+.canvas-zoom-controls {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  z-index: 2;
+  display: flex;
+  align-items: stretch;
+  border-radius: 4px;
+  background: rgba(20, 20, 20, 0.82);
+  border: 1px solid var(--panel-border);
+  overflow: hidden;
+}
+
+.canvas-zoom-reset {
+  appearance: none;
+  border: none;
+  border-right: 1px solid var(--panel-border);
+  background: transparent;
+  color: var(--muted);
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    background 0.18s var(--ui-ease),
+    color 0.18s var(--ui-ease);
+}
+
+.canvas-zoom-reset:hover:not(:disabled) {
+  background: var(--accent-hover);
+  color: var(--text);
+}
+
+.canvas-zoom-reset:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.canvas-zoom-indicator {
+  padding: 6px 10px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  user-select: none;
+}
+
+.canvas-stage.is-fullscreen .canvas-zoom-controls {
+  right: 20px;
+  bottom: 20px;
+}
+
+.canvas-stage.is-fullscreen .mosaic-canvas {
+  box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .canvas-stage,
+  .mosaic-canvas {
+    transition: none;
+  }
 }
 
 .controls-panel {
@@ -198,6 +273,59 @@ body {
   accent-color: var(--accent);
 }
 
+.control-row--muted {
+  opacity: 0.4;
+}
+
+.control-row--muted input[type="range"],
+.control-row--muted input[type="checkbox"] {
+  pointer-events: none;
+}
+
+.control-row__label--solo {
+  margin-bottom: 8px;
+}
+
+.has-hint {
+  position: relative;
+  cursor: help;
+}
+
+.has-hint::after {
+  content: attr(data-hint);
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 8px);
+  z-index: 30;
+  width: max-content;
+  max-width: 240px;
+  padding: 8px 10px;
+  border-radius: 4px;
+  background: #242424;
+  border: 1px solid var(--panel-border);
+  color: var(--text);
+  font-size: 11px;
+  line-height: 1.45;
+  font-weight: 400;
+  white-space: normal;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition:
+    opacity 0.15s var(--ui-ease),
+    transform 0.15s var(--ui-ease);
+}
+
+.has-hint:hover::after,
+.has-hint:focus-visible::after {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.has-hint:focus-visible {
+  outline: none;
+}
+
 .control-row select {
   width: 100%;
   background: rgba(255, 255, 255, 0.04);
@@ -211,12 +339,6 @@ body {
 .control-row--toggle {
   grid-template-columns: 1fr auto;
   align-items: center;
-}
-
-.control-hint {
-  margin: -4px 0 12px;
-  font-size: 11px;
-  color: var(--muted);
 }
 
 .color-list {
@@ -320,7 +442,6 @@ body {
   width: max-content;
   min-width: 100%;
   justify-content: safe center;
-  transition: padding-right 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .timeline__strip.is-dragging {
@@ -328,33 +449,23 @@ body {
   user-select: none;
 }
 
-.timeline__strip.is-dragging .timeline-strip-item {
-  will-change: transform;
-}
-
 .timeline-strip-item {
   display: flex;
   flex: 0 0 auto;
   align-items: center;
-  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.timeline-insert-line-host {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 0;
+.timeline-insert-slot {
+  flex: 0 0 auto;
   display: flex;
+  align-items: center;
   justify-content: center;
   pointer-events: none;
-  z-index: 2;
-  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .timeline-thumb-cell {
   flex: 0 0 auto;
   overflow: hidden;
-  transition: width 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .timeline-insert-line {

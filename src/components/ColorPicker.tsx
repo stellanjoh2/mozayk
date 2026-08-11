@@ -69,7 +69,6 @@ export function ColorPicker({
   const [recents] = useState<string[]>(() => readRecentColors());
   const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
   const dragModeRef = useRef<"sv" | "hue" | null>(null);
-  const isDraggingRef = useRef(false);
   const hsvRef = useRef(hsv);
   hsvRef.current = hsv;
   const onCloseRef = useRef(onClose);
@@ -143,8 +142,7 @@ export function ColorPicker({
         dismiss(true);
       }
     };
-    const onDocPointerUp = (e: PointerEvent) => {
-      if (isDraggingRef.current) return;
+    const onDocPointerDown = (e: PointerEvent) => {
       const root = rootRef.current;
       const anchor = anchorRef.current;
       const t = e.target;
@@ -154,12 +152,12 @@ export function ColorPicker({
     };
     const bindId = requestAnimationFrame(() => {
       document.addEventListener("keydown", onKey, true);
-      document.addEventListener("pointerup", onDocPointerUp, true);
+      document.addEventListener("pointerdown", onDocPointerDown, true);
     });
     return () => {
       cancelAnimationFrame(bindId);
       document.removeEventListener("keydown", onKey, true);
-      document.removeEventListener("pointerup", onDocPointerUp, true);
+      document.removeEventListener("pointerdown", onDocPointerDown, true);
     };
   }, [anchorRef]);
 
@@ -183,7 +181,6 @@ export function ColorPicker({
   const onSvPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    isDraggingRef.current = true;
     e.currentTarget.setPointerCapture(e.pointerId);
     dragModeRef.current = "sv";
     sampleFromPointer("sv", e.clientX, e.clientY, e.currentTarget);
@@ -192,7 +189,6 @@ export function ColorPicker({
   const onHuePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    isDraggingRef.current = true;
     e.currentTarget.setPointerCapture(e.pointerId);
     dragModeRef.current = "hue";
     sampleFromPointer("hue", e.clientX, e.clientY, e.currentTarget);
@@ -214,7 +210,6 @@ export function ColorPicker({
       }
     }
     dragModeRef.current = null;
-    isDraggingRef.current = false;
   };
 
   const hueCss = hsvToHex(hsv.h, 1, 1);
@@ -245,8 +240,6 @@ export function ColorPicker({
           ? { left: pos.left, top: pos.top, visibility: "visible" }
           : { visibility: "hidden", left: 0, top: 0 }
       }
-      onPointerDown={(e) => e.stopPropagation()}
-      onPointerUp={(e) => e.stopPropagation()}
     >
       <div className="rfrct-color-picker__head">
         <h2 className="rfrct-color-picker__title">Select color</h2>

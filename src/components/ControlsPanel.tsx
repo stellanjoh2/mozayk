@@ -8,6 +8,7 @@ import {
 import type { Density, Frame, FrameSettings, Orientation } from "../types";
 import { ColorSwatch } from "./ColorSwatch";
 import { SliderRow, ToggleRow } from "./ControlRow";
+import { HintLabel } from "./HintLabel";
 
 type ControlsPanelProps = {
   frame: Frame;
@@ -82,7 +83,7 @@ export function ControlsPanel({
           </button>
         </div>
         <label className="control-row">
-          <span className="control-row__label">Grid</span>
+          <span className="control-row__label">Grid Density</span>
           <select
             value={settings.density}
             onChange={(e) =>
@@ -103,15 +104,22 @@ export function ControlsPanel({
 
       <section className="panel-section">
         <h2>Layout</h2>
-        <button type="button" className="panel-btn" onClick={onRandomizeLayout}>
+        <button
+          type="button"
+          className="panel-btn has-hint"
+          data-hint="Keeps your current slider settings"
+          onClick={onRandomizeLayout}
+        >
           Randomize Layout
         </button>
-        <button type="button" className="panel-btn panel-btn--ghost" onClick={onRandomizeAll}>
+        <button
+          type="button"
+          className="panel-btn panel-btn--ghost has-hint"
+          data-hint="Also randomizes all sliders"
+          onClick={onRandomizeAll}
+        >
           Randomize All
         </button>
-        <p className="control-hint">
-          Layout keeps your settings · All also randomizes sliders
-        </p>
         <div className="button-row">
           <button type="button" className="panel-btn panel-btn--ghost" onClick={onCopySettings}>
             Copy Settings
@@ -125,7 +133,9 @@ export function ControlsPanel({
             Paste Settings
           </button>
         </div>
-        <p className="control-hint">Blocks always on · toggle extras to mix in</p>
+        <p className="control-row__label control-row__label--solo">
+          <HintLabel hint="Blocks always on · toggle extras to mix in">Shapes</HintLabel>
+        </p>
         <div className="button-row">
           <button
             type="button"
@@ -151,82 +161,79 @@ export function ControlsPanel({
           </button>
         </div>
         <SliderRow
-          label="Shape mix"
+          label="Shape Mix"
+          hint="0 = blocks only · 100 = mix all enabled"
           value={settings.shapeMix}
           onChange={(shapeMix) => onSettingsChange({ shapeMix })}
         />
-        <p className="control-hint">0 = blocks only · 100 = mix all enabled</p>
-        {shapes.ring ? (
-          <>
-            <SliderRow
-              label="Ring thickness"
-              value={settings.ringThickness ?? 45}
-              onChange={(ringThickness) => onSettingsChange({ ringThickness })}
-            />
-            <p className="control-hint">0 = solid · 100 = thin ring</p>
-          </>
-        ) : null}
         <SliderRow
-          label="Fill amount"
+          label="Ring Thickness"
+          hint="0 = solid · 100 = thin ring"
+          value={settings.ringThickness ?? 45}
+          disabled={!shapes.ring}
+          onChange={(ringThickness) => onSettingsChange({ ringThickness })}
+        />
+        <SliderRow
+          label="Fill Amount"
           value={settings.fillAmount}
           onChange={(fillAmount) => onSettingsChange({ fillAmount })}
         />
         <SliderRow
-          label="Scale blend"
+          label="Scale Blend"
+          hint="1 macro ← mixed → 6 micro"
           value={settings.scaleBlend}
           min={1}
           max={6}
           step={1}
           onChange={(scaleBlend) => onSettingsChange({ scaleBlend })}
         />
-        <p className="control-hint">1 macro ← mixed → 6 micro</p>
         <SliderRow
-          label="Weight"
+          label="Distribution"
+          hint="Left ← even → right"
           value={settings.weight}
           onChange={(weight) => onSettingsChange({ weight })}
         />
-        <p className="control-hint">Weight: left ← even → right</p>
       </section>
 
       <section className="panel-section">
         <h2>Size</h2>
         <SliderRow
-          label="Min cell size"
+          label="Min Cell Size"
           value={settings.minCellSize}
           min={1}
           max={settings.maxCellSize}
           onChange={(minCellSize) => onSettingsChange({ minCellSize })}
         />
         <SliderRow
-          label="Max cell size"
+          label="Max Cell Size"
           value={settings.maxCellSize}
           min={settings.minCellSize}
           max={cellSizeMax}
           onChange={(maxCellSize) => onSettingsChange({ maxCellSize })}
         />
         <SliderRow
-          label="Max height"
+          label="Max Height"
           value={settings.maxHeight}
           min={1}
           max={heightMax}
           onChange={(maxHeight) => onSettingsChange({ maxHeight })}
         />
         <ToggleRow
-          label="Random height"
+          label="Random Height"
           checked={settings.randomHeight}
           onChange={(randomHeight) =>
             onSettingsChange({ randomHeight }, true)
           }
         />
         <SliderRow
-          label="Max width"
+          label="Max Width"
           value={settings.maxWidth}
           min={1}
           max={widthMax}
           onChange={(maxWidth) => onSettingsChange({ maxWidth })}
         />
         <ToggleRow
-          label="Random width"
+          label="Random Width"
           checked={settings.randomWidth}
           onChange={(randomWidth) => onSettingsChange({ randomWidth }, true)}
         />
@@ -281,7 +288,11 @@ export function ControlsPanel({
       <section className="panel-section">
         <h2>Export</h2>
         <label className="control-row">
-          <span className="control-row__label">Resolution</span>
+          <span className="control-row__label">
+            <HintLabel hint={`Preview at 1080p · playback ${DEFAULT_FPS} fps`}>
+              Resolution
+            </HintLabel>
+          </span>
           <select
             value={exportPreset}
             onChange={(e) => onExportPresetChange(e.target.value as ExportPreset)}
@@ -299,7 +310,6 @@ export function ControlsPanel({
         <button type="button" className="panel-btn panel-btn--ghost" onClick={onExportSequence}>
           Export Sequence (ZIP)
         </button>
-        <p className="control-hint">Preview at 1080p · playback {DEFAULT_FPS} fps</p>
       </section>
     </aside>
   );

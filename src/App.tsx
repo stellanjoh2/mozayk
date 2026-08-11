@@ -34,6 +34,16 @@ import "./App.css";
 
 const LAYOUT_REGEN_MS = 280;
 
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  return (
+    target.isContentEditable ||
+    target.tagName === "INPUT" ||
+    target.tagName === "TEXTAREA" ||
+    target.tagName === "SELECT"
+  );
+}
+
 export default function App() {
   const [orientation, setOrientation] = useState<Orientation>("landscape");
   const [frames, setFrames] = useState<Frame[]>(() => [
@@ -41,6 +51,7 @@ export default function App() {
   ]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [exportPreset, setExportPreset] = useState<ExportPreset>("1080p");
   const [canPasteSettings, setCanPasteSettings] = useState(hasStoredSettings);
   const [toast, setToast] = useState<string | null>(null);
@@ -259,9 +270,47 @@ export default function App() {
     return () => window.clearInterval(timer);
   }, [playing, frames.length]);
 
+  const togglePlay = useCallback(() => {
+    setPlaying((value) => !value);
+  }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    setIsFullscreen((value) => !value);
+  }, []);
+
+  const stepFrame = useCallback((delta: -1 | 1) => {
+    setActiveIndex(
+      (index) => (index + delta + frames.length) % frames.length,
+    );
+  }, [frames.length]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (isEditableTarget(event.target)) return;
+
+      if (event.code === "KeyF") {
+        event.preventDefault();
+        toggleFullscreen();
+      } else if (event.code === "Space") {
+        event.preventDefault();
+        togglePlay();
+      } else if (event.code === "ArrowLeft") {
+        event.preventDefault();
+        stepFrame(-1);
+      } else if (event.code === "ArrowRight") {
+        event.preventDefault();
+        stepFrame(1);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [toggleFullscreen, togglePlay, stepFrame]);
+
   return (
-    <div className="app">
-      {toast ? <div className="app-toast">{toast}</div> : null}
+    <div className={["app", isFullscreen ? "is-fullscreen" : ""].filter(Boolean).join(" ")}>
+      {toast && !isFullscreen ? <div className="app-toast">{toast}</div> : null}
+      {!isFullscreen ? (
       <ControlsPanel
         frame={activeFrame}
         orientation={orientation}
@@ -317,9 +366,15 @@ export default function App() {
           void exportAllFrames(frames, orientation, exportPreset)
         }
       />
+      ) : null}
 
-      <main className="workspace">
-        <CanvasView frame={activeFrame} orientation={orientation} />
+      <main className={["workspace", isFullscreen ? "is-fullscreen" : ""].filter(Boolean).join(" ")}>
+        <CanvasView
+          frame={activeFrame}
+          orientation={orientation}
+          isFullscreen={isFullscreen}
+        />
+        {!isFullscreen ? (
         <Timeline
           frames={frames}
           activeIndex={activeIndex}
@@ -331,8 +386,9 @@ export default function App() {
           onDuplicateCurrent={handleDuplicateCurrent}
           onRemove={handleRemoveFrame}
           canAddFrame={frames.length < MAX_FRAMES}
-          onTogglePlay={() => setPlaying((value) => !value)}
+          onTogglePlay={togglePlay}
         />
+        ) : null}
       </main>
     </div>
   );

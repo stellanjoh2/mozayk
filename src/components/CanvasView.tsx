@@ -1,4 +1,10 @@
-import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import { createPortal } from "react-dom";
 import { getThumbnailSize } from "../grid/gridMath";
 import { renderMosaic } from "../render/renderFrame";
@@ -8,13 +14,42 @@ import {
 } from "../config";
 import type { Frame, Orientation } from "../types";
 
+const MIN_ZOOM = 0.5;
+const MAX_ZOOM = 1.5;
+const ZOOM_WHEEL_FACTOR = 1.08;
+
+function clampZoom(value: number): number {
+  return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value));
+}
+
+function computeFullscreenFitScale(
+  stageWidth: number,
+  stageHeight: number,
+  canvasWidth: number,
+  canvasHeight: number,
+  orientation: Orientation,
+): number {
+  if (stageWidth <= 0 || stageHeight <= 0) return 1;
+  const scaleW = stageWidth / canvasWidth;
+  const scaleH = stageHeight / canvasHeight;
+  return orientation === "portrait" ? scaleH : Math.min(scaleW, scaleH);
+}
+
 type CanvasViewProps = {
   frame: Frame;
   orientation: Orientation;
+  isFullscreen?: boolean;
 };
 
-export function CanvasView({ frame, orientation }: CanvasViewProps) {
+export function CanvasView({
+  frame,
+  orientation,
+  isFullscreen = false,
+}: CanvasViewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const [zoom, setZoom] = useState(1);
+  const [fitScale, setFitScale] = useState(1);
   const width =
     orientation === "landscape"
       ? PREVIEW_WIDTH_LANDSCAPE
@@ -36,15 +71,84 @@ export function CanvasView({ frame, orientation }: CanvasViewProps) {
     });
   }, [frame.settings, frame.blocks, frame.id, orientation, width, height]);
 
+  useEffect(() => {
+    setZoom(1);
+  }, [orientation, isFullscreen]);
+
+  useLayoutEffect(() => {
+    if (!isFullscreen) {
+      setFitScale(1);
+      return;
+    }
+
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    const updateFitScale = () => {
+      setFitScale(
+        computeFullscreenFitScale(
+          stage.clientWidth,
+          stage.clientHeight,
+          width,
+          height,
+          orientation,
+        ),
+      );
+    };
+
+    updateFitScale();
+    const observer = new ResizeObserver(updateFitScale);
+    observer.observe(stage);
+    return () => observer.disconnect();
+  }, [isFullscreen, orientation, width, height]);
+
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    const handleWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      const factor = event.deltaY > 0 ? 1 / ZOOM_WHEEL_FACTOR : ZOOM_WHEEL_FACTOR;
+      setZoom((current) => clampZoom(current * factor));
+    };
+
+    stage.addEventListener("wheel", handleWheel, { passive: false });
+    return () => stage.removeEventListener("wheel", handleWheel);
+  }, []);
+
+  const totalScale = fitScale * zoom;
+  const displayWidth = width * totalScale;
+  const displayHeight = height * totalScale;
+
   return (
-    <div className="canvas-stage">
+    <div
+      ref={stageRef}
+      className={["canvas-stage", isFullscreen ? "is-fullscreen" : ""]
+        .filter(Boolean)
+        .join(" ")}
+    >
       <canvas
         ref={canvasRef}
         className="mosaic-canvas"
         width={width}
         height={height}
+        style={{ width: displayWidth, height: displayHeight }}
         aria-label="Mosaic preview"
       />
+      <div className="canvas-zoom-controls">
+        <button
+          type="button"
+          className="canvas-zoom-reset"
+          onClick={() => setZoom(1)}
+          disabled={zoom === 1}
+          aria-label="Reset zoom to 100%"
+        >
+          Reset
+        </button>
+        <div className="canvas-zoom-indicator" aria-live="polite">
+          {Math.round(totalScale * 100)}%
+        </div>
+      </div>
     </div>
   );
 }
@@ -112,7 +216,6 @@ function FrameThumbnail({
   );
 }
 
-const TIMELINE_GAP = 8;
 const DRAG_THRESHOLD = 5;
 
 type PendingDrag = {
@@ -129,64 +232,64 @@ function insertIndexToTarget(fromIndex: number, insertIndex: number): number {
   return insertIndex - 1;
 }
 
-function isNoOpInsert(fromIndex: number, insertIndex: number): boolean {
-  return insertIndex === fromIndex || insertIndex === fromIndex + 1;
-}
+type StripVisualItem =
+  | { kind: "insert" }
+  | { kind: "frame"; index: number };
 
-function getItemShift(
-  index: number,
-  dragIndex: number,
-  insertIndex: number,
-  slotWidth: number,
-): number {
-  if (isNoOpInsert(dragIndex, insertIndex)) return 0;
-  if (index === dragIndex) return 0;
-  if (dragIndex < insertIndex) {
-    if (index >= insertIndex) return slotWidth;
-  } else if (index >= insertIndex && index < dragIndex) {
-    return slotWidth;
-  }
-  return 0;
-}
-
-function getInsertLineX(
-  insertIndex: number,
+function buildVisualStripItems(
+  frameCount: number,
   dragIndex: number | null,
-  slotWidth: number,
-): number {
-  let x = 0;
-  for (let i = 0; i < insertIndex; i++) {
-    if (i === dragIndex) continue;
-    x += slotWidth;
+  insertIndex: number | null,
+): StripVisualItem[] {
+  if (dragIndex === null || insertIndex === null) {
+    return Array.from({ length: frameCount }, (_, index) => ({
+      kind: "frame" as const,
+      index,
+    }));
   }
-  return x;
+
+  const frameIndices: number[] = [];
+  for (let i = 0; i < frameCount; i++) {
+    if (i !== dragIndex) frameIndices.push(i);
+  }
+
+  let visualInsert = insertIndex;
+  if (insertIndex > dragIndex) visualInsert = insertIndex - 1;
+
+  const items: StripVisualItem[] = [];
+  for (let vi = 0; vi <= frameIndices.length; vi++) {
+    if (vi === visualInsert) items.push({ kind: "insert" });
+    if (vi < frameIndices.length) {
+      items.push({ kind: "frame", index: frameIndices[vi] });
+    }
+  }
+  return items;
 }
-function getInsertIndex(
-  strip: HTMLElement,
-  clientX: number,
-  dragIndex: number,
-  slotWidth: number,
-): number {
-  const cells = Array.from(
-    strip.querySelectorAll<HTMLElement>("[data-timeline-cell]"),
+
+function getInsertIndex(strip: HTMLElement, clientX: number): number {
+  const slots = Array.from(
+    strip.querySelectorAll<HTMLElement>("[data-timeline-slot]"),
   );
+  if (slots.length === 0) return 0;
 
-  for (let i = 0; i < cells.length; i++) {
-    const rect = cells[i].getBoundingClientRect();
-    let left = rect.left;
-    let right = rect.right;
+  for (const slot of slots) {
+    const rect = slot.getBoundingClientRect();
+    const mid = (rect.left + rect.right) / 2;
 
-    if (i === dragIndex && rect.width < 1) {
-      const prev = cells[i - 1]?.getBoundingClientRect();
-      const next = cells[i + 1]?.getBoundingClientRect();
-      left = prev?.right ?? rect.left;
-      right = next?.left ?? left + slotWidth;
+    if (slot.dataset.insertIndex !== undefined) {
+      if (clientX < mid) return Number(slot.dataset.insertIndex);
+      continue;
     }
 
-    if (clientX < (left + right) / 2) return i;
+    const frameIndex = Number(slot.dataset.frameIndex);
+    if (clientX < mid) return frameIndex;
   }
 
-  return cells.length;
+  const lastSlot = slots[slots.length - 1];
+  if (lastSlot.dataset.frameIndex !== undefined) {
+    return Number(lastSlot.dataset.frameIndex) + 1;
+  }
+  return Number(lastSlot.dataset.insertIndex ?? 0) + 1;
 }
 
 type TimelineProps = {
@@ -226,7 +329,6 @@ export function Timeline({
   const [pointer, setPointer] = useState<{ x: number; y: number } | null>(null);
   const [ghostOffset, setGhostOffset] = useState({ x: 0, y: 0 });
   const [thumbW, thumbH] = getThumbnailSize(orientation);
-  const slotWidth = thumbW + TIMELINE_GAP;
 
   useEffect(() => {
     const strip = stripRef.current;
@@ -290,7 +392,7 @@ export function Timeline({
       const strip = stripRef.current;
       if (!strip) return;
       updateInsertIndex(
-        getInsertIndex(strip, event.clientX, pending.index, slotWidth),
+        getInsertIndex(strip, event.clientX),
       );
     };
 
@@ -315,7 +417,7 @@ export function Timeline({
       window.removeEventListener("pointerup", handlePointerUp);
       window.removeEventListener("pointercancel", handlePointerCancel);
     };
-  }, [onReorder, slotWidth, trackPointer]);
+  }, [onReorder, trackPointer]);
 
   const handleThumbPointerDown = (
     index: number,
@@ -335,17 +437,12 @@ export function Timeline({
     event.currentTarget.setPointerCapture(event.pointerId);
   };
 
-  const showInsertLine =
-    dragIndex !== null &&
-    insertIndex !== null &&
-    !isNoOpInsert(dragIndex, insertIndex);
-
-  const insertLineX =
-    showInsertLine && insertIndex !== null
-      ? getInsertLineX(insertIndex, dragIndex, slotWidth)
-      : 0;
-
   const draggedFrame = dragIndex !== null ? frames[dragIndex] : null;
+  const visualItems = buildVisualStripItems(
+    frames.length,
+    dragIndex,
+    insertIndex,
+  );
 
   return (
     <footer className="timeline">
@@ -366,45 +463,42 @@ export function Timeline({
       <div ref={stripRef} className="timeline__scroll">
         <div
           className={`timeline__strip${dragIndex !== null ? " is-dragging" : ""}`}
-          style={{
-            minHeight: thumbH,
-            paddingRight: showInsertLine ? slotWidth : 0,
-          }}
+          style={{ minHeight: thumbH }}
         >
-          {showInsertLine ? (
-            <div
-              className="timeline-insert-line-host"
-              style={{
-                height: thumbH,
-                transform: `translate3d(${insertLineX}px, 0, 0)`,
-              }}
-              aria-hidden
-            >
-              <div className="timeline-insert-line" />
-            </div>
-          ) : null}
-          {frames.map((frame, index) => {
-            const shift =
-              dragIndex !== null && insertIndex !== null
-                ? getItemShift(index, dragIndex, insertIndex, slotWidth)
-                : 0;
+          {visualItems.map((item, visualIndex) => {
+            if (item.kind === "insert") {
+              return (
+                <div
+                  key={`insert-${visualIndex}`}
+                  className="timeline-insert-slot"
+                  data-timeline-slot
+                  data-insert-index={insertIndex ?? 0}
+                  style={{ width: thumbW, height: thumbH }}
+                  aria-hidden
+                >
+                  <div className="timeline-insert-line" />
+                </div>
+              );
+            }
+
+            const { index } = item;
+            const frame = frames[index];
 
             return (
               <div
                 key={frame.id}
                 className="timeline-strip-item"
-                style={{ transform: `translate3d(${shift}px, 0, 0)` }}
+                data-timeline-slot
+                data-frame-index={index}
               >
                 <div
-                  className={`timeline-thumb-cell${dragIndex === index ? " is-source" : ""}`}
-                  data-timeline-cell
-                  style={{ width: dragIndex === index ? 0 : thumbW }}
+                  className="timeline-thumb-cell"
+                  style={{ width: thumbW }}
                 >
                   <FrameThumbnail
                     frame={frame}
                     orientation={orientation}
                     active={index === activeIndex}
-                    hidden={dragIndex === index}
                     onSelect={() => onSelect(index)}
                     onPointerDown={(event) => handleThumbPointerDown(index, event)}
                   />
