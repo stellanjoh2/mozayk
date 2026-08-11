@@ -1,4 +1,7 @@
 import { getGridDimensions } from "../grid/gridMath";
+import { normalizeHex } from "../colorMath";
+import { colorGrainForSettings } from "../state/frameUtils";
+import { applyPhotoshopGrain } from "./grain";
 import type {
   FrameSettings,
   GridDimensions,
@@ -27,6 +30,15 @@ function drawCheckerboard(
       ctx.fillRect(x, y, cell, cell);
     }
   }
+}
+
+function buildColorGrainLookup(settings: FrameSettings): Map<string, number> {
+  const grain = colorGrainForSettings(settings);
+  const lookup = new Map<string, number>();
+  settings.colors.forEach((color, index) => {
+    lookup.set(normalizeHex(color), grain[index] ?? 0);
+  });
+  return lookup;
 }
 
 function drawRing(
@@ -116,7 +128,7 @@ export function renderMosaic(
   canvas.width = width;
   canvas.height = height;
 
-  const ctx = canvas.getContext("2d");
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
   if (!ctx) throw new Error("Canvas 2D unavailable");
 
   ctx.clearRect(0, 0, width, height);
@@ -132,6 +144,17 @@ export function renderMosaic(
     if (!block.color) continue;
     drawBlock(ctx, block, grid, settings.ringThickness);
   }
+
+  const grainLookup = buildColorGrainLookup(settings);
+  applyPhotoshopGrain(
+    ctx,
+    blocks,
+    grid,
+    grainLookup,
+    settings.ringThickness,
+    width,
+    height,
+  );
 
   return grid;
 }

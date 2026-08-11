@@ -14,6 +14,7 @@ import {
   applyPastedSettings,
   clampSettingsForOrientation,
   colorAmountsForSettings,
+  colorGrainForSettings,
   createInitialFrame,
   activeIndexAfterReorder,
   createDefaultShapePalette,
@@ -23,7 +24,7 @@ import {
   randomizeFrameCurrentColors,
   randomizeFrameNewColors,
   randomizeFrameLayout,
-  removeColorFromSettings,
+  removeColorFromFrame,
   transposeFrameBlocks,
 } from "./state/frameUtils";
 import {
@@ -147,6 +148,7 @@ export default function App() {
         ringThickness: frame.settings.ringThickness ?? 45,
         colors: [...frame.settings.colors],
         colorAmounts: colorAmountsForSettings(frame.settings),
+        colorGrain: colorGrainForSettings(frame.settings),
       };
 
       const shapePatch = definedPatch.shapes;
@@ -389,10 +391,7 @@ export default function App() {
           )
         }
         onRemoveColor={(index) =>
-          updateActiveFrame((frame) => ({
-            ...frame,
-            settings: removeColorFromSettings(frame.settings, index),
-          }))
+          updateActiveFrame((frame) => removeColorFromFrame(frame, index))
         }
         onColorChange={(index, hex) =>
           updateActiveFrame((frame) => ({
@@ -419,6 +418,17 @@ export default function App() {
               ...frame,
               settings: { ...frame.settings, colorAmounts },
             });
+          })
+        }
+        onColorGrainChange={(index, grain) =>
+          updateActiveFrame((frame) => {
+            const colorGrain = colorGrainForSettings(frame.settings).map(
+              (value, i) => (i === index ? grain : value),
+            );
+            return {
+              ...frame,
+              settings: { ...frame.settings, colorGrain },
+            };
           })
         }
         onOrientationChange={handleOrientationChange}

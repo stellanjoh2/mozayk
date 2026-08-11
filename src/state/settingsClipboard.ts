@@ -25,6 +25,15 @@ function clampInt(value: unknown, min: number, max: number, fallback: number): n
   return Math.min(max, Math.max(min, Math.round(n)));
 }
 
+function parseColorGrain(value: unknown, colorCount: number): number[] {
+  if (!Array.isArray(value)) return Array.from({ length: colorCount }, () => 0);
+  const grain = value
+    .map((amount) => clampInt(amount, 0, 100, 0))
+    .slice(0, colorCount);
+  if (grain.length !== colorCount) return Array.from({ length: colorCount }, () => 0);
+  return grain;
+}
+
 function parseColorAmounts(value: unknown, colorCount: number): number[] {
   if (!Array.isArray(value)) return equalColorAmounts(colorCount);
   const amounts = value
@@ -94,6 +103,7 @@ export function parseSettingsClipboard(raw: string): FrameSettings | null {
       scaleBlend: clampInt(candidate.scaleBlend, 1, 6, 3),
       colors,
       colorAmounts: parseColorAmounts(candidate.colorAmounts, colors.length),
+      colorGrain: parseColorGrain(candidate.colorGrain, colors.length),
       background: isBackground(String(candidate.background))
         ? (candidate.background as BackgroundMode)
         : "black",

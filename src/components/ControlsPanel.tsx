@@ -26,6 +26,7 @@ type ControlsPanelProps = {
   onRemoveColor: (index: number) => void;
   onColorChange: (index: number, hex: string) => void;
   onColorAmountChange: (index: number, amount: number) => void;
+  onColorGrainChange: (index: number, grain: number) => void;
   onOrientationChange: (orientation: Orientation) => void;
   onExportPresetChange: (preset: ExportPreset) => void;
   onExportPngFrame: () => void;
@@ -49,6 +50,7 @@ export function ControlsPanel({
   onRemoveColor,
   onColorChange,
   onColorAmountChange,
+  onColorGrainChange,
   onOrientationChange,
   onExportPresetChange,
   onExportPngFrame,
@@ -269,6 +271,12 @@ export function ControlsPanel({
                 min={1}
                 onChange={(amount) => onColorAmountChange(index, amount)}
               />
+              <SliderRow
+                label="Grain"
+                hint="Film grain overlay · PNG preview only, excluded from SVG"
+                value={settings.colorGrain?.[index] ?? 0}
+                onChange={(grain) => onColorGrainChange(index, grain)}
+              />
             </div>
           ))}
         </div>
@@ -333,6 +341,7 @@ export function ControlsPanel({
 
         <div className="export-group">
           <h3 className="export-group__title">SVG</h3>
+          <p className="export-group__note">Flat fills only — grain is not included</p>
           <button type="button" className="panel-btn" onClick={onExportSvgFrame}>
             Export SVG Frame
           </button>

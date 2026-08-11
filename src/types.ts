@@ -36,6 +36,8 @@ export type FrameSettings = {
   colors: string[];
   /** Relative colour share on canvas (normalized at assignment time). */
   colorAmounts: number[];
+  /** Film grain intensity per palette slot (0–100). PNG/canvas only. */
+  colorGrain: number[];
   background: BackgroundMode;
 };
 

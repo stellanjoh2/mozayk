@@ -247,6 +247,13 @@ body {
   color: var(--text);
 }
 
+.export-group__note {
+  margin: -4px 0 10px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+
 .app-toast {
   position: fixed;
   z-index: 40;

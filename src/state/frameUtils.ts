@@ -4,6 +4,7 @@ import { transposeBlocks } from "../grid/gridMath";
 import {
   generateLayout,
   generateRandomPalette,
+  pickWeightedColor,
   randomizeColors,
 } from "../layout/generateLayout";
 import {
@@ -43,6 +44,14 @@ export function colorAmountsForSettings(settings: FrameSettings): number[] {
   return equalColorAmounts(colors.length);
 }
 
+export function colorGrainForSettings(settings: FrameSettings): number[] {
+  const { colors, colorGrain } = settings;
+  if (colorGrain && colorGrain.length === colors.length) {
+    return colorGrain;
+  }
+  return Array.from({ length: colors.length }, () => 0);
+}
+
 export function createDefaultSettings(): FrameSettings {
   return {
     density: 6,
@@ -60,6 +69,7 @@ export function createDefaultSettings(): FrameSettings {
     scaleBlend: 3,
     colors: ["#ffffff"],
     colorAmounts: [100],
+    colorGrain: [0],
     background: "black",
   };
 }
@@ -180,6 +190,7 @@ export function addColorToSettings(settings: FrameSettings): FrameSettings {
     ...settings,
     colors,
     colorAmounts: equalColorAmounts(colors.length),
+    colorGrain: [...colorGrainForSettings(settings), 0],
   };
 }
 
@@ -189,11 +200,31 @@ export function removeColorFromSettings(
 ): FrameSettings {
   if (settings.colors.length <= 1) return settings;
   const colors = settings.colors.filter((_, i) => i !== index);
+  const colorGrain = colorGrainForSettings(settings).filter((_, i) => i !== index);
   return {
     ...settings,
     colors,
     colorAmounts: equalColorAmounts(colors.length),
+    colorGrain,
   };
+}
+
+export function removeColorFromFrame(frame: Frame, index: number): Frame {
+  if (frame.settings.colors.length <= 1) return frame;
+
+  const removedColor = frame.settings.colors[index];
+  const settings = removeColorFromSettings(frame.settings, index);
+  const amounts = colorAmountsForSettings(settings);
+
+  const blocks = frame.blocks.map((block) => {
+    if (block.color !== removedColor) return block;
+    return {
+      ...block,
+      color: pickWeightedColor(settings.colors, amounts, Math.random),
+    };
+  });
+
+  return { ...frame, settings, blocks };
 }
 
 export function setBackground(
