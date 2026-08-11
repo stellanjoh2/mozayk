@@ -10,11 +10,6 @@ import type {
 
 export type Rng = () => number;
 
-function pickInt(rng: Rng, min: number, max: number): number {
-  if (max <= min) return min;
-  return min + Math.floor(rng() * (max - min + 1));
-}
-
 const WEIGHT_FLOOR = 0.05;
 
 /**
@@ -218,15 +213,36 @@ export function generateLayout(
   return blocks;
 }
 
+export function pickWeightedColor(
+  colors: string[],
+  amounts: number[] | undefined,
+  rng: Rng,
+): string {
+  if (colors.length === 0) return "#ffffff";
+  const weights =
+    amounts && amounts.length === colors.length
+      ? amounts.map((amount) => Math.max(0, amount))
+      : colors.map(() => 1);
+  const total = weights.reduce((sum, weight) => sum + weight, 0);
+  if (total <= 0) return colors[0];
+  let roll = rng() * total;
+  for (let i = 0; i < colors.length; i++) {
+    roll -= weights[i];
+    if (roll <= 0) return colors[i];
+  }
+  return colors[colors.length - 1];
+}
+
 export function randomizeColors(
   blocks: MosaicBlock[],
   colors: string[],
+  amounts?: number[],
   rng: Rng = Math.random,
 ): MosaicBlock[] {
   if (colors.length === 0) return blocks;
   return blocks.map((block) => ({
     ...block,
-    color: colors[pickInt(rng, 0, colors.length - 1)] ?? colors[0],
+    color: pickWeightedColor(colors, amounts, rng),
   }));
 }
 

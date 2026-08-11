@@ -25,10 +25,12 @@ type ControlsPanelProps = {
   onAddColor: () => void;
   onRemoveColor: (index: number) => void;
   onColorChange: (index: number, hex: string) => void;
+  onColorAmountChange: (index: number, amount: number) => void;
   onOrientationChange: (orientation: Orientation) => void;
   onExportPresetChange: (preset: ExportPreset) => void;
-  onExportFrame: () => void;
-  onExportSequence: () => void;
+  onExportPngFrame: () => void;
+  onExportPngSequence: () => void;
+  onExportSvgFrame: () => void;
 };
 
 export function ControlsPanel({
@@ -46,10 +48,12 @@ export function ControlsPanel({
   onAddColor,
   onRemoveColor,
   onColorChange,
+  onColorAmountChange,
   onOrientationChange,
   onExportPresetChange,
-  onExportFrame,
-  onExportSequence,
+  onExportPngFrame,
+  onExportPngSequence,
+  onExportSvgFrame,
 }: ControlsPanelProps) {
   const { settings } = frame;
   const shapes = settings.shapes ?? { sphere: true, ring: false };
@@ -248,16 +252,24 @@ export function ControlsPanel({
         ) : null}
         <div className="color-list">
           {settings.colors.map((color, index) => (
-            <ColorSwatch
-              key={`swatch-${index}`}
-              color={color}
-              onChange={(hex) => onColorChange(index, hex)}
-              onRemove={
-                settings.colors.length > 1
-                  ? () => onRemoveColor(index)
-                  : undefined
-              }
-            />
+            <div key={`color-${index}`} className="color-row">
+              <ColorSwatch
+                color={color}
+                onChange={(hex) => onColorChange(index, hex)}
+                onRemove={
+                  settings.colors.length > 1
+                    ? () => onRemoveColor(index)
+                    : undefined
+                }
+              />
+              <SliderRow
+                label="Amount"
+                hint="Share of canvas for this colour"
+                value={settings.colorAmounts?.[index] ?? Math.round(100 / settings.colors.length)}
+                min={1}
+                onChange={(amount) => onColorAmountChange(index, amount)}
+              />
+            </div>
           ))}
         </div>
         <button type="button" className="panel-btn" onClick={onRandomizeCurrentColors}>
@@ -287,29 +299,44 @@ export function ControlsPanel({
 
       <section className="panel-section">
         <h2>Export</h2>
-        <label className="control-row">
-          <span className="control-row__label">
-            <HintLabel hint={`Preview at 1080p · playback ${DEFAULT_FPS} fps`}>
-              Resolution
-            </HintLabel>
-          </span>
-          <select
-            value={exportPreset}
-            onChange={(e) => onExportPresetChange(e.target.value as ExportPreset)}
+
+        <div className="export-group">
+          <h3 className="export-group__title">PNG</h3>
+          <label className="control-row">
+            <span className="control-row__label">
+              <HintLabel hint={`Preview at 1080p · playback ${DEFAULT_FPS} fps`}>
+                Resolution
+              </HintLabel>
+            </span>
+            <select
+              value={exportPreset}
+              onChange={(e) => onExportPresetChange(e.target.value as ExportPreset)}
+            >
+              {Object.entries(EXPORT_PRESETS).map(([key, preset]) => (
+                <option key={key} value={key}>
+                  {preset.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type="button" className="panel-btn" onClick={onExportPngFrame}>
+            Export PNG Frame
+          </button>
+          <button
+            type="button"
+            className="panel-btn panel-btn--ghost"
+            onClick={onExportPngSequence}
           >
-            {Object.entries(EXPORT_PRESETS).map(([key, preset]) => (
-              <option key={key} value={key}>
-                {preset.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button type="button" className="panel-btn" onClick={onExportFrame}>
-          Export Frame
-        </button>
-        <button type="button" className="panel-btn panel-btn--ghost" onClick={onExportSequence}>
-          Export Sequence (ZIP)
-        </button>
+            Export PNG Sequence (ZIP)
+          </button>
+        </div>
+
+        <div className="export-group">
+          <h3 className="export-group__title">SVG</h3>
+          <button type="button" className="panel-btn" onClick={onExportSvgFrame}>
+            Export SVG Frame
+          </button>
+        </div>
       </section>
     </aside>
   );

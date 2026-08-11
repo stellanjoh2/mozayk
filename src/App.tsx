@@ -3,6 +3,7 @@ import { DEFAULT_FPS, type ExportPreset } from "./config";
 import { CanvasView, Timeline } from "./components/CanvasView";
 import { ControlsPanel, MAX_FRAMES } from "./components/ControlsPanel";
 import { exportAllFrames, exportCurrentFrame } from "./export/exportPng";
+import { exportCurrentFrameSvg } from "./export/exportSvg";
 import {
   patchNeedsLayoutRegen,
   rerollShapes,
@@ -12,6 +13,7 @@ import {
   applyDensityChange,
   applyPastedSettings,
   clampSettingsForOrientation,
+  colorAmountsForSettings,
   createInitialFrame,
   activeIndexAfterReorder,
   createDefaultShapePalette,
@@ -34,14 +36,36 @@ import "./App.css";
 
 const LAYOUT_REGEN_MS = 280;
 
-function isEditableTarget(target: EventTarget | null): boolean {
+function getFullscreenElement(): Element | null {
+  const doc = document as Document & { webkitFullscreenElement?: Element | null };
+  return doc.fullscreenElement ?? doc.webkitFullscreenElement ?? null;
+}
+
+function requestAppFullscreen(app: HTMLElement): Promise<void> {
+  if (app.requestFullscreen) return app.requestFullscreen();
+  const webkitRequest = (
+    app as HTMLElement & { webkitRequestFullscreen?: () => Promise<void> }
+  ).webkitRequestFullscreen;
+  if (webkitRequest) return webkitRequest.call(app);
+  return Promise.reject(new Error("Fullscreen not supported"));
+}
+
+function exitAppFullscreen(): Promise<void> {
+  if (document.exitFullscreen) return document.exitFullscreen();
+  const webkitExit = (
+    document as Document & { webkitExitFullscreen?: () => Promise<void> }
+  ).webkitExitFullscreen;
+  if (webkitExit) return webkitExit.call(document);
+  return Promise.reject(new Error("Fullscreen not supported"));
+}
+
+function isTextInputTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
-  return (
-    target.isContentEditable ||
-    target.tagName === "INPUT" ||
-    target.tagName === "TEXTAREA" ||
-    target.tagName === "SELECT"
-  );
+  if (target.isContentEditable) return true;
+  if (target.tagName === "TEXTAREA") return true;
+  if (target.tagName !== "INPUT") return false;
+  const input = target as HTMLInputElement;
+  return input.type === "text" || input.type === "search" || input.type === "number";
 }
 
 export default function App() {
@@ -56,6 +80,7 @@ export default function App() {
   const [canPasteSettings, setCanPasteSettings] = useState(hasStoredSettings);
   const [toast, setToast] = useState<string | null>(null);
   const layoutRegenTimer = useRef<number | null>(null);
+  const appRef = useRef<HTMLDivElement>(null);
   const activeIndexRef = useRef(activeIndex);
   const orientationRef = useRef(orientation);
 
@@ -121,6 +146,7 @@ export default function App() {
         shapes: frame.settings.shapes ?? createDefaultShapePalette(),
         ringThickness: frame.settings.ringThickness ?? 45,
         colors: [...frame.settings.colors],
+        colorAmounts: colorAmountsForSettings(frame.settings),
       };
 
       const shapePatch = definedPatch.shapes;
@@ -275,7 +301,30 @@ export default function App() {
   }, []);
 
   const toggleFullscreen = useCallback(() => {
-    setIsFullscreen((value) => !value);
+    const app = appRef.current;
+    if (getFullscreenElement() === app) {
+      void exitAppFullscreen();
+      return;
+    }
+    if (isFullscreen) {
+      setIsFullscreen(false);
+      return;
+    }
+    setIsFullscreen(true);
+    if (!app) return;
+    void requestAppFullscreen(app).catch(() => {});
+  }, [isFullscreen]);
+
+  useEffect(() => {
+    const syncFullscreen = () => {
+      setIsFullscreen(getFullscreenElement() === appRef.current);
+    };
+    document.addEventListener("fullscreenchange", syncFullscreen);
+    document.addEventListener("webkitfullscreenchange", syncFullscreen);
+    return () => {
+      document.removeEventListener("fullscreenchange", syncFullscreen);
+      document.removeEventListener("webkitfullscreenchange", syncFullscreen);
+    };
   }, []);
 
   const stepFrame = useCallback((delta: -1 | 1) => {
@@ -286,29 +335,33 @@ export default function App() {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (isEditableTarget(event.target)) return;
+      if (isTextInputTarget(event.target)) return;
 
-      if (event.code === "KeyF") {
+      const key = event.key.toLowerCase();
+      if (event.code === "KeyF" || key === "f") {
         event.preventDefault();
         toggleFullscreen();
-      } else if (event.code === "Space") {
+      } else if (event.code === "Space" || key === " ") {
         event.preventDefault();
         togglePlay();
-      } else if (event.code === "ArrowLeft") {
+      } else if (event.code === "ArrowLeft" || key === "arrowleft") {
         event.preventDefault();
         stepFrame(-1);
-      } else if (event.code === "ArrowRight") {
+      } else if (event.code === "ArrowRight" || key === "arrowright") {
         event.preventDefault();
         stepFrame(1);
       }
     };
 
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    document.addEventListener("keydown", onKeyDown, true);
+    return () => document.removeEventListener("keydown", onKeyDown, true);
   }, [toggleFullscreen, togglePlay, stepFrame]);
 
   return (
-    <div className={["app", isFullscreen ? "is-fullscreen" : ""].filter(Boolean).join(" ")}>
+    <div
+      ref={appRef}
+      className={["app", isFullscreen ? "is-fullscreen" : ""].filter(Boolean).join(" ")}
+    >
       {toast && !isFullscreen ? <div className="app-toast">{toast}</div> : null}
       {!isFullscreen ? (
       <ControlsPanel
@@ -357,13 +410,27 @@ export default function App() {
             ),
           }))
         }
+        onColorAmountChange={(index, amount) =>
+          updateActiveFrame((frame) => {
+            const colorAmounts = colorAmountsForSettings(frame.settings).map(
+              (value, i) => (i === index ? amount : value),
+            );
+            return randomizeFrameCurrentColors({
+              ...frame,
+              settings: { ...frame.settings, colorAmounts },
+            });
+          })
+        }
         onOrientationChange={handleOrientationChange}
         onExportPresetChange={setExportPreset}
-        onExportFrame={() =>
+        onExportPngFrame={() =>
           void exportCurrentFrame(activeFrame, orientation, exportPreset)
         }
-        onExportSequence={() =>
+        onExportPngSequence={() =>
           void exportAllFrames(frames, orientation, exportPreset)
+        }
+        onExportSvgFrame={() =>
+          exportCurrentFrameSvg(activeFrame, orientation, exportPreset)
         }
       />
       ) : null}
@@ -373,6 +440,7 @@ export default function App() {
           frame={activeFrame}
           orientation={orientation}
           isFullscreen={isFullscreen}
+          onToggleFullscreen={toggleFullscreen}
         />
         {!isFullscreen ? (
         <Timeline

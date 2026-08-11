@@ -25,6 +25,24 @@ function clampInt(value: unknown, min: number, max: number, fallback: number): n
   return Math.min(max, Math.max(min, Math.round(n)));
 }
 
+function parseColorAmounts(value: unknown, colorCount: number): number[] {
+  if (!Array.isArray(value)) return equalColorAmounts(colorCount);
+  const amounts = value
+    .map((amount) => clampInt(amount, 0, 100, 0))
+    .slice(0, colorCount);
+  if (amounts.length !== colorCount) return equalColorAmounts(colorCount);
+  return amounts;
+}
+
+function equalColorAmounts(count: number): number[] {
+  if (count <= 0) return [100];
+  const base = Math.floor(100 / count);
+  const remainder = 100 - base * count;
+  return Array.from({ length: count }, (_, index) =>
+    base + (index < remainder ? 1 : 0),
+  );
+}
+
 function parseColors(value: unknown): string[] {
   if (!Array.isArray(value)) return ["#ffffff"];
   const colors = value
@@ -58,6 +76,8 @@ export function parseSettingsClipboard(raw: string): FrameSettings | null {
     const density = Number(candidate.density);
     if (!isDensity(density)) return null;
 
+    const colors = parseColors(candidate.colors);
+
     return {
       density,
       shapeMix: clampInt(candidate.shapeMix, 0, 100, 50),
@@ -72,7 +92,8 @@ export function parseSettingsClipboard(raw: string): FrameSettings | null {
       fillAmount: clampInt(candidate.fillAmount, 0, 100, 85),
       weight: clampInt(candidate.weight, 0, 100, 50),
       scaleBlend: clampInt(candidate.scaleBlend, 1, 6, 3),
-      colors: parseColors(candidate.colors),
+      colors,
+      colorAmounts: parseColorAmounts(candidate.colorAmounts, colors.length),
       background: isBackground(String(candidate.background))
         ? (candidate.background as BackgroundMode)
         : "black",

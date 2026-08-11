@@ -39,12 +39,14 @@ type CanvasViewProps = {
   frame: Frame;
   orientation: Orientation;
   isFullscreen?: boolean;
+  onToggleFullscreen?: () => void;
 };
 
 export function CanvasView({
   frame,
   orientation,
   isFullscreen = false,
+  onToggleFullscreen,
 }: CanvasViewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -136,6 +138,17 @@ export function CanvasView({
         aria-label="Mosaic preview"
       />
       <div className="canvas-zoom-controls">
+        {onToggleFullscreen ? (
+          <button
+            type="button"
+            className="canvas-fullscreen-toggle"
+            onClick={onToggleFullscreen}
+            aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+            aria-pressed={isFullscreen}
+          >
+            {isFullscreen ? "Exit" : "Full"}
+          </button>
+        ) : null}
         <button
           type="button"
           className="canvas-zoom-reset"

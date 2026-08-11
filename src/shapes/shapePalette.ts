@@ -24,14 +24,16 @@ export function assignShape(settings: FrameSettings, rng: Rng = Math.random): Sh
 
   const mix = settings.shapeMix;
   if (mix <= 0) return "block";
+
+  const optional = pool.filter((shape) => shape !== "block");
+  if (optional.length === 0) return "block";
+
   if (mix >= 100) {
-    return pool[pickInt(rng, 0, pool.length - 1)] ?? "block";
+    return optional[pickInt(rng, 0, optional.length - 1)] ?? "block";
   }
 
   const t = mix / 100;
   if (rng() > t) return "block";
 
-  const optional = pool.filter((shape) => shape !== "block");
-  if (optional.length === 0) return "block";
   return optional[pickInt(rng, 0, optional.length - 1)] ?? "block";
 }

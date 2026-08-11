@@ -55,6 +55,7 @@ export function carryOverBlockColors(
   newBlocks: MosaicBlock[],
   oldBlocks: MosaicBlock[],
   palette: string[],
+  amounts?: number[],
   rng: Rng = Math.random,
 ): MosaicBlock[] {
   if (newBlocks.length === 0) return newBlocks;
@@ -65,7 +66,7 @@ export function carryOverBlockColors(
     .filter((color): color is string => Boolean(color));
 
   if (blockColors.length === 0) {
-    return randomizeColors(newBlocks, activePalette, rng);
+    return randomizeColors(newBlocks, activePalette, amounts, rng);
   }
 
   const pool: string[] = [...activePalette];

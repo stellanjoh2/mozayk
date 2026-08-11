@@ -26,6 +26,23 @@ export function createDefaultShapePalette(): FrameSettings["shapes"] {
   return { sphere: true, ring: false };
 }
 
+export function equalColorAmounts(count: number): number[] {
+  if (count <= 0) return [100];
+  const base = Math.floor(100 / count);
+  const remainder = 100 - base * count;
+  return Array.from({ length: count }, (_, index) =>
+    base + (index < remainder ? 1 : 0),
+  );
+}
+
+export function colorAmountsForSettings(settings: FrameSettings): number[] {
+  const { colors, colorAmounts } = settings;
+  if (colorAmounts && colorAmounts.length === colors.length) {
+    return colorAmounts;
+  }
+  return equalColorAmounts(colors.length);
+}
+
 export function createDefaultSettings(): FrameSettings {
   return {
     density: 6,
@@ -42,6 +59,7 @@ export function createDefaultSettings(): FrameSettings {
     weight: 50,
     scaleBlend: 3,
     colors: ["#ffffff"],
+    colorAmounts: [100],
     background: "black",
   };
 }
@@ -49,7 +67,11 @@ export function createDefaultSettings(): FrameSettings {
 export function createInitialFrame(orientation: Orientation): Frame {
   const settings = createDefaultSettings();
   let blocks = generateLayout(orientation, settings);
-  blocks = randomizeColors(blocks, settings.colors);
+  blocks = randomizeColors(
+    blocks,
+    settings.colors,
+    colorAmountsForSettings(settings),
+  );
   return { id: createId(), settings, blocks };
 }
 
@@ -78,7 +100,11 @@ export function applyPastedSettings(
 ): Frame {
   const settings = clampSettingsForOrientation(pasted, orientation);
   let blocks = generateLayout(orientation, settings);
-  blocks = randomizeColors(blocks, settings.colors);
+  blocks = randomizeColors(
+    blocks,
+    settings.colors,
+    colorAmountsForSettings(settings),
+  );
   return { ...frame, settings, blocks };
 }
 
@@ -92,6 +118,7 @@ export function regenerateFrameLayout(
     generateLayout(orientation, settings),
     frame.blocks,
     settings.colors,
+    colorAmountsForSettings(settings),
   );
   return { ...frame, settings, blocks };
 }
@@ -107,18 +134,27 @@ export function randomizeFrameLayout(
     generateLayout(orientation, settings),
     frame.blocks,
     settings.colors,
+    colorAmountsForSettings(settings),
   );
   return { ...frame, settings, blocks };
 }
 
 export function randomizeFrameCurrentColors(frame: Frame): Frame {
-  const blocks = randomizeColors(frame.blocks, frame.settings.colors);
+  const blocks = randomizeColors(
+    frame.blocks,
+    frame.settings.colors,
+    colorAmountsForSettings(frame.settings),
+  );
   return { ...frame, blocks };
 }
 
 export function randomizeFrameNewColors(frame: Frame): Frame {
   const colors = generateRandomPalette(frame.settings.colors.length);
-  const blocks = randomizeColors(frame.blocks, colors);
+  const blocks = randomizeColors(
+    frame.blocks,
+    colors,
+    colorAmountsForSettings(frame.settings),
+  );
   return { ...frame, settings: { ...frame.settings, colors }, blocks };
 }
 
@@ -139,7 +175,12 @@ export function addColorToSettings(settings: FrameSettings): FrameSettings {
   const palette = ["#ff0000", "#00ff00", "#0000ff", "#ffff00"];
   const next =
     palette.find((color) => !settings.colors.includes(color)) ?? "#888888";
-  return { ...settings, colors: [...settings.colors, next] };
+  const colors = [...settings.colors, next];
+  return {
+    ...settings,
+    colors,
+    colorAmounts: equalColorAmounts(colors.length),
+  };
 }
 
 export function removeColorFromSettings(
@@ -148,7 +189,11 @@ export function removeColorFromSettings(
 ): FrameSettings {
   if (settings.colors.length <= 1) return settings;
   const colors = settings.colors.filter((_, i) => i !== index);
-  return { ...settings, colors };
+  return {
+    ...settings,
+    colors,
+    colorAmounts: equalColorAmounts(colors.length),
+  };
 }
 
 export function setBackground(

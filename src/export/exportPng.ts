@@ -5,15 +5,7 @@ import {
 } from "../config";
 import { renderMosaicToBlob } from "../render/renderFrame";
 import type { Frame, Orientation } from "../types";
-
-function downloadBlob(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.click();
-  URL.revokeObjectURL(url);
-}
+import { downloadBlob } from "./downloadBlob";
 
 function padFrameIndex(index: number): string {
   return String(index + 1).padStart(3, "0");

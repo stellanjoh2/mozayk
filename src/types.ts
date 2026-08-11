@@ -34,6 +34,8 @@ export type FrameSettings = {
   /** 1 = macro (large blocks), 6 = micro (tiny blocks), 3 = mixed */
   scaleBlend: number;
   colors: string[];
+  /** Relative colour share on canvas (normalized at assignment time). */
+  colorAmounts: number[];
   background: BackgroundMode;
 };
 
