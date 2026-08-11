@@ -7,6 +7,7 @@ import {
   maxWidthSliderMax,
 } from "../grid/density";
 import type { Density, Frame, FrameSettings, Orientation } from "../types";
+import { SUPPORTED_IMAGE_ACCEPT } from "../import/supportedImageTypes";
 import { ColorSwatch } from "./ColorSwatch";
 import { SliderRow, ToggleRow } from "./ControlRow";
 import { HintLabel } from "./HintLabel";
@@ -126,7 +127,7 @@ export function ControlsPanel({
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept={SUPPORTED_IMAGE_ACCEPT}
           className="import-file-input"
           onChange={(event) => {
             const file = event.target.files?.[0];

@@ -7,6 +7,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { getThumbnailSize } from "../grid/gridMath";
+import { ensureCachedSourceImage, drawCoverImage } from "../import/imageSource";
 import { renderMosaic } from "../render/renderFrame";
 import { getPreviewSize } from "../config";
 import type { Frame, Orientation } from "../types";
@@ -38,6 +39,7 @@ function computeFitScale(
 type CanvasViewProps = {
   frame: Frame;
   orientation: Orientation;
+  viewOriginal?: boolean;
   isFullscreen?: boolean;
   onToggleFullscreen?: () => void;
 };
@@ -45,6 +47,7 @@ type CanvasViewProps = {
 export function CanvasView({
   frame,
   orientation,
+  viewOriginal = false,
   isFullscreen = false,
   onToggleFullscreen,
 }: CanvasViewProps) {
@@ -52,11 +55,40 @@ export function CanvasView({
   const stageRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
   const [fitScale, setFitScale] = useState(1);
+  const [sourceImage, setSourceImage] = useState<HTMLImageElement | null>(null);
   const [width, height] = getPreviewSize(orientation);
+
+  useEffect(() => {
+    if (!viewOriginal || !frame.imageSource) {
+      setSourceImage(null);
+      return;
+    }
+
+    let cancelled = false;
+    void ensureCachedSourceImage(frame.imageSource.dataUrl)
+      .then((image) => {
+        if (!cancelled) setSourceImage(image);
+      })
+      .catch(() => {
+        if (!cancelled) setSourceImage(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [viewOriginal, frame.imageSource?.dataUrl]);
 
   useLayoutEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    if (viewOriginal && sourceImage) {
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      drawCoverImage(ctx, sourceImage, width, height);
+      return;
+    }
+
     renderMosaic(canvas, {
       orientation,
       settings: frame.settings,
@@ -64,7 +96,16 @@ export function CanvasView({
       width,
       height,
     });
-  }, [frame.settings, frame.blocks, frame.id, orientation, width, height]);
+  }, [
+    viewOriginal,
+    sourceImage,
+    frame.settings,
+    frame.blocks,
+    frame.id,
+    orientation,
+    width,
+    height,
+  ]);
 
   useEffect(() => {
     setZoom(1);
@@ -125,7 +166,11 @@ export function CanvasView({
         width={width}
         height={height}
         style={{ width: displayWidth, height: displayHeight }}
-        aria-label="Mosaic preview"
+        aria-label={
+          viewOriginal && frame.imageSource
+            ? "Original photo preview"
+            : "Mosaic preview"
+        }
       />
       <div className="canvas-zoom-controls">
         {onToggleFullscreen ? (
@@ -149,6 +194,9 @@ export function CanvasView({
           Fit
         </button>
         <div className="canvas-zoom-indicator" aria-live="polite">
+          {viewOriginal && frame.imageSource ? (
+            <span className="canvas-view-original-badge">Original</span>
+          ) : null}
           {Math.round(totalScale * 100)}%
         </div>
       </div>

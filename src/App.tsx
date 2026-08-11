@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { DEFAULT_FPS, type ExportPreset } from "./config";
 import { CanvasView, Timeline } from "./components/CanvasView";
 import { ControlsPanel, MAX_FRAMES } from "./components/ControlsPanel";
+import { ImportErrorDialog } from "./components/ImportErrorDialog";
 import { exportAllFrames, exportCurrentFrame } from "./export/exportPng";
 import { exportCurrentFrameSvg } from "./export/exportSvg";
 import {
@@ -35,6 +36,11 @@ import {
   readSettingsClipboard,
 } from "./state/settingsClipboard";
 import { importImageFileToMosaic } from "./import/imageImport";
+import {
+  UnsupportedImageTypeError,
+  unsupportedImageMessage,
+  validateImageFile,
+} from "./import/supportedImageTypes";
 import type { Frame, FrameSettings, Orientation } from "./types";
 
 import "./App.css";
@@ -84,6 +90,10 @@ export default function App() {
   const [exportPreset, setExportPreset] = useState<ExportPreset>("1080p");
   const [canPasteSettings, setCanPasteSettings] = useState(hasStoredSettings);
   const [importingImage, setImportingImage] = useState(false);
+  const [importErrorMessage, setImportErrorMessage] = useState<string | null>(
+    null,
+  );
+  const [viewOriginal, setViewOriginal] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const layoutRegenTimer = useRef<number | null>(null);
   const appRef = useRef<HTMLDivElement>(null);
@@ -94,6 +104,12 @@ export default function App() {
   orientationRef.current = orientation;
 
   const activeFrame = frames[activeIndex] ?? frames[0];
+
+  useEffect(() => {
+    if (!activeFrame.imageSource) {
+      setViewOriginal(false);
+    }
+  }, [activeFrame.id, activeFrame.imageSource]);
 
   const updateActiveFrame = useCallback((updater: (frame: Frame) => Frame) => {
     setFrames((prev) =>
@@ -311,6 +327,19 @@ export default function App() {
 
   const handleImportImage = useCallback(
     async (file: File) => {
+      try {
+        validateImageFile(file);
+      } catch (error) {
+        if (error instanceof UnsupportedImageTypeError) {
+          setImportErrorMessage(unsupportedImageMessage(error.label));
+          return;
+        }
+        setImportErrorMessage(
+          "This file could not be imported. Use JPEG, PNG, WebP, GIF, or AVIF instead.",
+        );
+        return;
+      }
+
       setImportingImage(true);
       try {
         const frame = frames[activeIndexRef.current] ?? frames[0];
@@ -322,7 +351,9 @@ export default function App() {
         updateActiveFrame((current) => applyImageImport(current, result));
         setToast("Image imported");
       } catch {
-        setToast("Import failed");
+        setImportErrorMessage(
+          "This image could not be loaded. Try JPEG, PNG, WebP, GIF, or AVIF instead.",
+        );
       } finally {
         setImportingImage(false);
       }
@@ -345,6 +376,7 @@ export default function App() {
     setActiveIndex(0);
     setPlaying(false);
     setExportPreset("1080p");
+    setViewOriginal(false);
 
     if (getFullscreenElement() === appRef.current) {
       void exitAppFullscreen();
@@ -418,12 +450,18 @@ export default function App() {
       } else if (event.code === "KeyR" || key === "r") {
         event.preventDefault();
         randomizeAll();
+      } else if (event.code === "KeyO" || key === "o") {
+        const frame = frames[activeIndexRef.current] ?? frames[0];
+        if (frame?.imageSource) {
+          event.preventDefault();
+          setViewOriginal((current) => !current);
+        }
       }
     };
 
     document.addEventListener("keydown", onKeyDown, true);
     return () => document.removeEventListener("keydown", onKeyDown, true);
-  }, [toggleFullscreen, togglePlay, stepFrame, randomizeAll]);
+  }, [toggleFullscreen, togglePlay, stepFrame, randomizeAll, frames]);
 
   return (
     <div
@@ -431,6 +469,12 @@ export default function App() {
       className={["app", isFullscreen ? "is-fullscreen" : ""].filter(Boolean).join(" ")}
     >
       {toast && !isFullscreen ? <div className="app-toast">{toast}</div> : null}
+      {importErrorMessage ? (
+        <ImportErrorDialog
+          message={importErrorMessage}
+          onDismiss={() => setImportErrorMessage(null)}
+        />
+      ) : null}
       {!isFullscreen ? (
       <ControlsPanel
         frame={activeFrame}
@@ -507,6 +551,7 @@ export default function App() {
         <CanvasView
           frame={activeFrame}
           orientation={orientation}
+          viewOriginal={viewOriginal}
           isFullscreen={isFullscreen}
           onToggleFullscreen={toggleFullscreen}
         />

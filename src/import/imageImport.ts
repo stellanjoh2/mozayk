@@ -9,6 +9,7 @@ import type {
 } from "../types";
 import {
   cacheSourceImage,
+  coverCropRect,
   imageToDataUrl,
   type ImageRgb,
   type ImageSourceData,
@@ -455,20 +456,12 @@ export function sampleImageGrid(
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Could not create canvas context");
 
-  const gridAspect = columns / rows;
-  const imageAspect = image.width / image.height;
-  let sx = 0;
-  let sy = 0;
-  let sw = image.width;
-  let sh = image.height;
-
-  if (imageAspect > gridAspect) {
-    sw = image.height * gridAspect;
-    sx = (image.width - sw) / 2;
-  } else {
-    sh = image.width / gridAspect;
-    sy = (image.height - sh) / 2;
-  }
+  const { sx, sy, sw, sh } = coverCropRect(
+    image.width,
+    image.height,
+    columns,
+    rows,
+  );
 
   ctx.fillStyle = "#000000";
   ctx.fillRect(0, 0, columns, rows);

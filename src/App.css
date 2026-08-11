@@ -130,11 +130,24 @@ body {
 }
 
 .canvas-zoom-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 6px 10px;
   font-size: 12px;
   font-variant-numeric: tabular-nums;
   color: var(--muted);
   user-select: none;
+}
+
+.canvas-view-original-badge {
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: var(--text);
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 
 .canvas-stage.is-fullscreen .canvas-zoom-controls {
@@ -272,6 +285,44 @@ body {
   border: 1px solid var(--panel-border);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
   pointer-events: none;
+}
+
+.import-error-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.import-error-dialog {
+  width: min(100%, 360px);
+  padding: 20px;
+  border-radius: 10px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+}
+
+.import-error-dialog__title {
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.import-error-dialog__message {
+  margin: 0 0 16px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.import-error-dialog__button {
+  width: 100%;
 }
 
 .timeline__controls button:disabled {
