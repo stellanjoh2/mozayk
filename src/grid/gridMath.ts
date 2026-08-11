@@ -1,27 +1,31 @@
 import { REFERENCE_DENSITY } from "./density";
 import type { Density, GridDimensions, MosaicBlock, Orientation } from "../types";
 
+const GRID_ASPECT: Record<Orientation, { cols: number; rows: number }> = {
+  landscape: { cols: 16, rows: 9 },
+  portrait: { cols: 9, rows: 16 },
+  square: { cols: 9, rows: 9 },
+};
+
+export function getGridAspect(orientation: Orientation): { cols: number; rows: number } {
+  return GRID_ASPECT[orientation];
+}
+
 export function getThumbnailSize(
   orientation: Orientation,
   pixelsPerCell = 2,
 ): [number, number] {
   const density = REFERENCE_DENSITY;
-  if (orientation === "landscape") {
-    return [16 * density * pixelsPerCell, 9 * density * pixelsPerCell];
-  }
-  return [9 * density * pixelsPerCell, 16 * density * pixelsPerCell];
+  const { cols, rows } = getGridAspect(orientation);
+  return [cols * density * pixelsPerCell, rows * density * pixelsPerCell];
 }
-
 
 export function getGridCounts(
   orientation: Orientation,
   density: Density,
 ): { columns: number; rows: number } {
-  const k = density;
-  if (orientation === "landscape") {
-    return { columns: 16 * k, rows: 9 * k };
-  }
-  return { columns: 9 * k, rows: 16 * k };
+  const { cols, rows } = getGridAspect(orientation);
+  return { columns: cols * density, rows: rows * density };
 }
 
 export function getGridDimensions(
@@ -41,6 +45,22 @@ export function getGridDimensions(
   }
 
   return { columns, rows, cellSize: cellW, width, height };
+}
+
+/** Pixel-snapped block bounds — avoids sub-pixel seams when cell size is fractional. */
+export function blockPixelRect(
+  grid: GridDimensions,
+  block: Pick<MosaicBlock, "col" | "row" | "width" | "height">,
+): { x: number; y: number; width: number; height: number } {
+  const x = Math.round((block.col / grid.columns) * grid.width);
+  const y = Math.round((block.row / grid.rows) * grid.height);
+  const x2 = Math.round(
+    ((block.col + block.width) / grid.columns) * grid.width,
+  );
+  const y2 = Math.round(
+    ((block.row + block.height) / grid.rows) * grid.height,
+  );
+  return { x, y, width: x2 - x, height: y2 - y };
 }
 
 export function transposeBlocks(blocks: MosaicBlock[]): MosaicBlock[] {

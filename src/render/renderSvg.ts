@@ -1,4 +1,4 @@
-import { getGridDimensions } from "../grid/gridMath";
+import { blockPixelRect, getGridDimensions } from "../grid/gridMath";
 import type { GridDimensions, MosaicBlock } from "../types";
 import type { RenderOptions } from "./renderFrame";
 
@@ -42,10 +42,7 @@ function svgBlock(
   grid: GridDimensions,
   ringThickness: number,
 ): string {
-  const x = block.col * grid.cellSize;
-  const y = block.row * grid.cellSize;
-  const drawW = block.width * grid.cellSize;
-  const drawH = block.height * grid.cellSize;
+  const { x, y, width: drawW, height: drawH } = blockPixelRect(grid, block);
 
   if (block.shape === "ring") {
     const diameter = Math.min(drawW, drawH);

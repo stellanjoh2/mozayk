@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { DEFAULT_FPS, EXPORT_PRESETS, MAX_COLORS, MAX_FRAMES, type ExportPreset } from "../config";
 import {
   DENSITY_INFO,
@@ -26,12 +27,14 @@ type ControlsPanelProps = {
   onRemoveColor: (index: number) => void;
   onColorChange: (index: number, hex: string) => void;
   onColorAmountChange: (index: number, amount: number) => void;
-  onColorGrainChange: (index: number, grain: number) => void;
   onOrientationChange: (orientation: Orientation) => void;
   onExportPresetChange: (preset: ExportPreset) => void;
   onExportPngFrame: () => void;
   onExportPngSequence: () => void;
   onExportSvgFrame: () => void;
+  onImportImage: (file: File) => void;
+  importingImage?: boolean;
+  onResetCanvas: () => void;
 };
 
 export function ControlsPanel({
@@ -50,14 +53,17 @@ export function ControlsPanel({
   onRemoveColor,
   onColorChange,
   onColorAmountChange,
-  onColorGrainChange,
   onOrientationChange,
   onExportPresetChange,
   onExportPngFrame,
   onExportPngSequence,
   onExportSvgFrame,
+  onImportImage,
+  importingImage = false,
+  onResetCanvas,
 }: ControlsPanelProps) {
   const { settings } = frame;
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const shapes = settings.shapes ?? { sphere: true, ring: false };
   const cellSizeMax = maxCellSizeSliderMax(settings.density, orientation);
   const widthMax = maxWidthSliderMax(settings.density, orientation);
@@ -72,13 +78,20 @@ export function ControlsPanel({
 
       <section className="panel-section">
         <h2>Canvas</h2>
-        <div className="button-row">
+        <div className="button-row button-row--3">
           <button
             type="button"
             className={orientation === "landscape" ? "is-active" : ""}
             onClick={() => onOrientationChange("landscape")}
           >
             16:9
+          </button>
+          <button
+            type="button"
+            className={orientation === "square" ? "is-active" : ""}
+            onClick={() => onOrientationChange("square")}
+          >
+            1:1
           </button>
           <button
             type="button"
@@ -109,6 +122,32 @@ export function ControlsPanel({
       </section>
 
       <section className="panel-section">
+        <h2>Import</h2>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="import-file-input"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            if (file) onImportImage(file);
+          }}
+        />
+        <button
+          type="button"
+          className="panel-btn"
+          disabled={importingImage}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          {importingImage ? "Importing…" : "Upload Image"}
+        </button>
+        <p className="panel-hint">
+          Randomize Layout re-interprets the photo with new shapes while keeping its colours
+        </p>
+      </section>
+
+      <section className="panel-section">
         <h2>Layout</h2>
         <button
           type="button"
@@ -121,7 +160,7 @@ export function ControlsPanel({
         <button
           type="button"
           className="panel-btn panel-btn--ghost has-hint"
-          data-hint="Also randomizes all sliders"
+          data-hint="Also randomizes all sliders (R)"
           onClick={onRandomizeAll}
         >
           Randomize All
@@ -271,12 +310,6 @@ export function ControlsPanel({
                 min={1}
                 onChange={(amount) => onColorAmountChange(index, amount)}
               />
-              <SliderRow
-                label="Grain"
-                hint="Film grain overlay · PNG preview only, excluded from SVG"
-                value={settings.colorGrain?.[index] ?? 0}
-                onChange={(grain) => onColorGrainChange(index, grain)}
-              />
             </div>
           ))}
         </div>
@@ -341,9 +374,18 @@ export function ControlsPanel({
 
         <div className="export-group">
           <h3 className="export-group__title">SVG</h3>
-          <p className="export-group__note">Flat fills only — grain is not included</p>
           <button type="button" className="panel-btn" onClick={onExportSvgFrame}>
             Export SVG Frame
+          </button>
+        </div>
+
+        <div className="export-group">
+          <button
+            type="button"
+            className="panel-btn panel-btn--ghost"
+            onClick={onResetCanvas}
+          >
+            Reset Canvas
           </button>
         </div>
       </section>

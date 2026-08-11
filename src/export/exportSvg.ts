@@ -1,4 +1,4 @@
-import { EXPORT_PRESETS, type ExportPreset } from "../config";
+import { getExportSize, type ExportPreset } from "../config";
 import { downloadBlob } from "./downloadBlob";
 import { renderMosaicToSvg } from "../render/renderSvg";
 import type { Frame, Orientation } from "../types";
@@ -8,10 +8,7 @@ export function exportCurrentFrameSvg(
   orientation: Orientation,
   preset: ExportPreset,
 ): void {
-  const [width, height] =
-    orientation === "landscape"
-      ? EXPORT_PRESETS[preset].landscape
-      : EXPORT_PRESETS[preset].portrait;
+  const [width, height] = getExportSize(orientation, preset);
 
   const svg = renderMosaicToSvg({
     orientation,

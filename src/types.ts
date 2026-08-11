@@ -1,7 +1,10 @@
-export type Orientation = "landscape" | "portrait";
+import type { ImageSourceData } from "./import/imageSource";
+
+export type Orientation = "landscape" | "portrait" | "square";
 export type Density = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 export type ShapeType = "block" | "sphere" | "ring";
 export type BackgroundMode = "black" | "transparent";
+export type LayoutSource = "procedural" | "imported";
 
 export type ShapePalette = {
   sphere: boolean;
@@ -36,15 +39,17 @@ export type FrameSettings = {
   colors: string[];
   /** Relative colour share on canvas (normalized at assignment time). */
   colorAmounts: number[];
-  /** Film grain intensity per palette slot (0–100). PNG/canvas only. */
-  colorGrain: number[];
   background: BackgroundMode;
+  /** Imported image layouts are reshuffled instead of procedurally regenerated. */
+  layoutSource?: LayoutSource;
 };
 
 export type Frame = {
   id: string;
   settings: FrameSettings;
   blocks: MosaicBlock[];
+  /** Source photo used to target colours/shapes when randomizing imported layouts. */
+  imageSource?: ImageSourceData;
 };
 
 export type GridDimensions = {

@@ -103,7 +103,7 @@ body {
 }
 
 .canvas-fullscreen-toggle,
-.canvas-zoom-reset {
+.canvas-zoom-fit {
   appearance: none;
   border: none;
   border-right: 1px solid var(--panel-border);
@@ -119,12 +119,12 @@ body {
 }
 
 .canvas-fullscreen-toggle:hover,
-.canvas-zoom-reset:hover:not(:disabled) {
+.canvas-zoom-fit:hover:not(:disabled) {
   background: var(--accent-hover);
   color: var(--text);
 }
 
-.canvas-zoom-reset:disabled {
+.canvas-zoom-fit:disabled {
   opacity: 0.35;
   cursor: default;
 }
@@ -188,6 +188,17 @@ body {
   color: var(--muted);
 }
 
+.panel-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.import-file-input {
+  display: none;
+}
+
 .panel-btn,
 .button-row button,
 .timeline__controls button {
@@ -247,13 +258,6 @@ body {
   color: var(--text);
 }
 
-.export-group__note {
-  margin: -4px 0 10px;
-  font-size: 11px;
-  line-height: 1.4;
-  color: var(--text-muted);
-}
-
 .app-toast {
   position: fixed;
   z-index: 40;
@@ -280,6 +284,10 @@ body {
   grid-template-columns: 1fr 1fr;
   gap: 8px;
   margin-bottom: 12px;
+}
+
+.button-row--3 {
+  grid-template-columns: repeat(3, 1fr);
 }
 
 .button-row button.is-active {

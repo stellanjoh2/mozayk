@@ -36,8 +36,10 @@ export function maxCellSizeSliderMax(
   density: Density,
   orientation: Orientation,
 ): number {
-  const columns = orientation === "landscape" ? 16 * density : 9 * density;
-  const rows = orientation === "landscape" ? 9 * density : 16 * density;
+  const columns =
+    orientation === "landscape" ? 16 * density : 9 * density;
+  const rows =
+    orientation === "landscape" ? 9 * density : orientation === "portrait" ? 16 * density : 9 * density;
   return Math.min(Math.max(columns, rows), scaleGridUnits(24, density));
 }
 
@@ -45,14 +47,17 @@ export function maxWidthSliderMax(
   density: Density,
   orientation: Orientation,
 ): number {
-  return orientation === "landscape" ? 16 * density : 9 * density;
+  if (orientation === "landscape") return 16 * density;
+  return 9 * density;
 }
 
 export function maxHeightSliderMax(
   density: Density,
   orientation: Orientation,
 ): number {
-  return orientation === "landscape" ? 9 * density : 16 * density;
+  if (orientation === "landscape") return 9 * density;
+  if (orientation === "portrait") return 16 * density;
+  return 9 * density;
 }
 
 /** @deprecated use maxCellSizeSliderMax(density, orientation) */

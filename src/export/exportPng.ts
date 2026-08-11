@@ -1,8 +1,5 @@
 import { zipSync } from "fflate";
-import {
-  EXPORT_PRESETS,
-  type ExportPreset,
-} from "../config";
+import { getExportSize, type ExportPreset } from "../config";
 import { renderMosaicToBlob } from "../render/renderFrame";
 import type { Frame, Orientation } from "../types";
 import { downloadBlob } from "./downloadBlob";
@@ -16,10 +13,7 @@ export async function exportCurrentFrame(
   orientation: Orientation,
   preset: ExportPreset,
 ): Promise<void> {
-  const [width, height] =
-    orientation === "landscape"
-      ? EXPORT_PRESETS[preset].landscape
-      : EXPORT_PRESETS[preset].portrait;
+  const [width, height] = getExportSize(orientation, preset);
   const blob = await renderMosaicToBlob({
     orientation,
     settings: frame.settings,
@@ -36,10 +30,7 @@ export async function exportAllFrames(
   orientation: Orientation,
   preset: ExportPreset,
 ): Promise<void> {
-  const [width, height] =
-    orientation === "landscape"
-      ? EXPORT_PRESETS[preset].landscape
-      : EXPORT_PRESETS[preset].portrait;
+  const [width, height] = getExportSize(orientation, preset);
   const files: Record<string, Uint8Array> = {};
 
   for (let i = 0; i < frames.length; i++) {

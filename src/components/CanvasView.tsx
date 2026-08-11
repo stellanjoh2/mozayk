@@ -8,10 +8,7 @@ import {
 import { createPortal } from "react-dom";
 import { getThumbnailSize } from "../grid/gridMath";
 import { renderMosaic } from "../render/renderFrame";
-import {
-  PREVIEW_HEIGHT_LANDSCAPE,
-  PREVIEW_WIDTH_LANDSCAPE,
-} from "../config";
+import { getPreviewSize } from "../config";
 import type { Frame, Orientation } from "../types";
 
 const MIN_ZOOM = 0.5;
@@ -22,17 +19,20 @@ function clampZoom(value: number): number {
   return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value));
 }
 
-function computeFullscreenFitScale(
+const STAGE_PADDING = 24;
+
+function computeFitScale(
   stageWidth: number,
   stageHeight: number,
   canvasWidth: number,
   canvasHeight: number,
-  orientation: Orientation,
+  stagePadding: number,
 ): number {
   if (stageWidth <= 0 || stageHeight <= 0) return 1;
-  const scaleW = stageWidth / canvasWidth;
-  const scaleH = stageHeight / canvasHeight;
-  return orientation === "portrait" ? scaleH : Math.min(scaleW, scaleH);
+  const availW = stageWidth - stagePadding * 2;
+  const availH = stageHeight - stagePadding * 2;
+  if (availW <= 0 || availH <= 0) return 1;
+  return Math.min(availW / canvasWidth, availH / canvasHeight);
 }
 
 type CanvasViewProps = {
@@ -52,14 +52,7 @@ export function CanvasView({
   const stageRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
   const [fitScale, setFitScale] = useState(1);
-  const width =
-    orientation === "landscape"
-      ? PREVIEW_WIDTH_LANDSCAPE
-      : PREVIEW_HEIGHT_LANDSCAPE;
-  const height =
-    orientation === "landscape"
-      ? PREVIEW_HEIGHT_LANDSCAPE
-      : PREVIEW_WIDTH_LANDSCAPE;
+  const [width, height] = getPreviewSize(orientation);
 
   useLayoutEffect(() => {
     const canvas = canvasRef.current;
@@ -78,22 +71,19 @@ export function CanvasView({
   }, [orientation, isFullscreen]);
 
   useLayoutEffect(() => {
-    if (!isFullscreen) {
-      setFitScale(1);
-      return;
-    }
-
     const stage = stageRef.current;
     if (!stage) return;
 
+    const stagePadding = isFullscreen ? 0 : STAGE_PADDING;
+
     const updateFitScale = () => {
       setFitScale(
-        computeFullscreenFitScale(
+        computeFitScale(
           stage.clientWidth,
           stage.clientHeight,
           width,
           height,
-          orientation,
+          stagePadding,
         ),
       );
     };
@@ -151,12 +141,12 @@ export function CanvasView({
         ) : null}
         <button
           type="button"
-          className="canvas-zoom-reset"
+          className="canvas-zoom-fit"
           onClick={() => setZoom(1)}
           disabled={zoom === 1}
-          aria-label="Reset zoom to 100%"
+          aria-label="Fit canvas to screen"
         >
-          Reset
+          Fit
         </button>
         <div className="canvas-zoom-indicator" aria-live="polite">
           {Math.round(totalScale * 100)}%

@@ -1,5 +1,6 @@
 import { MAX_COLORS } from "../config";
 import { scaleGridUnits } from "../grid/density";
+import { getGridCounts } from "../grid/gridMath";
 import { transposeBlocks } from "../grid/gridMath";
 import {
   generateLayout,
@@ -11,6 +12,9 @@ import {
   carryOverBlockColors,
   randomizeLayoutSettings,
 } from "../layout/randomizeLayoutSettings";
+import { buildMergedLayoutFromImage } from "../import/imageImport";
+import type { ImageImportResult } from "../import/imageImport";
+import { getCachedSourceImage } from "../import/imageSource";
 import type {
   BackgroundMode,
   Density,
@@ -44,14 +48,6 @@ export function colorAmountsForSettings(settings: FrameSettings): number[] {
   return equalColorAmounts(colors.length);
 }
 
-export function colorGrainForSettings(settings: FrameSettings): number[] {
-  const { colors, colorGrain } = settings;
-  if (colorGrain && colorGrain.length === colors.length) {
-    return colorGrain;
-  }
-  return Array.from({ length: colors.length }, () => 0);
-}
-
 export function createDefaultSettings(): FrameSettings {
   return {
     density: 6,
@@ -69,7 +65,6 @@ export function createDefaultSettings(): FrameSettings {
     scaleBlend: 3,
     colors: ["#ffffff"],
     colorAmounts: [100],
-    colorGrain: [0],
     background: "black",
   };
 }
@@ -85,11 +80,24 @@ export function createInitialFrame(orientation: Orientation): Frame {
   return { id: createId(), settings, blocks };
 }
 
+export function createDefaultCanvas(orientation: Orientation = "landscape"): {
+  orientation: Orientation;
+  frames: Frame[];
+} {
+  return {
+    orientation,
+    frames: [createInitialFrame(orientation)],
+  };
+}
+
 export function duplicateFrame(frame: Frame): Frame {
   return {
     id: createId(),
     settings: structuredClone(frame.settings),
     blocks: frame.blocks.map((block) => ({ ...block })),
+    imageSource: frame.imageSource
+      ? structuredClone(frame.imageSource)
+      : undefined,
   };
 }
 
@@ -118,10 +126,49 @@ export function applyPastedSettings(
   return { ...frame, settings, blocks };
 }
 
+export function relayoutImportedFrame(
+  frame: Frame,
+  orientation: Orientation,
+  rng: () => number = Math.random,
+): Frame {
+  if (!frame.imageSource) return frame;
+
+  const image = getCachedSourceImage(frame.imageSource.dataUrl);
+  if (!image) return frame;
+
+  const settings = clampSettingsForOrientation(
+    {
+      ...frame.settings,
+      colors: [...frame.imageSource.palette],
+      colorAmounts: colorAmountsForSettings({
+        ...frame.settings,
+        colors: frame.imageSource.palette,
+      }),
+      layoutSource: "imported",
+    },
+    orientation,
+  );
+
+  const blocks = buildMergedLayoutFromImage(
+    image,
+    orientation,
+    settings,
+    frame.imageSource.palette,
+    frame.imageSource.paletteRgb,
+    rng,
+  );
+
+  return { ...frame, settings, blocks };
+}
+
 export function regenerateFrameLayout(
   frame: Frame,
   orientation: Orientation,
 ): Frame {
+  if (frame.imageSource) {
+    return relayoutImportedFrame(frame, orientation);
+  }
+
   const clamped = clampSettingsForOrientation(frame.settings, orientation);
   const settings = { ...clamped, colors: [...frame.settings.colors] };
   const blocks = carryOverBlockColors(
@@ -137,6 +184,14 @@ export function randomizeFrameLayout(
   frame: Frame,
   orientation: Orientation,
 ): Frame {
+  if (frame.imageSource) {
+    const randomized = randomizeLayoutSettings(frame.settings, orientation);
+    return relayoutImportedFrame(
+      { ...frame, settings: randomized },
+      orientation,
+    );
+  }
+
   const randomized = randomizeLayoutSettings(frame.settings, orientation);
   const clamped = clampSettingsForOrientation(randomized, orientation);
   const settings = { ...clamped, colors: [...frame.settings.colors] };
@@ -190,7 +245,6 @@ export function addColorToSettings(settings: FrameSettings): FrameSettings {
     ...settings,
     colors,
     colorAmounts: equalColorAmounts(colors.length),
-    colorGrain: [...colorGrainForSettings(settings), 0],
   };
 }
 
@@ -200,12 +254,10 @@ export function removeColorFromSettings(
 ): FrameSettings {
   if (settings.colors.length <= 1) return settings;
   const colors = settings.colors.filter((_, i) => i !== index);
-  const colorGrain = colorGrainForSettings(settings).filter((_, i) => i !== index);
   return {
     ...settings,
     colors,
     colorAmounts: equalColorAmounts(colors.length),
-    colorGrain,
   };
 }
 
@@ -264,8 +316,10 @@ export function clampSettingsForOrientation(
   settings: FrameSettings,
   orientation: Orientation,
 ): FrameSettings {
-  const maxSpan = orientation === "landscape" ? 16 * settings.density : 9 * settings.density;
-  const maxRow = orientation === "landscape" ? 9 * settings.density : 16 * settings.density;
+  const { columns: maxSpan, rows: maxRow } = getGridCounts(
+    orientation,
+    settings.density,
+  );
   const refMaxCell = scaleGridUnits(24, settings.density);
   return {
     ...settings,
@@ -297,4 +351,26 @@ export function activeIndexAfterReorder(
   if (fromIndex < activeIndex && toIndex >= activeIndex) return activeIndex - 1;
   if (fromIndex > activeIndex && toIndex <= activeIndex) return activeIndex + 1;
   return activeIndex;
+}
+
+export function applyImageImport(
+  frame: Frame,
+  result: ImageImportResult,
+): Frame {
+  return {
+    ...frame,
+    settings: {
+      ...frame.settings,
+      colors: result.colors,
+      colorAmounts: result.colorAmounts,
+      fillAmount: 100,
+      randomWidth: false,
+      randomHeight: false,
+      minCellSize: 1,
+      maxCellSize: 1,
+      layoutSource: "imported",
+    },
+    blocks: result.blocks,
+    imageSource: result.imageSource,
+  };
 }

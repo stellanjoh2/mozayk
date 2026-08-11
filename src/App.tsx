@@ -11,15 +11,17 @@ import {
 import {
   addColorToSettings,
   applyDensityChange,
+  applyImageImport,
   applyPastedSettings,
   clampSettingsForOrientation,
   colorAmountsForSettings,
-  colorGrainForSettings,
   createInitialFrame,
+  createDefaultCanvas,
   activeIndexAfterReorder,
   createDefaultShapePalette,
   duplicateFrame,
   regenerateFrameLayout,
+  relayoutImportedFrame,
   reorderFrames,
   randomizeFrameCurrentColors,
   randomizeFrameNewColors,
@@ -32,7 +34,9 @@ import {
   hasStoredSettings,
   readSettingsClipboard,
 } from "./state/settingsClipboard";
+import { importImageFileToMosaic } from "./import/imageImport";
 import type { Frame, FrameSettings, Orientation } from "./types";
+
 import "./App.css";
 
 const LAYOUT_REGEN_MS = 280;
@@ -79,6 +83,7 @@ export default function App() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [exportPreset, setExportPreset] = useState<ExportPreset>("1080p");
   const [canPasteSettings, setCanPasteSettings] = useState(hasStoredSettings);
+  const [importingImage, setImportingImage] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const layoutRegenTimer = useRef<number | null>(null);
   const appRef = useRef<HTMLDivElement>(null);
@@ -148,7 +153,6 @@ export default function App() {
         ringThickness: frame.settings.ringThickness ?? 45,
         colors: [...frame.settings.colors],
         colorAmounts: colorAmountsForSettings(frame.settings),
-        colorGrain: colorGrainForSettings(frame.settings),
       };
 
       const shapePatch = definedPatch.shapes;
@@ -174,6 +178,15 @@ export default function App() {
           colors: [...frame.settings.colors],
         };
       }
+
+      if (
+        settings.layoutSource === "imported" &&
+        !frame.imageSource &&
+        patchNeedsLayoutRegen(definedPatch)
+      ) {
+        settings = { ...settings, layoutSource: "procedural" };
+      }
+
       return clampSettingsForOrientation(
         { ...settings, colors: [...frame.settings.colors] },
         orientationRef.current,
@@ -223,7 +236,13 @@ export default function App() {
       setOrientation(next);
       orientationRef.current = next;
       setFrames((prev) =>
-        prev.map((frame) => transposeFrameBlocks(frame, orientation, next)),
+        prev.map((frame) => {
+          if (frame.imageSource) return relayoutImportedFrame(frame, next);
+          if (orientation === "square" || next === "square") {
+            return regenerateFrameLayout(frame, next);
+          }
+          return transposeFrameBlocks(frame, orientation, next);
+        }),
       );
     },
     [orientation],
@@ -290,6 +309,50 @@ export default function App() {
     setToast("Settings pasted");
   }, [updateActiveFrame]);
 
+  const handleImportImage = useCallback(
+    async (file: File) => {
+      setImportingImage(true);
+      try {
+        const frame = frames[activeIndexRef.current] ?? frames[0];
+        const result = await importImageFileToMosaic(
+          file,
+          orientationRef.current,
+          frame.settings,
+        );
+        updateActiveFrame((current) => applyImageImport(current, result));
+        setToast("Image imported");
+      } catch {
+        setToast("Import failed");
+      } finally {
+        setImportingImage(false);
+      }
+    },
+    [frames, updateActiveFrame],
+  );
+
+  const handleResetCanvas = useCallback(() => {
+    if (layoutRegenTimer.current) {
+      window.clearTimeout(layoutRegenTimer.current);
+      layoutRegenTimer.current = null;
+    }
+
+    const { orientation: defaultOrientation, frames: defaultFrames } =
+      createDefaultCanvas();
+
+    setOrientation(defaultOrientation);
+    orientationRef.current = defaultOrientation;
+    setFrames(defaultFrames);
+    setActiveIndex(0);
+    setPlaying(false);
+    setExportPreset("1080p");
+
+    if (getFullscreenElement() === appRef.current) {
+      void exitAppFullscreen();
+    }
+
+    setToast("Canvas reset");
+  }, []);
+
   useEffect(() => {
     if (!playing) return;
     const timer = window.setInterval(() => {
@@ -352,12 +415,15 @@ export default function App() {
       } else if (event.code === "ArrowRight" || key === "arrowright") {
         event.preventDefault();
         stepFrame(1);
+      } else if (event.code === "KeyR" || key === "r") {
+        event.preventDefault();
+        randomizeAll();
       }
     };
 
     document.addEventListener("keydown", onKeyDown, true);
     return () => document.removeEventListener("keydown", onKeyDown, true);
-  }, [toggleFullscreen, togglePlay, stepFrame]);
+  }, [toggleFullscreen, togglePlay, stepFrame, randomizeAll]);
 
   return (
     <div
@@ -420,17 +486,6 @@ export default function App() {
             });
           })
         }
-        onColorGrainChange={(index, grain) =>
-          updateActiveFrame((frame) => {
-            const colorGrain = colorGrainForSettings(frame.settings).map(
-              (value, i) => (i === index ? grain : value),
-            );
-            return {
-              ...frame,
-              settings: { ...frame.settings, colorGrain },
-            };
-          })
-        }
         onOrientationChange={handleOrientationChange}
         onExportPresetChange={setExportPreset}
         onExportPngFrame={() =>
@@ -442,6 +497,9 @@ export default function App() {
         onExportSvgFrame={() =>
           exportCurrentFrameSvg(activeFrame, orientation, exportPreset)
         }
+        onImportImage={(file) => void handleImportImage(file)}
+        importingImage={importingImage}
+        onResetCanvas={handleResetCanvas}
       />
       ) : null}
 
