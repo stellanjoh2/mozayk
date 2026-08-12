@@ -278,8 +278,13 @@ export function ControlsPanel({
         />
         <SliderRow
           label="Distribution"
-          hint="Left ← even → right"
+          hint={
+            frame.imageSource
+              ? "Only applies to generated layouts"
+              : "Left ← even → right"
+          }
           value={settings.weight}
+          disabled={Boolean(frame.imageSource)}
           onChange={(weight) => onSettingsChange({ weight })}
         />
       </section>
