@@ -28,7 +28,9 @@ export type FrameSettings = {
   shapes: ShapePalette;
   /** 0 = solid disc · 100 = thin ring. Absolute wall width, shared by all rings. */
   ringThickness: number;
+  /** Internal — derived from density; not user-facing. */
   minCellSize: number;
+  /** Internal similar-size ceiling for scale blend — derived from density. */
   maxCellSize: number;
   maxHeight: number;
   randomHeight: boolean;
@@ -36,7 +38,10 @@ export type FrameSettings = {
   randomWidth: boolean;
   fillAmount: number;
   weight: number;
-  /** 1 = macro (large blocks), 6 = micro (tiny blocks), 3 = mixed */
+  /**
+   * 1 = similar sizes, 6 = max contrast (min-sized detail + large simple blocks).
+   * High contrast opens giants toward Max Width / Max Height.
+   */
   scaleBlend: number;
   colors: string[];
   /** Relative colour share on canvas (normalized at assignment time). */

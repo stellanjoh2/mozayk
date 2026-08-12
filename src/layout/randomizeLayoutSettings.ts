@@ -1,5 +1,6 @@
 import {
-  maxCellSizeSliderMax,
+  defaultMaxCellSize,
+  defaultMinCellSize,
   maxHeightSliderMax,
   maxWidthSliderMax,
 } from "../grid/density";
@@ -17,14 +18,11 @@ export function randomizeLayoutSettings(
   orientation: Orientation,
   rng: Rng = Math.random,
 ): FrameSettings {
-  const cellMax = maxCellSizeSliderMax(settings.density, orientation);
   const widthMax = maxWidthSliderMax(settings.density, orientation);
   const heightMax = maxHeightSliderMax(settings.density, orientation);
 
   const randomWidth = rng() > 0.15;
   const randomHeight = rng() > 0.15;
-  const maxCellSize = pickInt(rng, 2, cellMax);
-  const minCellSize = pickInt(rng, 1, Math.min(4, maxCellSize));
   const ringEnabled = Boolean(settings.shapes?.ring);
 
   return {
@@ -35,8 +33,8 @@ export function randomizeLayoutSettings(
     fillAmount: pickInt(rng, 10, 100),
     weight: pickInt(rng, 0, 100),
     scaleBlend: pickInt(rng, 1, 6),
-    minCellSize,
-    maxCellSize,
+    minCellSize: defaultMinCellSize(),
+    maxCellSize: defaultMaxCellSize(settings.density),
     randomWidth,
     randomHeight,
     maxWidth: randomWidth ? pickInt(rng, 2, widthMax) : 1,

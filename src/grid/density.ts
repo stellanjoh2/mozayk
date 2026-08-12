@@ -32,15 +32,14 @@ export function scaleGridUnits(value: number, density: Density): number {
   return Math.max(1, Math.round(value * densityScale(density)));
 }
 
-export function maxCellSizeSliderMax(
-  density: Density,
-  orientation: Orientation,
-): number {
-  const columns =
-    orientation === "landscape" ? 16 * density : 9 * density;
-  const rows =
-    orientation === "landscape" ? 9 * density : orientation === "portrait" ? 16 * density : 9 * density;
-  return Math.min(Math.max(columns, rows), scaleGridUnits(24, density));
+/** Internal similar-size floor for scale blend (not user-facing). */
+export function defaultMinCellSize(): number {
+  return 1;
+}
+
+/** Internal similar-size ceiling for scale blend (not user-facing). */
+export function defaultMaxCellSize(density: Density): number {
+  return scaleGridUnits(6, density);
 }
 
 export function maxWidthSliderMax(
@@ -58,14 +57,6 @@ export function maxHeightSliderMax(
   if (orientation === "landscape") return 9 * density;
   if (orientation === "portrait") return 16 * density;
   return 9 * density;
-}
-
-/** @deprecated use maxCellSizeSliderMax(density, orientation) */
-export function maxSpanSliderMax(
-  density: Density,
-  orientation: Orientation,
-): number {
-  return maxWidthSliderMax(density, orientation);
 }
 
 export function canDoubleDensity(density: Density): boolean {

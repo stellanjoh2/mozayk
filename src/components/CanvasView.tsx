@@ -12,26 +12,6 @@ import { renderMosaic } from "../render/renderFrame";
 import { getPreviewSize, getPreviewSizeForDisplay } from "../config";
 import type { Frame, Orientation } from "../types";
 
-const MIN_ZOOM = 0.1;
-const MAX_ZOOM = 8;
-
-function clampZoom(value: number): number {
-  return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value));
-}
-
-function zoomFactorFromWheel(event: WheelEvent): number {
-  const lineHeight = 16;
-  const pageHeight =
-    typeof window !== "undefined" ? window.innerHeight : 800;
-  const delta =
-    event.deltaMode === 1
-      ? event.deltaY * lineHeight
-      : event.deltaMode === 2
-        ? event.deltaY * pageHeight
-        : event.deltaY;
-  return Math.exp(-delta * 0.002);
-}
-
 const STAGE_PADDING = 24;
 
 function stageAvailableSize(
@@ -78,7 +58,6 @@ export function CanvasView({
 }: CanvasViewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
-  const [zoom, setZoom] = useState(1);
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
   const [sourceImage, setSourceImage] = useState<HTMLImageElement | null>(null);
 
@@ -166,10 +145,6 @@ export function CanvasView({
     height,
   ]);
 
-  useEffect(() => {
-    setZoom(1);
-  }, [orientation, isFullscreen]);
-
   useLayoutEffect(() => {
     const stage = stageRef.current;
     if (!stage) return;
@@ -187,23 +162,8 @@ export function CanvasView({
     return () => observer.disconnect();
   }, []);
 
-  useEffect(() => {
-    const stage = stageRef.current;
-    if (!stage) return;
-
-    const handleWheel = (event: WheelEvent) => {
-      event.preventDefault();
-      const factor = zoomFactorFromWheel(event);
-      setZoom((current) => clampZoom(current * factor));
-    };
-
-    stage.addEventListener("wheel", handleWheel, { passive: false });
-    return () => stage.removeEventListener("wheel", handleWheel);
-  }, []);
-
-  const totalScale = fitScale * zoom;
-  const displayWidth = width * totalScale;
-  const displayHeight = height * totalScale;
+  const displayWidth = width * fitScale;
+  const displayHeight = height * fitScale;
 
   return (
     <div

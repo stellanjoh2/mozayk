@@ -34,34 +34,175 @@ function columnPlacementBias(
   return WEIGHT_FLOOR + (1 - WEIGHT_FLOOR) * weighted;
 }
 
-function pickDimension(
-  rng: Rng,
-  maxSpan: number,
-  maxSize: number,
-  scaleBlend: number,
-  spatialBias: number,
-): number {
-  const hi = Math.min(maxSpan, maxSize);
-  if (hi <= 1) return 1;
-
-  const raw = rng();
-  const microT = (scaleBlend - 1) / 5;
-  let exponent = 0.2 + microT * 4;
-  exponent *= 1.25 - spatialBias * 0.35;
-  exponent = Math.max(0.15, Math.min(5, exponent));
-
-  const u = Math.pow(raw, exponent);
-  return 1 + Math.floor(u * (hi - 1));
+/** Scale blend 1..6 → contrast 0..1 (similar → large+small). */
+function contrastFromScaleBlend(scaleBlend: number): number {
+  return Math.min(1, Math.max(0, (scaleBlend - 1) / 5));
 }
 
-function fitsSizeRange(
+function lerp(a: number, b: number, t: number): number {
+  return a + (b - a) * t;
+}
+
+function pickInRange(rng: Rng, lo: number, hi: number, favorHigh: number): number {
+  if (hi <= lo) return lo;
+  // favorHigh 0 → bias low, 1 → bias high
+  const exponent = 0.35 + (1 - favorHigh) * 2.8;
+  const u = Math.pow(rng(), exponent);
+  return Math.min(hi, lo + Math.floor(u * (hi - lo + 1)));
+}
+
+type SizeBand = "auto" | "large" | "small";
+
+/**
+ * At low contrast, giants stay near Max Cell Size.
+ * At high contrast, they open up toward Max Width / Max Height (axis caps).
+ */
+function largeSpanCeiling(
+  maxCellSize: number,
+  axisMax: number,
+  contrast: number,
+): number {
+  return Math.max(
+    1,
+    Math.round(lerp(maxCellSize, Math.max(maxCellSize, axisMax), contrast)),
+  );
+}
+
+function clampBlockSize(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(value, max));
+}
+
+/** Pick width/height with contrast bands; optional forced large/small pass. */
+function pickBlockDimensions(
+  rng: Rng,
+  maxW: number,
+  maxH: number,
+  minCellSize: number,
+  maxCellSize: number,
+  scaleBlend: number,
+  spatialBias: number,
+  randomWidth: boolean,
+  randomHeight: boolean,
+  band: SizeBand = "auto",
+): { width: number; height: number } {
+  if (!randomWidth && !randomHeight) {
+    return { width: 1, height: 1 };
+  }
+
+  const t = contrastFromScaleBlend(scaleBlend);
+  const axisCap = Math.max(maxW, maxH);
+  const largeHi = Math.min(
+    axisCap,
+    largeSpanCeiling(maxCellSize, axisCap, t),
+  );
+  const lo = Math.min(Math.max(1, minCellSize), largeHi);
+  const mid = Math.round(lerp(lo, Math.min(maxCellSize, largeHi), 0.5));
+
+  const smallLo = Math.round(lerp(mid, lo, t));
+  const smallHi = Math.round(lerp(mid, lerp(lo, mid, 0.4), t));
+  const sLo = Math.min(smallLo, smallHi);
+  const sHi = Math.max(lo, Math.max(smallLo, smallHi));
+
+  const lLo = Math.round(lerp(mid, lerp(mid, largeHi, 0.55), t));
+  const lHi = largeHi;
+  const largeLo = Math.min(lLo, lHi);
+  const largeHiClamped = Math.max(lLo, lHi);
+
+  const largeChance = t * (0.35 + 0.45 * spatialBias);
+  const useLarge =
+    band === "large" || (band === "auto" && t > 0 && rng() < largeChance);
+
+  if (randomWidth && !randomHeight) {
+    const hi = useLarge ? Math.min(maxW, largeHiClamped) : Math.min(maxW, sHi);
+    const picked = useLarge
+      ? pickInRange(rng, Math.min(largeLo, hi), hi, 0.7 + 0.3 * t)
+      : pickInRange(rng, Math.min(sLo, hi), hi, 0.3 * (1 - t));
+    return {
+      width: clampBlockSize(picked, lo, maxW),
+      height: 1,
+    };
+  }
+
+  if (!randomWidth && randomHeight) {
+    const hi = useLarge ? Math.min(maxH, largeHiClamped) : Math.min(maxH, sHi);
+    const picked = useLarge
+      ? pickInRange(rng, Math.min(largeLo, hi), hi, 0.7 + 0.3 * t)
+      : pickInRange(rng, Math.min(sLo, hi), hi, 0.3 * (1 - t));
+    return {
+      width: 1,
+      height: clampBlockSize(picked, lo, maxH),
+    };
+  }
+
+  if (useLarge) {
+    // Simple large blocks: one long axis, the other stays small/detail-sized.
+    const primaryHi = largeHiClamped;
+    const primary = pickInRange(
+      rng,
+      Math.min(largeLo, primaryHi),
+      primaryHi,
+      0.75 + 0.25 * t,
+    );
+    const secondary = pickInRange(rng, sLo, sHi, 0.2);
+    if (rng() < 0.55) {
+      return {
+        width: Math.min(maxW, Math.max(lo, primary)),
+        height: Math.min(maxH, Math.max(1, secondary)),
+      };
+    }
+    return {
+      width: Math.min(maxW, Math.max(1, secondary)),
+      height: Math.min(maxH, Math.max(lo, primary)),
+    };
+  }
+
+  // Small / similar band — stay within Max Cell Size.
+  const sizeHi = Math.min(maxW, maxH, maxCellSize, sHi);
+  const size = pickInRange(rng, Math.min(sLo, sizeHi), sizeHi, 0.3 * (1 - t));
+  if (rng() < 0.5) {
+    return {
+      width: Math.min(maxW, size),
+      height: Math.min(maxH, Math.max(1, pickInRange(rng, 1, Math.min(maxH, size), 0.3))),
+    };
+  }
+  return {
+    width: Math.min(maxW, Math.max(1, pickInRange(rng, 1, Math.min(maxW, size), 0.3))),
+    height: Math.min(maxH, size),
+  };
+}
+
+/** Largest free axis-aligned rect with top-left at (row, col). */
+function freeRectFrom(
+  occupied: boolean[][],
+  row: number,
+  col: number,
+  rows: number,
+  columns: number,
+): { width: number; height: number } {
+  let width = 0;
+  while (col + width < columns && !occupied[row][col + width]) {
+    width++;
+  }
+  if (width === 0) return { width: 0, height: 0 };
+
+  let height = 1;
+  for (let r = row + 1; r < rows; r++) {
+    for (let c = col; c < col + width; c++) {
+      if (occupied[r][c]) return { width, height };
+    }
+    height++;
+  }
+  return { width, height };
+}
+
+function fitsBlock(
   width: number,
   height: number,
-  min: number,
-  max: number,
+  minCellSize: number,
+  spanCeiling: number,
 ): boolean {
   const size = Math.max(width, height);
-  return size >= min && size <= max;
+  return size >= minCellSize && size <= spanCeiling;
 }
 
 function canPlace(
@@ -123,6 +264,7 @@ export const LAYOUT_SETTING_KEYS = [
 /** Settings that actually reshape an imported (photo-mapped) layout. */
 export const IMPORTED_LAYOUT_SETTING_KEYS = [
   "density",
+  "fillAmount",
   "scaleBlend",
 ] as const satisfies readonly (keyof FrameSettings)[];
 
@@ -138,63 +280,73 @@ export function patchNeedsImportedLayoutRegen(
   return IMPORTED_LAYOUT_SETTING_KEYS.some((key) => key in patch);
 }
 
-export function generateLayout(
-  orientation: Orientation,
+function placeLayoutPass(
+  occupied: boolean[][],
+  blocks: MosaicBlock[],
+  columns: number,
+  rows: number,
   settings: FrameSettings,
-  rng: Rng = Math.random,
-): MosaicBlock[] {
-  const { columns, rows } = getGridCounts(orientation, settings.density);
-  const occupied = Array.from({ length: rows }, () =>
-    Array<boolean>(columns).fill(false),
+  rng: Rng,
+  band: SizeBand,
+  fillScale: number,
+): void {
+  const contrast = contrastFromScaleBlend(settings.scaleBlend);
+  const axisCap = Math.max(
+    settings.randomWidth ? settings.maxWidth : 1,
+    settings.randomHeight ? settings.maxHeight : 1,
   );
-  const blocks: MosaicBlock[] = [];
+  const spanCeiling = largeSpanCeiling(
+    settings.maxCellSize,
+    axisCap,
+    contrast,
+  );
 
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < columns; col++) {
       if (occupied[row][col]) continue;
 
       const spatialBias = columnPlacementBias(col, columns, settings.weight);
-      const placeChance = (settings.fillAmount / 100) * spatialBias;
+      const placeChance =
+        (settings.fillAmount / 100) * spatialBias * fillScale;
       if (rng() > placeChance) continue;
+
+      const free = freeRectFrom(occupied, row, col, rows, columns);
       const maxW = settings.randomWidth
-        ? Math.min(settings.maxWidth, columns - col)
+        ? Math.min(settings.maxWidth, free.width)
         : 1;
       const maxH = settings.randomHeight
-        ? Math.min(settings.maxHeight, rows - row)
+        ? Math.min(settings.maxHeight, free.height)
         : 1;
+      if (maxW < 1 || maxH < 1) continue;
+
+      // Large pass needs room; skip crumbs so giants stay simple.
+      if (band === "large") {
+        const minGiant = Math.max(
+          settings.minCellSize,
+          Math.round(lerp(settings.maxCellSize, settings.maxCellSize * 0.5, contrast)),
+        );
+        if (Math.max(maxW, maxH) < minGiant) continue;
+      }
 
       let width = 1;
       let height = 1;
       let placed = false;
 
       for (let attempt = 0; attempt < 16; attempt++) {
-        width = settings.randomWidth
-          ? pickDimension(
-              rng,
-              maxW,
-              settings.maxCellSize,
-              settings.scaleBlend,
-              spatialBias,
-            )
-          : 1;
-        height = settings.randomHeight
-          ? pickDimension(
-              rng,
-              maxH,
-              settings.maxCellSize,
-              settings.scaleBlend,
-              spatialBias,
-            )
-          : 1;
+        ({ width, height } = pickBlockDimensions(
+          rng,
+          maxW,
+          maxH,
+          settings.minCellSize,
+          settings.maxCellSize,
+          settings.scaleBlend,
+          spatialBias,
+          settings.randomWidth,
+          settings.randomHeight,
+          band,
+        ));
 
-        if (
-          !fitsSizeRange(
-            width,
-            height,
-            settings.minCellSize,
-            settings.maxCellSize,
-          )
-        ) {
+        if (!fitsBlock(width, height, settings.minCellSize, spanCeiling)) {
           continue;
         }
         if (!canPlace(occupied, row, col, width, height, rows, columns)) {
@@ -205,9 +357,33 @@ export function generateLayout(
       }
 
       if (!placed) {
-        width = 1;
-        height = 1;
-        if (!canPlace(occupied, row, col, 1, 1, rows, columns)) continue;
+        if (band === "large") continue;
+        const fallbackSize = Math.min(
+          settings.minCellSize,
+          settings.maxCellSize,
+          maxW,
+          maxH,
+        );
+        if (
+          fallbackSize >= 1 &&
+          canPlace(
+            occupied,
+            row,
+            col,
+            fallbackSize,
+            fallbackSize,
+            rows,
+            columns,
+          )
+        ) {
+          width = fallbackSize;
+          height = fallbackSize;
+        } else if (canPlace(occupied, row, col, 1, 1, rows, columns)) {
+          width = 1;
+          height = 1;
+        } else {
+          continue;
+        }
       }
 
       markOccupied(occupied, row, col, width, height);
@@ -220,6 +396,54 @@ export function generateLayout(
         color: "",
       });
     }
+  }
+}
+
+export function generateLayout(
+  orientation: Orientation,
+  settings: FrameSettings,
+  rng: Rng = Math.random,
+): MosaicBlock[] {
+  const { columns, rows } = getGridCounts(orientation, settings.density);
+  const occupied = Array.from({ length: rows }, () =>
+    Array<boolean>(columns).fill(false),
+  );
+  const blocks: MosaicBlock[] = [];
+  const contrast = contrastFromScaleBlend(settings.scaleBlend);
+
+  // Macro first so large simple blocks claim space; detail fills gaps after.
+  if (contrast > 0.08) {
+    placeLayoutPass(
+      occupied,
+      blocks,
+      columns,
+      rows,
+      settings,
+      rng,
+      "large",
+      0.4 + contrast * 0.9,
+    );
+    placeLayoutPass(
+      occupied,
+      blocks,
+      columns,
+      rows,
+      settings,
+      rng,
+      "small",
+      1,
+    );
+  } else {
+    placeLayoutPass(
+      occupied,
+      blocks,
+      columns,
+      rows,
+      settings,
+      rng,
+      "auto",
+      1,
+    );
   }
 
   return blocks;

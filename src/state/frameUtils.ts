@@ -1,5 +1,5 @@
 import { MAX_COLORS } from "../config";
-import { scaleGridUnits } from "../grid/density";
+import { defaultMaxCellSize, defaultMinCellSize } from "../grid/density";
 import { getGridCounts } from "../grid/gridMath";
 import { transposeBlocks } from "../grid/gridMath";
 import {
@@ -28,7 +28,7 @@ function createId(): string {
 }
 
 export function createDefaultShapePalette(): FrameSettings["shapes"] {
-  return { sphere: true, ring: false, triangle: false };
+  return { sphere: false, ring: false, triangle: false };
 }
 
 export function equalColorAmounts(count: number): number[] {
@@ -63,13 +63,14 @@ export function lockedColorsSet(settings: FrameSettings): Set<string> {
 }
 
 export function createDefaultSettings(): FrameSettings {
+  const density = 6 as Density;
   return {
-    density: 6,
+    density,
     shapeMix: 50,
     shapes: createDefaultShapePalette(),
     ringThickness: 45,
-    minCellSize: 1,
-    maxCellSize: 12,
+    minCellSize: defaultMinCellSize(),
+    maxCellSize: defaultMaxCellSize(density),
     maxHeight: 18,
     randomHeight: true,
     maxWidth: 24,
@@ -328,8 +329,8 @@ export function applyDensityChange(
   return {
     ...settings,
     density: newDensity,
-    minCellSize: scale(settings.minCellSize),
-    maxCellSize: scale(settings.maxCellSize),
+    minCellSize: defaultMinCellSize(),
+    maxCellSize: defaultMaxCellSize(newDensity),
     maxHeight: scale(settings.maxHeight),
     maxWidth: scale(settings.maxWidth),
   };
@@ -350,13 +351,12 @@ export function clampSettingsForOrientation(
     orientation,
     settings.density,
   );
-  const refMaxCell = scaleGridUnits(24, settings.density);
   return {
     ...settings,
     maxWidth: Math.min(settings.maxWidth, maxSpan),
     maxHeight: Math.min(settings.maxHeight, maxRow),
-    maxCellSize: Math.min(settings.maxCellSize, Math.min(refMaxCell, Math.max(maxSpan, maxRow))),
-    minCellSize: Math.min(settings.minCellSize, settings.maxCellSize),
+    minCellSize: defaultMinCellSize(),
+    maxCellSize: defaultMaxCellSize(settings.density),
   };
 }
 
@@ -397,8 +397,8 @@ export function applyImageImport(
       fillAmount: 100,
       randomWidth: false,
       randomHeight: false,
-      minCellSize: 1,
-      maxCellSize: 1,
+      minCellSize: defaultMinCellSize(),
+      maxCellSize: defaultMaxCellSize(frame.settings.density),
       layoutSource: "imported",
     },
     blocks: result.blocks,

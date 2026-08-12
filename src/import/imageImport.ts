@@ -134,12 +134,15 @@ function shuffleCells<T>(items: T[], rng: Rng): T[] {
   return next;
 }
 
-/** 1 = macro (large blocks), 6 = micro (small blocks) — matches procedural pickDimension. */
-function poolSizeForScaleBlend(scaleBlend: number): number {
-  if (scaleBlend <= 1) return 4;
-  if (scaleBlend === 2) return 3;
-  if (scaleBlend === 3) return 2;
-  return 1;
+/** Scale blend 1..6 → contrast 0..1 (similar → large+small). */
+function contrastFromScaleBlend(scaleBlend: number): number {
+  return Math.min(1, Math.max(0, (scaleBlend - 1) / 5));
+}
+
+/** Macro pool grows with contrast; 1 at low contrast (no coarsen). */
+function poolSizeForContrast(contrast: number): number {
+  if (contrast <= 0.05) return 1;
+  return Math.max(2, Math.round(2 + contrast * 6));
 }
 
 function majorityIndex(indices: number[]): number {
@@ -233,10 +236,13 @@ function growMergedBlock(
   col: number,
   rows: number,
   columns: number,
+  maxWidth = Number.POSITIVE_INFINITY,
+  maxHeight = Number.POSITIVE_INFINITY,
 ): { width: number; height: number; colorIdx: number } {
   const colorIdx = grid[row][col];
   let width = 1;
   while (
+    width < maxWidth &&
     col + width < columns &&
     !visited[row][col + width] &&
     grid[row][col + width] === colorIdx
@@ -246,7 +252,7 @@ function growMergedBlock(
 
   let height = 1;
   let canGrow = true;
-  while (canGrow && row + height < rows) {
+  while (canGrow && height < maxHeight && row + height < rows) {
     for (let c = col; c < col + width; c++) {
       if (visited[row + height][c] || grid[row + height][c] !== colorIdx) {
         canGrow = false;
@@ -265,12 +271,17 @@ function mergeColorGrid(
   settings: FrameSettings,
   rng: Rng = Math.random,
   randomOrder = false,
+  options?: {
+    preVisited?: boolean[][];
+    /** Cap merge span for "similar size" / fine detail. Infinity = uncapped giants. */
+    maxSpanForCell?: (rng: Rng) => number;
+  },
 ): MosaicBlock[] {
   const rows = grid.length;
   const columns = grid[0]?.length ?? 0;
-  const visited = Array.from({ length: rows }, () =>
-    Array<boolean>(columns).fill(false),
-  );
+  const visited = options?.preVisited
+    ? options.preVisited.map((line) => line.slice())
+    : Array.from({ length: rows }, () => Array<boolean>(columns).fill(false));
   const blocks: MosaicBlock[] = [];
 
   const cells: { row: number; col: number }[] = [];
@@ -285,6 +296,7 @@ function mergeColorGrid(
   for (const { row, col } of scanOrder) {
     if (visited[row][col]) continue;
 
+    const maxSpan = options?.maxSpanForCell?.(rng) ?? Number.POSITIVE_INFINITY;
     const { width, height, colorIdx } = growMergedBlock(
       grid,
       visited,
@@ -292,6 +304,8 @@ function mergeColorGrid(
       col,
       rows,
       columns,
+      maxSpan,
+      maxSpan,
     );
 
     for (let r = row; r < row + height; r++) {
@@ -313,60 +327,24 @@ function mergeColorGrid(
   return blocks;
 }
 
-/** Split large blocks — stronger at high scaleBlend (micro). */
-function splitSomeBlocks(
+function markBlocksOccupied(
+  occupied: boolean[][],
   blocks: MosaicBlock[],
-  scaleBlend: number,
-  rng: Rng,
-): MosaicBlock[] {
-  const microT = (scaleBlend - 1) / 5;
-  const splitChance = 0.05 + microT * 0.75;
-  const minSpan = microT >= 0.75 ? 2 : 3;
-  const passes = microT >= 0.5 ? 2 : 1;
-
-  let result = blocks;
-  for (let pass = 0; pass < passes; pass++) {
-    const next: MosaicBlock[] = [];
-    for (const block of result) {
-      const canSplit =
-        (block.width >= minSpan || block.height >= minSpan) &&
-        rng() < splitChance;
-
-      if (!canSplit) {
-        next.push(block);
-        continue;
+): void {
+  for (const block of blocks) {
+    for (let r = block.row; r < block.row + block.height; r++) {
+      for (let c = block.col; c < block.col + block.width; c++) {
+        if (occupied[r]?.[c] !== undefined) occupied[r][c] = true;
       }
-
-      if (block.width >= block.height && block.width >= 2) {
-        const splitAt = 1 + Math.floor(rng() * (block.width - 1));
-        next.push({ ...block, width: splitAt });
-        next.push({
-          ...block,
-          col: block.col + splitAt,
-          width: block.width - splitAt,
-        });
-        continue;
-      }
-
-      if (block.height >= 2) {
-        const splitAt = 1 + Math.floor(rng() * (block.height - 1));
-        next.push({ ...block, height: splitAt });
-        next.push({
-          ...block,
-          row: block.row + splitAt,
-          height: block.height - splitAt,
-        });
-        continue;
-      }
-
-      next.push(block);
     }
-    result = next;
   }
-
-  return result;
 }
 
+/**
+ * Contrast layout for photos:
+ * - low contrast: capped merges → similar block sizes
+ * - high contrast: keep some coarsened giants, fill leftovers with fine detail
+ */
 function buildBlocksFromIndexedGrid(
   indexedGrid: number[][],
   colors: string[],
@@ -376,19 +354,71 @@ function buildBlocksFromIndexedGrid(
 ): MosaicBlock[] {
   const fullColumns = indexedGrid[0]?.length ?? 0;
   const fullRows = indexedGrid.length;
-  const pool = poolSizeForScaleBlend(settings.scaleBlend);
-  const workingGrid =
-    pool > 1 ? coarsenIndexedGrid(indexedGrid, pool) : indexedGrid;
+  const contrast = contrastFromScaleBlend(settings.scaleBlend ?? 3);
+  const pool = poolSizeForContrast(contrast);
 
-  let blocks = mergeColorGrid(workingGrid, colors, settings, rng, randomOrder);
+  const occupied = Array.from({ length: fullRows }, () =>
+    Array<boolean>(fullColumns).fill(false),
+  );
+  const kept: MosaicBlock[] = [];
 
+  // Macro pass — only at meaningful contrast.
   if (pool > 1) {
-    blocks = scaleBlocksToGrid(blocks, pool, fullColumns, fullRows);
+    const coarse = coarsenIndexedGrid(indexedGrid, pool);
+    let macroBlocks = mergeColorGrid(
+      coarse,
+      colors,
+      settings,
+      rng,
+      randomOrder,
+    );
+    macroBlocks = scaleBlocksToGrid(
+      macroBlocks,
+      pool,
+      fullColumns,
+      fullRows,
+    );
+
+    const keepChance = 0.12 + contrast * 0.55;
+    const candidates = randomOrder
+      ? shuffleCells(macroBlocks, rng)
+      : macroBlocks;
+    for (const block of candidates) {
+      const span = Math.max(block.width, block.height);
+      if (span < pool * 2) continue;
+      if (rng() > keepChance) continue;
+      kept.push(block);
+    }
+    markBlocksOccupied(occupied, kept);
   }
 
-  blocks = splitSomeBlocks(blocks, settings.scaleBlend, rng);
+  // Fine pass — cap span at low contrast; keep detail small beside giants at high contrast.
+  const similarSpan = Math.max(2, Math.round(6 - contrast * 3));
+  const fineMaxSpan = (cellRng: Rng) => {
+    if (contrast <= 0.05) return similarSpan;
+    // Occasional uncapped merge on fine grid adds a few extra large shapes.
+    if (cellRng() < contrast * 0.12) return Number.POSITIVE_INFINITY;
+    return Math.max(1, Math.round(2 + (1 - contrast) * 3));
+  };
 
-  return blocks.map((block) => ({
+  const fineBlocks = mergeColorGrid(
+    indexedGrid,
+    colors,
+    settings,
+    rng,
+    randomOrder,
+    { preVisited: occupied, maxSpanForCell: fineMaxSpan },
+  );
+
+  const fill = Math.max(0, Math.min(100, settings.fillAmount ?? 100)) / 100;
+  const merged =
+    fill >= 0.999
+      ? [...kept, ...fineBlocks]
+      : fill <= 0
+        ? []
+        : [...kept, ...fineBlocks].filter(() => rng() < fill);
+
+  return merged.map((block) => ({
     ...block,
     shape: inferShapeFromBlock(block.width, block.height, settings, rng),
   }));

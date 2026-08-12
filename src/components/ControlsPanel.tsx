@@ -2,7 +2,6 @@ import { useRef } from "react";
 import { DEFAULT_FPS, EXPORT_PRESETS, MAX_COLORS, MAX_FRAMES, type ExportPreset } from "../config";
 import {
   DENSITY_INFO,
-  maxCellSizeSliderMax,
   maxHeightSliderMax,
   maxWidthSliderMax,
 } from "../grid/density";
@@ -69,8 +68,7 @@ export function ControlsPanel({
 }: ControlsPanelProps) {
   const { settings } = frame;
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const shapes = settings.shapes ?? { sphere: true, ring: false, triangle: false };
-  const cellSizeMax = maxCellSizeSliderMax(settings.density, orientation);
+  const shapes = settings.shapes ?? { sphere: false, ring: false, triangle: false };
   const widthMax = maxWidthSliderMax(settings.density, orientation);
   const heightMax = maxHeightSliderMax(settings.density, orientation);
 
@@ -271,7 +269,7 @@ export function ControlsPanel({
         />
         <SliderRow
           label="Scale Blend"
-          hint="1 macro ← mixed → 6 micro"
+          hint="1 similar ← contrast → 6 large+small"
           value={settings.scaleBlend}
           min={1}
           max={6}
@@ -288,20 +286,6 @@ export function ControlsPanel({
 
       <section className="panel-section">
         <h2>Size</h2>
-        <SliderRow
-          label="Min Cell Size"
-          value={settings.minCellSize}
-          min={1}
-          max={settings.maxCellSize}
-          onChange={(minCellSize) => onSettingsChange({ minCellSize })}
-        />
-        <SliderRow
-          label="Max Cell Size"
-          value={settings.maxCellSize}
-          min={settings.minCellSize}
-          max={cellSizeMax}
-          onChange={(maxCellSize) => onSettingsChange({ maxCellSize })}
-        />
         <SliderRow
           label="Max Height"
           value={settings.maxHeight}
