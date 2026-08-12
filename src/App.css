@@ -156,17 +156,16 @@ body {
   padding: 20px 16px 32px;
 }
 
-.controls-panel__head h1 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 500;
-  letter-spacing: 0.04em;
+.controls-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.controls-panel__sub {
-  margin: 6px 0 0;
-  color: var(--muted);
-  font-size: 12px;
+.controls-panel__logo {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
 .panel-section {

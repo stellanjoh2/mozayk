@@ -77,8 +77,11 @@ export function ControlsPanel({
   return (
     <aside className="controls-panel">
       <header className="controls-panel__head">
-        <h1>Mosaik</h1>
-        <p className="controls-panel__sub">Procedural grid transitions</p>
+        <img
+          className="controls-panel__logo"
+          src="/mosaik_logo.png"
+          alt="Mosaik"
+        />
       </header>
 
       <section className="panel-section">
@@ -192,7 +195,7 @@ export function ControlsPanel({
           </button>
         </div>
         <p className="control-row__label control-row__label--solo">
-          <HintLabel hint="Blocks always on · toggle extras to mix in">Shapes</HintLabel>
+          <HintLabel hint="Blocks always on · toggle extras to mix in">Additional Shapes</HintLabel>
         </p>
         <div className="button-row button-row--3 button-row--shape-icons">
           <button
