@@ -3,9 +3,10 @@ import { DEFAULT_FPS, type ExportPreset } from "./config";
 import { CanvasView, Timeline } from "./components/CanvasView";
 import { ControlsPanel, MAX_FRAMES } from "./components/ControlsPanel";
 import { ImportErrorDialog } from "./components/ImportErrorDialog";
-import { exportAllFrames, exportCurrentFrame } from "./export/exportPng";
+import { exportAllFrames, exportCurrentFrame, exportCurrentFrameTransparent } from "./export/exportPng";
 import { exportCurrentFrameSvg } from "./export/exportSvg";
 import {
+  patchNeedsImportedLayoutRegen,
   patchNeedsLayoutRegen,
   rerollShapes,
 } from "./layout/generateLayout";
@@ -16,6 +17,7 @@ import {
   applyPastedSettings,
   clampSettingsForOrientation,
   colorAmountsForSettings,
+  colorsLockedForSettings,
   createInitialFrame,
   createDefaultCanvas,
   activeIndexAfterReorder,
@@ -35,6 +37,11 @@ import {
   hasStoredSettings,
   readSettingsClipboard,
 } from "./state/settingsClipboard";
+import {
+  captureCanvasSnapshot,
+  pushSnapshot,
+  type CanvasSnapshot,
+} from "./state/undoHistory";
 import { importImageFileToMosaic } from "./import/imageImport";
 import {
   UnsupportedImageTypeError,
@@ -46,6 +53,8 @@ import type { Frame, FrameSettings, Orientation } from "./types";
 import "./App.css";
 
 const LAYOUT_REGEN_MS = 280;
+/** Idle gap after which continuous edits (sliders) become a new undo step. */
+const UNDO_COALESCE_MS = 400;
 
 function getFullscreenElement(): Element | null {
   const doc = document as Document & { webkitFullscreenElement?: Element | null };
@@ -99,9 +108,16 @@ export default function App() {
   const appRef = useRef<HTMLDivElement>(null);
   const activeIndexRef = useRef(activeIndex);
   const orientationRef = useRef(orientation);
+  const framesRef = useRef(frames);
+  const undoStackRef = useRef<CanvasSnapshot[]>([]);
+  const redoStackRef = useRef<CanvasSnapshot[]>([]);
+  const applyingHistoryRef = useRef(false);
+  const undoCoalesceArmedRef = useRef(false);
+  const undoCoalesceTimer = useRef<number | null>(null);
 
   activeIndexRef.current = activeIndex;
   orientationRef.current = orientation;
+  framesRef.current = frames;
 
   const activeFrame = frames[activeIndex] ?? frames[0];
 
@@ -110,6 +126,97 @@ export default function App() {
       setViewOriginal(false);
     }
   }, [activeFrame.id, activeFrame.imageSource]);
+
+  const captureCurrentSnapshot = useCallback(
+    (): CanvasSnapshot =>
+      captureCanvasSnapshot(
+        framesRef.current,
+        activeIndexRef.current,
+        orientationRef.current,
+      ),
+    [],
+  );
+
+  const resetUndoCoalesce = useCallback(() => {
+    undoCoalesceArmedRef.current = false;
+    if (undoCoalesceTimer.current) {
+      window.clearTimeout(undoCoalesceTimer.current);
+      undoCoalesceTimer.current = null;
+    }
+  }, []);
+
+  const pushUndoCheckpoint = useCallback(
+    (coalesce = false) => {
+      if (applyingHistoryRef.current) return;
+
+      if (coalesce) {
+        if (!undoCoalesceArmedRef.current) {
+          undoStackRef.current = pushSnapshot(
+            undoStackRef.current,
+            captureCurrentSnapshot(),
+          );
+          redoStackRef.current = [];
+          undoCoalesceArmedRef.current = true;
+        }
+        if (undoCoalesceTimer.current) {
+          window.clearTimeout(undoCoalesceTimer.current);
+        }
+        undoCoalesceTimer.current = window.setTimeout(() => {
+          undoCoalesceArmedRef.current = false;
+          undoCoalesceTimer.current = null;
+        }, UNDO_COALESCE_MS);
+        return;
+      }
+
+      resetUndoCoalesce();
+      undoStackRef.current = pushSnapshot(
+        undoStackRef.current,
+        captureCurrentSnapshot(),
+      );
+      redoStackRef.current = [];
+    },
+    [captureCurrentSnapshot, resetUndoCoalesce],
+  );
+
+  const applySnapshot = useCallback((snapshot: CanvasSnapshot) => {
+    if (layoutRegenTimer.current) {
+      window.clearTimeout(layoutRegenTimer.current);
+      layoutRegenTimer.current = null;
+    }
+    resetUndoCoalesce();
+    applyingHistoryRef.current = true;
+    orientationRef.current = snapshot.orientation;
+    framesRef.current = snapshot.frames;
+    activeIndexRef.current = snapshot.activeIndex;
+    setOrientation(snapshot.orientation);
+    setFrames(snapshot.frames);
+    setActiveIndex(snapshot.activeIndex);
+    queueMicrotask(() => {
+      applyingHistoryRef.current = false;
+    });
+  }, [resetUndoCoalesce]);
+
+  const undo = useCallback(() => {
+    const previous = undoStackRef.current[undoStackRef.current.length - 1];
+    if (!previous) return;
+    undoStackRef.current = undoStackRef.current.slice(0, -1);
+    redoStackRef.current = pushSnapshot(
+      redoStackRef.current,
+      captureCurrentSnapshot(),
+    );
+    applySnapshot(previous);
+  }, [applySnapshot, captureCurrentSnapshot]);
+
+  const redo = useCallback(() => {
+    const next = redoStackRef.current[redoStackRef.current.length - 1];
+    if (!next) return;
+    redoStackRef.current = redoStackRef.current.slice(0, -1);
+    undoStackRef.current = pushSnapshot(
+      undoStackRef.current,
+      captureCurrentSnapshot(),
+    );
+    applySnapshot(next);
+  }, [applySnapshot, captureCurrentSnapshot]);
 
   const updateActiveFrame = useCallback((updater: (frame: Frame) => Frame) => {
     setFrames((prev) =>
@@ -126,16 +233,18 @@ export default function App() {
   }, [updateActiveFrame]);
 
   const randomizeLayout = useCallback(() => {
+    pushUndoCheckpoint();
     updateActiveFrame((frame) =>
       regenerateFrameLayout(frame, orientationRef.current),
     );
-  }, [updateActiveFrame]);
+  }, [pushUndoCheckpoint, updateActiveFrame]);
 
   const randomizeAll = useCallback(() => {
+    pushUndoCheckpoint();
     updateActiveFrame((frame) =>
       randomizeFrameLayout(frame, orientationRef.current),
     );
-  }, [updateActiveFrame]);
+  }, [pushUndoCheckpoint, updateActiveFrame]);
 
   const scheduleLayoutRegen = useCallback(() => {
     if (layoutRegenTimer.current) {
@@ -151,6 +260,9 @@ export default function App() {
     () => () => {
       if (layoutRegenTimer.current) {
         window.clearTimeout(layoutRegenTimer.current);
+      }
+      if (undoCoalesceTimer.current) {
+        window.clearTimeout(undoCoalesceTimer.current);
       }
     },
     [],
@@ -213,7 +325,11 @@ export default function App() {
 
   const handleSettingsChange = useCallback(
     (patch: Partial<FrameSettings>, immediateLayout = false) => {
-      const needsLayout = patchNeedsLayoutRegen(patch);
+      pushUndoCheckpoint(true);
+      const active = framesRef.current[activeIndexRef.current];
+      const needsLayout = active?.imageSource
+        ? patchNeedsImportedLayoutRegen(patch)
+        : patchNeedsLayoutRegen(patch);
       const rerollsShape =
         "shapeMix" in patch || "shapes" in patch;
 
@@ -243,12 +359,13 @@ export default function App() {
         scheduleLayoutRegen();
       }
     },
-    [mergeSettings, scheduleLayoutRegen, updateActiveFrame],
+    [mergeSettings, pushUndoCheckpoint, scheduleLayoutRegen, updateActiveFrame],
   );
 
   const handleOrientationChange = useCallback(
     (next: Orientation) => {
       if (next === orientation) return;
+      pushUndoCheckpoint();
       setOrientation(next);
       orientationRef.current = next;
       setFrames((prev) =>
@@ -261,10 +378,12 @@ export default function App() {
         }),
       );
     },
-    [orientation],
+    [orientation, pushUndoCheckpoint],
   );
 
   const handleAddFrame = useCallback(() => {
+    if (framesRef.current.length >= MAX_FRAMES) return;
+    pushUndoCheckpoint();
     setFrames((prev) => {
       if (prev.length >= MAX_FRAMES) return prev;
       const copy = duplicateFrame(prev[prev.length - 1] ?? prev[0]);
@@ -272,9 +391,11 @@ export default function App() {
       setActiveIndex(next.length - 1);
       return next;
     });
-  }, []);
+  }, [pushUndoCheckpoint]);
 
   const handleDuplicateCurrent = useCallback(() => {
+    if (framesRef.current.length >= MAX_FRAMES) return;
+    pushUndoCheckpoint();
     setFrames((prev) => {
       if (prev.length >= MAX_FRAMES) return prev;
       const sourceIndex = activeIndexRef.current;
@@ -285,21 +406,26 @@ export default function App() {
       setActiveIndex(insertAt);
       return next;
     });
-  }, []);
+  }, [pushUndoCheckpoint]);
 
   const handleRemoveFrame = useCallback(() => {
+    if (framesRef.current.length <= 1) return;
+    pushUndoCheckpoint();
+    const removeIndex = activeIndexRef.current;
     setFrames((prev) => {
       if (prev.length <= 1) return prev;
-      return prev.slice(1);
+      const next = prev.filter((_, index) => index !== removeIndex);
+      setActiveIndex(Math.min(removeIndex, next.length - 1));
+      return next;
     });
-    setActiveIndex((index) => Math.max(0, index - 1));
-  }, []);
+  }, [pushUndoCheckpoint]);
 
   const handleReorderFrames = useCallback((fromIndex: number, toIndex: number) => {
     if (fromIndex === toIndex) return;
+    pushUndoCheckpoint();
     setFrames((prev) => reorderFrames(prev, fromIndex, toIndex));
     setActiveIndex((index) => activeIndexAfterReorder(index, fromIndex, toIndex));
-  }, []);
+  }, [pushUndoCheckpoint]);
 
   useEffect(() => {
     if (!toast) return;
@@ -319,11 +445,12 @@ export default function App() {
       setToast("Nothing to paste");
       return;
     }
+    pushUndoCheckpoint();
     updateActiveFrame((frame) =>
       applyPastedSettings(frame, pasted, orientationRef.current),
     );
     setToast("Settings pasted");
-  }, [updateActiveFrame]);
+  }, [pushUndoCheckpoint, updateActiveFrame]);
 
   const handleImportImage = useCallback(
     async (file: File) => {
@@ -348,6 +475,7 @@ export default function App() {
           orientationRef.current,
           frame.settings,
         );
+        pushUndoCheckpoint();
         updateActiveFrame((current) => applyImageImport(current, result));
         setToast("Image imported");
       } catch {
@@ -358,10 +486,11 @@ export default function App() {
         setImportingImage(false);
       }
     },
-    [frames, updateActiveFrame],
+    [frames, pushUndoCheckpoint, updateActiveFrame],
   );
 
   const handleResetCanvas = useCallback(() => {
+    pushUndoCheckpoint();
     if (layoutRegenTimer.current) {
       window.clearTimeout(layoutRegenTimer.current);
       layoutRegenTimer.current = null;
@@ -383,7 +512,7 @@ export default function App() {
     }
 
     setToast("Canvas reset");
-  }, []);
+  }, [pushUndoCheckpoint]);
 
   useEffect(() => {
     if (!playing) return;
@@ -434,6 +563,19 @@ export default function App() {
     const onKeyDown = (event: KeyboardEvent) => {
       if (isTextInputTarget(event.target)) return;
 
+      const mod = event.metaKey || event.ctrlKey;
+      if (mod && event.code === "KeyZ") {
+        event.preventDefault();
+        if (event.shiftKey) redo();
+        else undo();
+        return;
+      }
+      if (mod && event.code === "KeyY") {
+        event.preventDefault();
+        redo();
+        return;
+      }
+
       const key = event.key.toLowerCase();
       if (event.code === "KeyF" || key === "f") {
         event.preventDefault();
@@ -447,9 +589,6 @@ export default function App() {
       } else if (event.code === "ArrowRight" || key === "arrowright") {
         event.preventDefault();
         stepFrame(1);
-      } else if (event.code === "KeyR" || key === "r") {
-        event.preventDefault();
-        randomizeAll();
       } else if (event.code === "KeyO" || key === "o") {
         const frame = frames[activeIndexRef.current] ?? frames[0];
         if (frame?.imageSource) {
@@ -461,7 +600,7 @@ export default function App() {
 
     document.addEventListener("keydown", onKeyDown, true);
     return () => document.removeEventListener("keydown", onKeyDown, true);
-  }, [toggleFullscreen, togglePlay, stepFrame, randomizeAll, frames]);
+  }, [toggleFullscreen, togglePlay, stepFrame, frames, undo, redo]);
 
   return (
     <div
@@ -486,24 +625,29 @@ export default function App() {
         onCopySettings={() => void handleCopySettings()}
         onPasteSettings={() => void handlePasteSettings()}
         canPasteSettings={canPasteSettings}
-        onRandomizeCurrentColors={() =>
-          updateActiveFrame((frame) => randomizeFrameCurrentColors(frame))
-        }
-        onRandomizeNewColors={() =>
-          updateActiveFrame((frame) => randomizeFrameNewColors(frame))
-        }
-        onAddColor={() =>
+        onRandomizeCurrentColors={() => {
+          pushUndoCheckpoint();
+          updateActiveFrame((frame) => randomizeFrameCurrentColors(frame));
+        }}
+        onRandomizeNewColors={() => {
+          pushUndoCheckpoint();
+          updateActiveFrame((frame) => randomizeFrameNewColors(frame));
+        }}
+        onAddColor={() => {
+          pushUndoCheckpoint();
           updateActiveFrame((frame) =>
             randomizeFrameCurrentColors({
               ...frame,
               settings: addColorToSettings(frame.settings),
             }),
-          )
-        }
-        onRemoveColor={(index) =>
-          updateActiveFrame((frame) => removeColorFromFrame(frame, index))
-        }
-        onColorChange={(index, hex) =>
+          );
+        }}
+        onRemoveColor={(index) => {
+          pushUndoCheckpoint();
+          updateActiveFrame((frame) => removeColorFromFrame(frame, index));
+        }}
+        onColorChange={(index, hex) => {
+          pushUndoCheckpoint(true);
           updateActiveFrame((frame) => ({
             ...frame,
             settings: {
@@ -517,9 +661,22 @@ export default function App() {
                 ? { ...block, color: hex }
                 : block,
             ),
-          }))
-        }
-        onColorAmountChange={(index, amount) =>
+          }));
+        }}
+        onToggleColorLock={(index) => {
+          pushUndoCheckpoint();
+          updateActiveFrame((frame) => {
+            const colorsLocked = colorsLockedForSettings(frame.settings).map(
+              (value, i) => (i === index ? !value : value),
+            );
+            return {
+              ...frame,
+              settings: { ...frame.settings, colorsLocked },
+            };
+          });
+        }}
+        onColorAmountChange={(index, amount) => {
+          pushUndoCheckpoint(true);
           updateActiveFrame((frame) => {
             const colorAmounts = colorAmountsForSettings(frame.settings).map(
               (value, i) => (i === index ? amount : value),
@@ -528,12 +685,19 @@ export default function App() {
               ...frame,
               settings: { ...frame.settings, colorAmounts },
             });
-          })
-        }
+          });
+        }}
         onOrientationChange={handleOrientationChange}
         onExportPresetChange={setExportPreset}
         onExportPngFrame={() =>
           void exportCurrentFrame(activeFrame, orientation, exportPreset)
+        }
+        onExportPngTransparent={() =>
+          void exportCurrentFrameTransparent(
+            activeFrame,
+            orientation,
+            exportPreset,
+          )
         }
         onExportPngSequence={() =>
           void exportAllFrames(frames, orientation, exportPreset)

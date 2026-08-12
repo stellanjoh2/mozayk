@@ -213,11 +213,6 @@ function inferShapeFromBlock(
   const size = Math.max(width, height);
   const isSquare = width === height;
 
-  if (isSquare && size <= 3) {
-    if (settings.shapes.sphere) return "sphere";
-    return "block";
-  }
-
   if (isSquare && size >= 4 && settings.shapes.ring && settings.shapeMix > 0) {
     if (settings.shapeMix >= 100) return "ring";
     if (rng() < settings.shapeMix / 100) return "ring";

@@ -28,7 +28,7 @@ function createId(): string {
 }
 
 export function createDefaultShapePalette(): FrameSettings["shapes"] {
-  return { sphere: true, ring: false };
+  return { sphere: true, ring: false, triangle: false };
 }
 
 export function equalColorAmounts(count: number): number[] {
@@ -46,6 +46,20 @@ export function colorAmountsForSettings(settings: FrameSettings): number[] {
     return colorAmounts;
   }
   return equalColorAmounts(colors.length);
+}
+
+export function colorsLockedForSettings(settings: FrameSettings): boolean[] {
+  const { colors, colorsLocked } = settings;
+  if (colorsLocked && colorsLocked.length === colors.length) {
+    return colorsLocked;
+  }
+  return colors.map(() => false);
+}
+
+/** Hex values currently paused / excluded from randomization & transparent export. */
+export function lockedColorsSet(settings: FrameSettings): Set<string> {
+  const locked = colorsLockedForSettings(settings);
+  return new Set(settings.colors.filter((_, index) => locked[index]));
 }
 
 export function createDefaultSettings(): FrameSettings {
@@ -136,13 +150,21 @@ export function relayoutImportedFrame(
   const image = getCachedSourceImage(frame.imageSource.dataUrl);
   if (!image) return frame;
 
+  // Keep user/edited colours when the palette length still matches the
+  // import clusters — never wipe New Random Colours back to the photo palette.
+  const clusterCount = frame.imageSource.paletteRgb.length;
+  const displayPalette =
+    frame.settings.colors.length === clusterCount
+      ? [...frame.settings.colors]
+      : [...frame.imageSource.palette];
+
   const settings = clampSettingsForOrientation(
     {
       ...frame.settings,
-      colors: [...frame.imageSource.palette],
+      colors: displayPalette,
       colorAmounts: colorAmountsForSettings({
         ...frame.settings,
-        colors: frame.imageSource.palette,
+        colors: displayPalette,
       }),
       layoutSource: "imported",
     },
@@ -153,7 +175,7 @@ export function relayoutImportedFrame(
     image,
     orientation,
     settings,
-    frame.imageSource.palette,
+    displayPalette,
     frame.imageSource.paletteRgb,
     rng,
   );
@@ -173,7 +195,6 @@ export function regenerateFrameLayout(
   const settings = { ...clamped, colors: [...frame.settings.colors] };
   const blocks = carryOverBlockColors(
     generateLayout(orientation, settings),
-    frame.blocks,
     settings.colors,
     colorAmountsForSettings(settings),
   );
@@ -197,7 +218,6 @@ export function randomizeFrameLayout(
   const settings = { ...clamped, colors: [...frame.settings.colors] };
   const blocks = carryOverBlockColors(
     generateLayout(orientation, settings),
-    frame.blocks,
     settings.colors,
     colorAmountsForSettings(settings),
   );
@@ -209,16 +229,24 @@ export function randomizeFrameCurrentColors(frame: Frame): Frame {
     frame.blocks,
     frame.settings.colors,
     colorAmountsForSettings(frame.settings),
+    Math.random,
+    colorsLockedForSettings(frame.settings),
   );
   return { ...frame, blocks };
 }
 
 export function randomizeFrameNewColors(frame: Frame): Frame {
-  const colors = generateRandomPalette(frame.settings.colors.length);
+  const locked = colorsLockedForSettings(frame.settings);
+  const generated = generateRandomPalette(frame.settings.colors.length);
+  const colors = frame.settings.colors.map((color, index) =>
+    locked[index] ? color : generated[index],
+  );
   const blocks = randomizeColors(
     frame.blocks,
     colors,
     colorAmountsForSettings(frame.settings),
+    Math.random,
+    locked,
   );
   return { ...frame, settings: { ...frame.settings, colors }, blocks };
 }
@@ -245,6 +273,7 @@ export function addColorToSettings(settings: FrameSettings): FrameSettings {
     ...settings,
     colors,
     colorAmounts: equalColorAmounts(colors.length),
+    colorsLocked: [...colorsLockedForSettings(settings), false],
   };
 }
 
@@ -258,6 +287,7 @@ export function removeColorFromSettings(
     ...settings,
     colors,
     colorAmounts: equalColorAmounts(colors.length),
+    colorsLocked: colorsLockedForSettings(settings).filter((_, i) => i !== index),
   };
 }
 
@@ -363,6 +393,7 @@ export function applyImageImport(
       ...frame.settings,
       colors: result.colors,
       colorAmounts: result.colorAmounts,
+      colorsLocked: result.colors.map(() => false),
       fillAmount: 100,
       randomWidth: false,
       randomHeight: false,

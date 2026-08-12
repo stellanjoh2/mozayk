@@ -1,28 +1,22 @@
 import { blockPixelRect, getGridDimensions } from "../grid/gridMath";
 import type { GridDimensions, MosaicBlock } from "../types";
 import type { RenderOptions } from "./renderFrame";
+import { ringInnerRadius } from "./ringGeometry";
 
 function svgRing(
   cx: number,
   cy: number,
   outerR: number,
   ringThickness: number,
+  cellSize: number,
   color: string,
 ): string {
   if (outerR <= 0) return "";
 
-  if (ringThickness <= 0) {
+  const innerR = ringInnerRadius(outerR, ringThickness, cellSize);
+
+  if (innerR <= 0) {
     return `<circle cx="${cx}" cy="${cy}" r="${outerR}" fill="${color}"/>`;
-  }
-
-  const holeRatio = Math.min(0.95, Math.max(0.05, ringThickness / 100));
-  const innerR = outerR * holeRatio;
-  const bandWidth = outerR - innerR;
-
-  if (bandWidth < 2) {
-    const strokeWidth = Math.max(1, bandWidth);
-    const r = outerR - strokeWidth / 2;
-    return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="${strokeWidth}"/>`;
   }
 
   const d = [
@@ -51,6 +45,7 @@ function svgBlock(
       y + drawH / 2,
       diameter / 2,
       ringThickness,
+      grid.cellSize,
       block.color,
     );
   }
@@ -62,49 +57,68 @@ function svgBlock(
     return `<circle cx="${cx}" cy="${cy}" r="${diameter / 2}" fill="${block.color}"/>`;
   }
 
-  return `<rect x="${x}" y="${y}" width="${drawW}" height="${drawH}" fill="${block.color}"/>`;
-}
+  if (block.shape === "triangle") {
+    // Always half of a square (never stretch with the cell).
+    const size = Math.min(drawW, drawH);
+    const ox = x + (drawW - size) / 2;
+    const oy = y + (drawH - size) / 2;
+    const points = `${ox},${oy} ${ox + size},${oy} ${ox + size},${oy + size}`;
+    return `<polygon points="${points}" fill="${block.color}"/>`;
+  }
 
-function svgCheckerboardPattern(cell = 20): string {
-  const half = cell / 2;
-  return [
-    `<pattern id="mosaik-checker" width="${cell}" height="${cell}" patternUnits="userSpaceOnUse">`,
-    `<rect width="${half}" height="${half}" fill="#1a1a1a"/>`,
-    `<rect x="${half}" width="${half}" height="${half}" fill="#2a2a2a"/>`,
-    `<rect y="${half}" width="${half}" height="${half}" fill="#2a2a2a"/>`,
-    `<rect x="${half}" y="${half}" width="${half}" height="${half}" fill="#1a1a1a"/>`,
-    `</pattern>`,
-  ].join("");
+  return `<rect x="${x}" y="${y}" width="${drawW}" height="${drawH}" fill="${block.color}"/>`;
 }
 
 function svgBackground(
   width: number,
   height: number,
-  mode: RenderOptions["settings"]["background"],
+  settings: RenderOptions["settings"],
+  sourceDataUrl?: string,
+  transparentBackground?: boolean,
 ): string {
-  if (mode === "black") {
-    return `<rect width="${width}" height="${height}" fill="#000000"/>`;
+  if (settings.showSourceImage && sourceDataUrl) {
+    return `<image href="${sourceDataUrl}" x="0" y="0" width="${width}" height="${height}" preserveAspectRatio="xMidYMid slice"/>`;
   }
-  return `<rect width="${width}" height="${height}" fill="url(#mosaik-checker)"/>`;
+
+  if (transparentBackground || settings.background === "transparent") {
+    return "";
+  }
+
+  return `<rect width="${width}" height="${height}" fill="#000000"/>`;
 }
 
-export function renderMosaicToSvg(options: RenderOptions): string {
-  const { orientation, settings, blocks, width, height } = options;
+export type SvgRenderOptions = RenderOptions & {
+  sourceDataUrl?: string;
+};
+
+export function renderMosaicToSvg(options: SvgRenderOptions): string {
+  const {
+    orientation,
+    settings,
+    blocks,
+    width,
+    height,
+    sourceDataUrl,
+    omitColors,
+    transparentBackground,
+  } = options;
   const grid = getGridDimensions(orientation, settings.density, width, height);
 
-  const defs =
-    settings.background === "transparent" ? `<defs>${svgCheckerboardPattern()}</defs>` : "";
-
   const shapes = blocks
-    .filter((block) => block.color)
+    .filter((block) => block.color && !omitColors?.has(block.color))
     .map((block) => svgBlock(block, grid, settings.ringThickness))
     .join("\n  ");
 
   return [
     `<?xml version="1.0" encoding="UTF-8"?>`,
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
-    defs,
-    svgBackground(width, height, settings.background),
+    svgBackground(
+      width,
+      height,
+      settings,
+      sourceDataUrl,
+      transparentBackground,
+    ),
     shapes,
     `</svg>`,
   ]

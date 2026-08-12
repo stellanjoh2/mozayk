@@ -34,6 +34,13 @@ function parseColorAmounts(value: unknown, colorCount: number): number[] {
   return amounts;
 }
 
+function parseColorsLocked(value: unknown, colorCount: number): boolean[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const locked = value.map((item) => Boolean(item)).slice(0, colorCount);
+  if (locked.length !== colorCount) return undefined;
+  return locked;
+}
+
 function equalColorAmounts(count: number): number[] {
   if (count <= 0) return [100];
   const base = Math.floor(100 / count);
@@ -53,12 +60,13 @@ function parseColors(value: unknown): string[] {
 
 function parseShapePalette(value: unknown): ShapePalette {
   if (!value || typeof value !== "object") {
-    return { sphere: true, ring: false };
+    return { sphere: true, ring: false, triangle: false };
   }
   const record = value as Record<string, unknown>;
   return {
     sphere: record.sphere !== false,
     ring: Boolean(record.ring),
+    triangle: Boolean(record.triangle),
   };
 }
 
@@ -77,6 +85,7 @@ export function parseSettingsClipboard(raw: string): FrameSettings | null {
     if (!isDensity(density)) return null;
 
     const colors = parseColors(candidate.colors);
+    const colorsLocked = parseColorsLocked(candidate.colorsLocked, colors.length);
 
     return {
       density,
@@ -94,9 +103,11 @@ export function parseSettingsClipboard(raw: string): FrameSettings | null {
       scaleBlend: clampInt(candidate.scaleBlend, 1, 6, 3),
       colors,
       colorAmounts: parseColorAmounts(candidate.colorAmounts, colors.length),
+      ...(colorsLocked ? { colorsLocked } : {}),
       background: isBackground(String(candidate.background))
         ? (candidate.background as BackgroundMode)
         : "black",
+      showSourceImage: Boolean(candidate.showSourceImage),
     };
   } catch {
     return null;

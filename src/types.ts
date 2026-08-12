@@ -2,13 +2,15 @@ import type { ImageSourceData } from "./import/imageSource";
 
 export type Orientation = "landscape" | "portrait" | "square";
 export type Density = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
-export type ShapeType = "block" | "sphere" | "ring";
+export type ShapeType = "block" | "sphere" | "ring" | "triangle";
 export type BackgroundMode = "black" | "transparent";
 export type LayoutSource = "procedural" | "imported";
 
 export type ShapePalette = {
   sphere: boolean;
   ring: boolean;
+  /** Upper-right half of a diagonally split square. */
+  triangle: boolean;
 };
 
 export type MosaicBlock = {
@@ -24,7 +26,7 @@ export type FrameSettings = {
   density: Density;
   shapeMix: number;
   shapes: ShapePalette;
-  /** 0 = solid disc · 100 = thin ring */
+  /** 0 = solid disc · 100 = thin ring. Absolute wall width, shared by all rings. */
   ringThickness: number;
   minCellSize: number;
   maxCellSize: number;
@@ -39,7 +41,11 @@ export type FrameSettings = {
   colors: string[];
   /** Relative colour share on canvas (normalized at assignment time). */
   colorAmounts: number[];
+  /** When true, that slot keeps its hex during New Random Colours. */
+  colorsLocked?: boolean[];
   background: BackgroundMode;
+  /** Reveal the imported photo in gaps between mosaic shapes. Requires imageSource. */
+  showSourceImage?: boolean;
   /** Imported image layouts are reshuffled instead of procedurally regenerated. */
   layoutSource?: LayoutSource;
 };

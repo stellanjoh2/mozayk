@@ -120,10 +120,22 @@ export const LAYOUT_SETTING_KEYS = [
   "randomWidth",
 ] as const satisfies readonly (keyof FrameSettings)[];
 
+/** Settings that actually reshape an imported (photo-mapped) layout. */
+export const IMPORTED_LAYOUT_SETTING_KEYS = [
+  "density",
+  "scaleBlend",
+] as const satisfies readonly (keyof FrameSettings)[];
+
 export function patchNeedsLayoutRegen(
   patch: Partial<FrameSettings>,
 ): boolean {
   return LAYOUT_SETTING_KEYS.some((key) => key in patch);
+}
+
+export function patchNeedsImportedLayoutRegen(
+  patch: Partial<FrameSettings>,
+): boolean {
+  return IMPORTED_LAYOUT_SETTING_KEYS.some((key) => key in patch);
 }
 
 export function generateLayout(
@@ -238,12 +250,33 @@ export function randomizeColors(
   colors: string[],
   amounts?: number[],
   rng: Rng = Math.random,
+  locked?: boolean[],
 ): MosaicBlock[] {
   if (colors.length === 0) return blocks;
-  return blocks.map((block) => ({
-    ...block,
-    color: pickWeightedColor(colors, amounts, rng),
-  }));
+
+  const lockedFlags =
+    locked && locked.length === colors.length
+      ? locked
+      : colors.map(() => false);
+  const lockedColorSet = new Set(
+    colors.filter((_, index) => lockedFlags[index]),
+  );
+  const unlockedColors = colors.filter((_, index) => !lockedFlags[index]);
+  const unlockedAmounts = (
+    amounts && amounts.length === colors.length
+      ? amounts
+      : colors.map(() => 1)
+  ).filter((_, index) => !lockedFlags[index]);
+
+  if (unlockedColors.length === 0) return blocks;
+
+  return blocks.map((block) => {
+    if (lockedColorSet.has(block.color)) return block;
+    return {
+      ...block,
+      color: pickWeightedColor(unlockedColors, unlockedAmounts, rng),
+    };
+  });
 }
 
 export function generateRandomPalette(

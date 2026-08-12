@@ -27,10 +27,12 @@ type ControlsPanelProps = {
   onAddColor: () => void;
   onRemoveColor: (index: number) => void;
   onColorChange: (index: number, hex: string) => void;
+  onToggleColorLock: (index: number) => void;
   onColorAmountChange: (index: number, amount: number) => void;
   onOrientationChange: (orientation: Orientation) => void;
   onExportPresetChange: (preset: ExportPreset) => void;
   onExportPngFrame: () => void;
+  onExportPngTransparent: () => void;
   onExportPngSequence: () => void;
   onExportSvgFrame: () => void;
   onImportImage: (file: File) => void;
@@ -53,10 +55,12 @@ export function ControlsPanel({
   onAddColor,
   onRemoveColor,
   onColorChange,
+  onToggleColorLock,
   onColorAmountChange,
   onOrientationChange,
   onExportPresetChange,
   onExportPngFrame,
+  onExportPngTransparent,
   onExportPngSequence,
   onExportSvgFrame,
   onImportImage,
@@ -65,7 +69,7 @@ export function ControlsPanel({
 }: ControlsPanelProps) {
   const { settings } = frame;
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const shapes = settings.shapes ?? { sphere: true, ring: false };
+  const shapes = settings.shapes ?? { sphere: true, ring: false, triangle: false };
   const cellSizeMax = maxCellSizeSliderMax(settings.density, orientation);
   const widthMax = maxWidthSliderMax(settings.density, orientation);
   const heightMax = maxHeightSliderMax(settings.density, orientation);
@@ -143,6 +147,14 @@ export function ControlsPanel({
         >
           {importingImage ? "Importing…" : "Upload Image"}
         </button>
+        {frame.imageSource ? (
+          <ToggleRow
+            label="Show Source Image"
+            hint="Reveal the photo in gaps between shapes"
+            checked={Boolean(frame.settings.showSourceImage)}
+            onChange={(showSourceImage) => onSettingsChange({ showSourceImage })}
+          />
+        ) : null}
         <p className="panel-hint">
           Randomize Layout re-interprets the photo with new shapes while keeping its colours
         </p>
@@ -161,7 +173,7 @@ export function ControlsPanel({
         <button
           type="button"
           className="panel-btn panel-btn--ghost has-hint"
-          data-hint="Also randomizes all sliders (R)"
+          data-hint="Also randomizes all sliders"
           onClick={onRandomizeAll}
         >
           Randomize All
@@ -182,9 +194,11 @@ export function ControlsPanel({
         <p className="control-row__label control-row__label--solo">
           <HintLabel hint="Blocks always on · toggle extras to mix in">Shapes</HintLabel>
         </p>
-        <div className="button-row">
+        <div className="button-row button-row--3 button-row--shape-icons">
           <button
             type="button"
+            aria-label="Spheres"
+            aria-pressed={shapes.sphere}
             className={shapes.sphere ? "is-active" : ""}
             onClick={() =>
               onSettingsChange({
@@ -192,10 +206,14 @@ export function ControlsPanel({
               })
             }
           >
-            Spheres
+            <svg className="shape-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="11" fill="currentColor" />
+            </svg>
           </button>
           <button
             type="button"
+            aria-label="Rings"
+            aria-pressed={shapes.ring}
             className={shapes.ring ? "is-active" : ""}
             onClick={() =>
               onSettingsChange({
@@ -203,7 +221,31 @@ export function ControlsPanel({
               })
             }
           >
-            Rings
+            <svg className="shape-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <circle
+                cx="12"
+                cy="12"
+                r="9.5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="5"
+              />
+            </svg>
+          </button>
+          <button
+            type="button"
+            aria-label="Triangles"
+            aria-pressed={Boolean(shapes.triangle)}
+            className={shapes.triangle ? "is-active" : ""}
+            onClick={() =>
+              onSettingsChange({
+                shapes: { ...shapes, triangle: !shapes.triangle },
+              })
+            }
+          >
+            <svg className="shape-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <polygon points="2,2 22,2 22,22" fill="currentColor" />
+            </svg>
           </button>
         </div>
         <SliderRow
@@ -214,7 +256,7 @@ export function ControlsPanel({
         />
         <SliderRow
           label="Ring Thickness"
-          hint="0 = solid · 100 = thin ring"
+          hint="0 = solid · 100 = thin · same on every ring"
           value={settings.ringThickness ?? 45}
           disabled={!shapes.ring}
           onChange={(ringThickness) => onSettingsChange({ ringThickness })}
@@ -297,7 +339,9 @@ export function ControlsPanel({
             <div key={`color-${index}`} className="color-row">
               <ColorSwatch
                 color={color}
+                locked={settings.colorsLocked?.[index] ?? false}
                 onChange={(hex) => onColorChange(index, hex)}
+                onToggleLock={() => onToggleColorLock(index)}
                 onRemove={
                   settings.colors.length > 1
                     ? () => onRemoveColor(index)
@@ -346,7 +390,9 @@ export function ControlsPanel({
           <h3 className="export-group__title">PNG</h3>
           <label className="control-row">
             <span className="control-row__label">
-              <HintLabel hint={`Preview at 1080p · playback ${DEFAULT_FPS} fps`}>
+              <HintLabel
+                hint={`Preview matches display · playback ${DEFAULT_FPS} fps`}
+              >
                 Resolution
               </HintLabel>
             </span>
@@ -366,6 +412,14 @@ export function ControlsPanel({
           </button>
           <button
             type="button"
+            className="panel-btn panel-btn--ghost has-hint"
+            data-hint="Transparent background · paused colours become holes"
+            onClick={onExportPngTransparent}
+          >
+            Export Transparent PNG
+          </button>
+          <button
+            type="button"
             className="panel-btn panel-btn--ghost"
             onClick={onExportPngSequence}
           >
@@ -375,7 +429,12 @@ export function ControlsPanel({
 
         <div className="export-group">
           <h3 className="export-group__title">SVG</h3>
-          <button type="button" className="panel-btn" onClick={onExportSvgFrame}>
+          <button
+            type="button"
+            className="panel-btn has-hint"
+            data-hint="Paused colours export as transparent holes"
+            onClick={onExportSvgFrame}
+          >
             Export SVG Frame
           </button>
         </div>

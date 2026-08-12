@@ -4,12 +4,13 @@ export type Rng = () => number;
 
 export type OptionalShape = Exclude<ShapeType, "block">;
 
-export const OPTIONAL_SHAPES: OptionalShape[] = ["sphere", "ring"];
+export const OPTIONAL_SHAPES: OptionalShape[] = ["sphere", "ring", "triangle"];
 
 export function getShapePool(settings: FrameSettings): ShapeType[] {
   const pool: ShapeType[] = ["block"];
   if (settings.shapes.sphere) pool.push("sphere");
   if (settings.shapes.ring) pool.push("ring");
+  if (settings.shapes.triangle) pool.push("triangle");
   return pool;
 }
 
@@ -18,7 +19,12 @@ function pickInt(rng: Rng, min: number, max: number): number {
   return min + Math.floor(rng() * (max - min + 1));
 }
 
-export function assignShape(settings: FrameSettings, rng: Rng = Math.random): ShapeType {
+export function assignShape(
+  settings: FrameSettings,
+  rng: Rng = Math.random,
+): ShapeType {
+  // Triangles may land on any cell; renderers keep them square via the
+  // inscribed min(width, height) so they never stretch.
   const pool = getShapePool(settings);
   if (pool.length === 1) return "block";
 

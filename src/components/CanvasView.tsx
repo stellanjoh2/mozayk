@@ -9,18 +9,41 @@ import { createPortal } from "react-dom";
 import { getThumbnailSize } from "../grid/gridMath";
 import { ensureCachedSourceImage, drawCoverImage } from "../import/imageSource";
 import { renderMosaic } from "../render/renderFrame";
-import { getPreviewSize } from "../config";
+import { getPreviewSize, getPreviewSizeForDisplay } from "../config";
 import type { Frame, Orientation } from "../types";
 
-const MIN_ZOOM = 0.5;
-const MAX_ZOOM = 1.5;
-const ZOOM_WHEEL_FACTOR = 1.08;
+const MIN_ZOOM = 0.1;
+const MAX_ZOOM = 8;
 
 function clampZoom(value: number): number {
   return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value));
 }
 
+function zoomFactorFromWheel(event: WheelEvent): number {
+  const lineHeight = 16;
+  const pageHeight =
+    typeof window !== "undefined" ? window.innerHeight : 800;
+  const delta =
+    event.deltaMode === 1
+      ? event.deltaY * lineHeight
+      : event.deltaMode === 2
+        ? event.deltaY * pageHeight
+        : event.deltaY;
+  return Math.exp(-delta * 0.002);
+}
+
 const STAGE_PADDING = 24;
+
+function stageAvailableSize(
+  stageWidth: number,
+  stageHeight: number,
+  stagePadding: number,
+): [number, number] {
+  return [
+    Math.max(0, stageWidth - stagePadding * 2),
+    Math.max(0, stageHeight - stagePadding * 2),
+  ];
+}
 
 function computeFitScale(
   stageWidth: number,
@@ -29,9 +52,11 @@ function computeFitScale(
   canvasHeight: number,
   stagePadding: number,
 ): number {
-  if (stageWidth <= 0 || stageHeight <= 0) return 1;
-  const availW = stageWidth - stagePadding * 2;
-  const availH = stageHeight - stagePadding * 2;
+  const [availW, availH] = stageAvailableSize(
+    stageWidth,
+    stageHeight,
+    stagePadding,
+  );
   if (availW <= 0 || availH <= 0) return 1;
   return Math.min(availW / canvasWidth, availH / canvasHeight);
 }
@@ -54,18 +79,46 @@ export function CanvasView({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
-  const [fitScale, setFitScale] = useState(1);
+  const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
   const [sourceImage, setSourceImage] = useState<HTMLImageElement | null>(null);
-  const [width, height] = getPreviewSize(orientation);
+
+  const stagePadding = isFullscreen ? 0 : STAGE_PADDING;
+  const [availW, availH] = stageAvailableSize(
+    stageSize.width,
+    stageSize.height,
+    stagePadding,
+  );
+  const [width, height] =
+    stageSize.width > 0
+      ? getPreviewSizeForDisplay(
+          orientation,
+          availW,
+          availH,
+          typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1,
+        )
+      : getPreviewSize(orientation);
+  const fitScale =
+    stageSize.width > 0
+      ? computeFitScale(
+          stageSize.width,
+          stageSize.height,
+          width,
+          height,
+          stagePadding,
+        )
+      : 1;
 
   useEffect(() => {
-    if (!viewOriginal || !frame.imageSource) {
+    const needsSource =
+      (viewOriginal || frame.settings.showSourceImage) && frame.imageSource;
+
+    if (!needsSource) {
       setSourceImage(null);
       return;
     }
 
     let cancelled = false;
-    void ensureCachedSourceImage(frame.imageSource.dataUrl)
+    void ensureCachedSourceImage(frame.imageSource!.dataUrl)
       .then((image) => {
         if (!cancelled) setSourceImage(image);
       })
@@ -76,7 +129,11 @@ export function CanvasView({
     return () => {
       cancelled = true;
     };
-  }, [viewOriginal, frame.imageSource?.dataUrl]);
+  }, [
+    viewOriginal,
+    frame.settings.showSourceImage,
+    frame.imageSource?.dataUrl,
+  ]);
 
   useLayoutEffect(() => {
     const canvas = canvasRef.current;
@@ -95,6 +152,7 @@ export function CanvasView({
       blocks: frame.blocks,
       width,
       height,
+      sourceImage: frame.settings.showSourceImage ? sourceImage : null,
     });
   }, [
     viewOriginal,
@@ -102,6 +160,7 @@ export function CanvasView({
     frame.settings,
     frame.blocks,
     frame.id,
+    frame.imageSource,
     orientation,
     width,
     height,
@@ -115,25 +174,18 @@ export function CanvasView({
     const stage = stageRef.current;
     if (!stage) return;
 
-    const stagePadding = isFullscreen ? 0 : STAGE_PADDING;
-
-    const updateFitScale = () => {
-      setFitScale(
-        computeFitScale(
-          stage.clientWidth,
-          stage.clientHeight,
-          width,
-          height,
-          stagePadding,
-        ),
+    const updateStageSize = () => {
+      const next = { width: stage.clientWidth, height: stage.clientHeight };
+      setStageSize((prev) =>
+        prev.width === next.width && prev.height === next.height ? prev : next,
       );
     };
 
-    updateFitScale();
-    const observer = new ResizeObserver(updateFitScale);
+    updateStageSize();
+    const observer = new ResizeObserver(updateStageSize);
     observer.observe(stage);
     return () => observer.disconnect();
-  }, [isFullscreen, orientation, width, height]);
+  }, []);
 
   useEffect(() => {
     const stage = stageRef.current;
@@ -141,7 +193,7 @@ export function CanvasView({
 
     const handleWheel = (event: WheelEvent) => {
       event.preventDefault();
-      const factor = event.deltaY > 0 ? 1 / ZOOM_WHEEL_FACTOR : ZOOM_WHEEL_FACTOR;
+      const factor = zoomFactorFromWheel(event);
       setZoom((current) => clampZoom(current * factor));
     };
 
@@ -172,34 +224,24 @@ export function CanvasView({
             : "Mosaic preview"
         }
       />
-      <div className="canvas-zoom-controls">
-        {onToggleFullscreen ? (
-          <button
-            type="button"
-            className="canvas-fullscreen-toggle"
-            onClick={onToggleFullscreen}
-            aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
-            aria-pressed={isFullscreen}
-          >
-            {isFullscreen ? "Exit" : "Full"}
-          </button>
-        ) : null}
-        <button
-          type="button"
-          className="canvas-zoom-fit"
-          onClick={() => setZoom(1)}
-          disabled={zoom === 1}
-          aria-label="Fit canvas to screen"
-        >
-          Fit
-        </button>
-        <div className="canvas-zoom-indicator" aria-live="polite">
+      {onToggleFullscreen || (viewOriginal && frame.imageSource) ? (
+        <div className="canvas-stage-controls">
+          {onToggleFullscreen ? (
+            <button
+              type="button"
+              className="canvas-fullscreen-toggle"
+              onClick={onToggleFullscreen}
+              aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+              aria-pressed={isFullscreen}
+            >
+              {isFullscreen ? "Exit" : "Full"}
+            </button>
+          ) : null}
           {viewOriginal && frame.imageSource ? (
             <span className="canvas-view-original-badge">Original</span>
           ) : null}
-          {Math.round(totalScale * 100)}%
         </div>
-      </div>
+      ) : null}
     </div>
   );
 }
@@ -224,6 +266,27 @@ function FrameThumbnail({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const skippedClickRef = useRef(false);
   const [thumbW, thumbH] = getThumbnailSize(orientation);
+  const [sourceImage, setSourceImage] = useState<HTMLImageElement | null>(null);
+
+  useEffect(() => {
+    if (!frame.settings.showSourceImage || !frame.imageSource) {
+      setSourceImage(null);
+      return;
+    }
+
+    let cancelled = false;
+    void ensureCachedSourceImage(frame.imageSource.dataUrl)
+      .then((image) => {
+        if (!cancelled) setSourceImage(image);
+      })
+      .catch(() => {
+        if (!cancelled) setSourceImage(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [frame.settings.showSourceImage, frame.imageSource?.dataUrl]);
 
   useLayoutEffect(() => {
     const canvas = canvasRef.current;
@@ -234,8 +297,18 @@ function FrameThumbnail({
       blocks: frame.blocks,
       width: thumbW,
       height: thumbH,
+      sourceImage: frame.settings.showSourceImage ? sourceImage : null,
     });
-  }, [frame.settings, frame.blocks, frame.id, orientation, thumbW, thumbH]);
+  }, [
+    frame.settings,
+    frame.blocks,
+    frame.id,
+    frame.imageSource,
+    orientation,
+    thumbW,
+    thumbH,
+    sourceImage,
+  ]);
 
   return (
     <button

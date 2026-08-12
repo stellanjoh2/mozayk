@@ -1,6 +1,7 @@
 /** Soft-coded limits — expected to change later. */
 export const MAX_FRAMES = 30;
 export const MAX_COLORS = 8;
+export const MAX_UNDO = 10;
 export const DEFAULT_FPS = 12;
 
 import type { Orientation } from "./types";
@@ -59,4 +60,27 @@ export function getExportSize(
   if (orientation === "landscape") return sizes.landscape;
   if (orientation === "portrait") return sizes.portrait;
   return sizes.square;
+}
+
+/** Prefer the smallest export preset that covers the on-screen fit box at device DPR. */
+const PREVIEW_PRESET_ORDER: ExportPreset[] = ["1080p", "1440p", "2160p"];
+
+export function getPreviewSizeForDisplay(
+  orientation: Orientation,
+  displayWidthCss: number,
+  displayHeightCss: number,
+  devicePixelRatio = 1,
+): [number, number] {
+  const dpr = Number.isFinite(devicePixelRatio) && devicePixelRatio > 0
+    ? devicePixelRatio
+    : 1;
+  const needW = Math.max(0, displayWidthCss) * dpr;
+  const needH = Math.max(0, displayHeightCss) * dpr;
+
+  for (const preset of PREVIEW_PRESET_ORDER) {
+    const size = getExportSize(orientation, preset);
+    if (size[0] >= needW && size[1] >= needH) return size;
+  }
+
+  return getExportSize(orientation, "2160p");
 }
