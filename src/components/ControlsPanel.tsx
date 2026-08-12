@@ -77,7 +77,7 @@ export function ControlsPanel({
       <header className="controls-panel__head">
         <img
           className="controls-panel__logo"
-          src="/mosaik_logo.png"
+          src={`${import.meta.env.BASE_URL}mosaik_logo.png`}
           alt="Mosaik"
         />
       </header>
