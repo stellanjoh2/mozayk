@@ -166,7 +166,9 @@ body {
 .controls-panel {
   border-right: 1px solid var(--panel-border);
   background: var(--panel);
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-x: none;
   padding: 24px 16px 40px;
 }
 

@@ -6,6 +6,8 @@ type SliderRowProps = {
   max?: number;
   step?: number;
   suffix?: string;
+  /** Overrides the numeric value display (e.g. discrete px steps). */
+  formatValue?: (value: number) => string;
   disabled?: boolean;
   onChange: (value: number) => void;
 };
@@ -20,6 +22,7 @@ export function SliderRow({
   max = 100,
   step = 1,
   suffix,
+  formatValue,
   disabled = false,
   onChange,
 }: SliderRowProps) {
@@ -28,8 +31,7 @@ export function SliderRow({
       <span className="control-row__label">
         <HintLabel hint={hint}>{label}</HintLabel>
         <span className="control-row__value">
-          {value}
-          {suffix ?? ""}
+          {formatValue ? formatValue(value) : `${value}${suffix ?? ""}`}
         </span>
       </span>
       <input

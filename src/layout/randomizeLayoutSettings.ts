@@ -12,7 +12,7 @@ function pickInt(rng: Rng, min: number, max: number): number {
   return min + Math.floor(rng() * (max - min + 1));
 }
 
-/** Randomize layout sliders — shapes, colours, and grid stay under user control. */
+/** Randomize layout sliders — shapes, colours, and grid density stay under user control. */
 export function randomizeLayoutSettings(
   settings: FrameSettings,
   orientation: Orientation,
@@ -39,6 +39,7 @@ export function randomizeLayoutSettings(
     randomHeight,
     maxWidth: randomWidth ? pickInt(rng, 2, widthMax) : 1,
     maxHeight: randomHeight ? pickInt(rng, 2, heightMax) : 1,
+    gridOverlayChaos: pickInt(rng, 0, 100),
   };
 }
 

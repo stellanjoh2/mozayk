@@ -2,6 +2,7 @@ import type { ImageSourceData } from "./import/imageSource";
 
 export type Orientation = "landscape" | "portrait" | "square";
 export type Density = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+export type GridOverlayStroke = 1 | 2 | 4;
 export type ShapeType = "block" | "sphere" | "ring" | "triangle";
 export type BackgroundMode = "black" | "transparent";
 export type LayoutSource = "procedural" | "imported";
@@ -49,14 +50,18 @@ export type FrameSettings = {
   /** When true, that slot keeps its hex during New Random Colours. */
   colorsLocked?: boolean[];
   background: BackgroundMode;
-  /** 2px stroked square grid over mosaic shapes. */
+  /** Stroked grid over mosaic shapes. */
   gridOverlay?: boolean;
   /** Overlay grid density — independent of layout density. */
   gridOverlayDensity?: Density;
   /** Overlay stroke colour (hex). Defaults to white. */
   gridOverlayColor?: string;
+  /** Overlay stroke width in px: 1, 2, or 4. Defaults to 2. */
+  gridOverlayStroke?: GridOverlayStroke;
   /** Overlay stroke opacity 0–100. Defaults to 100. */
   gridOverlayOpacity?: number;
+  /** Break square grid into irregular paths 0–100. Defaults to 0. */
+  gridOverlayChaos?: number;
   /** When true, grid uses difference blend mode over the mosaic. */
   gridOverlayDifference?: boolean;
   /** Reveal the imported photo in gaps between mosaic shapes. Requires imageSource. */

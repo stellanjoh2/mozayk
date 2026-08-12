@@ -1,6 +1,7 @@
 import { isValidHex, normalizeHex } from "../colorMath";
 import { MAX_COLORS } from "../config";
 import { MAX_DENSITY } from "../grid/density";
+import { resolveGridOverlayStroke } from "../render/gridOverlay";
 import type { BackgroundMode, Density, FrameSettings, ShapePalette } from "../types";
 
 const CLIPBOARD_MIME = "application/x-mosaik-settings";
@@ -116,7 +117,9 @@ export function parseSettingsClipboard(raw: string): FrameSettings | null {
       gridOverlayColor: isValidHex(String(candidate.gridOverlayColor ?? ""))
         ? normalizeHex(String(candidate.gridOverlayColor))
         : undefined,
+      gridOverlayStroke: resolveGridOverlayStroke(candidate.gridOverlayStroke),
       gridOverlayOpacity: clampInt(candidate.gridOverlayOpacity, 0, 100, 100),
+      gridOverlayChaos: clampInt(candidate.gridOverlayChaos, 0, 100, 0),
       gridOverlayDifference: Boolean(candidate.gridOverlayDifference),
       showSourceImage: Boolean(candidate.showSourceImage),
     };

@@ -139,8 +139,6 @@ function drawBackground(
   drawCheckerboard(ctx, width, height);
 }
 
-const GRID_OVERLAY_LINE_WIDTH = 2;
-
 function drawGridOverlay(
   ctx: CanvasRenderingContext2D,
   orientation: Orientation,
@@ -159,8 +157,8 @@ function drawGridOverlay(
     ctx.globalCompositeOperation = "difference";
   }
   ctx.strokeStyle = style.color;
-  ctx.lineWidth = GRID_OVERLAY_LINE_WIDTH;
-  ctx.stroke(new Path2D(gridOverlayPathData(grid)));
+  ctx.lineWidth = style.lineWidth;
+  ctx.stroke(new Path2D(gridOverlayPathData(grid, style.chaos)));
   ctx.restore();
 }
 

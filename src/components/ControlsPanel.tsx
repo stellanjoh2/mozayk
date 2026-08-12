@@ -5,6 +5,10 @@ import {
   maxHeightSliderMax,
   maxWidthSliderMax,
 } from "../grid/density";
+import {
+  GRID_OVERLAY_STROKES,
+  resolveGridOverlayStroke,
+} from "../render/gridOverlay";
 import type { Density, Frame, FrameSettings, Orientation } from "../types";
 import { SUPPORTED_IMAGE_ACCEPT } from "../import/supportedImageTypes";
 import { ColorSwatch } from "./ColorSwatch";
@@ -379,7 +383,7 @@ export function ControlsPanel({
         <h2>Grid Overlay</h2>
         <ToggleRow
           label="Enabled"
-          hint="2px square grid drawn over the mosaic"
+          hint="Grid drawn over the mosaic"
           checked={Boolean(settings.gridOverlay)}
           onChange={(gridOverlay) => onSettingsChange({ gridOverlay }, false)}
         />
@@ -413,12 +417,39 @@ export function ControlsPanel({
           />
         </div>
         <SliderRow
+          label="Stroke"
+          hint="Line thickness"
+          value={GRID_OVERLAY_STROKES.indexOf(
+            resolveGridOverlayStroke(settings.gridOverlayStroke),
+          )}
+          min={0}
+          max={GRID_OVERLAY_STROKES.length - 1}
+          step={1}
+          formatValue={(i) => `${GRID_OVERLAY_STROKES[i]}px`}
+          onChange={(i) =>
+            onSettingsChange(
+              { gridOverlayStroke: GRID_OVERLAY_STROKES[i] },
+              false,
+            )
+          }
+        />
+        <SliderRow
           label="Opacity"
           value={settings.gridOverlayOpacity ?? 100}
           min={0}
           max={100}
           onChange={(gridOverlayOpacity) =>
             onSettingsChange({ gridOverlayOpacity }, false)
+          }
+        />
+        <SliderRow
+          label="Randomness"
+          hint="Break the square grid into irregular paths"
+          value={settings.gridOverlayChaos ?? 0}
+          min={0}
+          max={100}
+          onChange={(gridOverlayChaos) =>
+            onSettingsChange({ gridOverlayChaos }, false)
           }
         />
         <ToggleRow

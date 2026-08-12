@@ -104,7 +104,7 @@ function svgGridOverlay(
   const grid = gridOverlayDimensions(orientation, width, height, style);
   const blend = style.difference ? ` style="mix-blend-mode:difference"` : "";
 
-  return `<path d="${gridOverlayPathData(grid)}" fill="none" stroke="${style.color}" stroke-width="2" stroke-opacity="${style.opacity}"${blend}/>`;
+  return `<path d="${gridOverlayPathData(grid, style.chaos)}" fill="none" stroke="${style.color}" stroke-width="${style.lineWidth}" stroke-opacity="${style.opacity}"${blend}/>`;
 }
 
 export type SvgRenderOptions = RenderOptions & {
