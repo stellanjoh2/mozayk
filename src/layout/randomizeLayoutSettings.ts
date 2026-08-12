@@ -32,7 +32,7 @@ export function randomizeLayoutSettings(
       : settings.ringThickness,
     fillAmount: pickInt(rng, 10, 100),
     weight: pickInt(rng, 0, 100),
-    scaleBlend: pickInt(rng, 1, 6),
+    scaleBlend: pickInt(rng, 0, 6),
     minCellSize: defaultMinCellSize(),
     maxCellSize: defaultMaxCellSize(settings.density),
     randomWidth,

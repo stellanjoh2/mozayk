@@ -34,9 +34,9 @@ function columnPlacementBias(
   return WEIGHT_FLOOR + (1 - WEIGHT_FLOOR) * weighted;
 }
 
-/** Scale blend 1..6 → contrast 0..1 (similar → large+small). */
+/** Scale blend 0..6 → contrast 0..1 (similar → large+small). */
 function contrastFromScaleBlend(scaleBlend: number): number {
-  return Math.min(1, Math.max(0, (scaleBlend - 1) / 5));
+  return Math.min(1, Math.max(0, scaleBlend / 6));
 }
 
 function lerp(a: number, b: number, t: number): number {

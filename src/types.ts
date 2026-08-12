@@ -1,7 +1,7 @@
 import type { ImageSourceData } from "./import/imageSource";
 
 export type Orientation = "landscape" | "portrait" | "square";
-export type Density = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+export type Density = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 export type ShapeType = "block" | "sphere" | "ring" | "triangle";
 export type BackgroundMode = "black" | "transparent";
 export type LayoutSource = "procedural" | "imported";
@@ -39,7 +39,7 @@ export type FrameSettings = {
   fillAmount: number;
   weight: number;
   /**
-   * 1 = similar sizes, 6 = max contrast (min-sized detail + large simple blocks).
+   * 0 = similar sizes, 6 = max contrast (min-sized detail + large simple blocks).
    * High contrast opens giants toward Max Width / Max Height.
    */
   scaleBlend: number;
@@ -49,6 +49,16 @@ export type FrameSettings = {
   /** When true, that slot keeps its hex during New Random Colours. */
   colorsLocked?: boolean[];
   background: BackgroundMode;
+  /** 2px stroked square grid over mosaic shapes. */
+  gridOverlay?: boolean;
+  /** Overlay grid density — independent of layout density. */
+  gridOverlayDensity?: Density;
+  /** Overlay stroke colour (hex). Defaults to white. */
+  gridOverlayColor?: string;
+  /** Overlay stroke opacity 0–100. Defaults to 100. */
+  gridOverlayOpacity?: number;
+  /** When true, grid uses difference blend mode over the mosaic. */
+  gridOverlayDifference?: boolean;
   /** Reveal the imported photo in gaps between mosaic shapes. Requires imageSource. */
   showSourceImage?: boolean;
   /** Imported image layouts are reshuffled instead of procedurally regenerated. */

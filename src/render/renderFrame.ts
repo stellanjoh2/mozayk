@@ -6,6 +6,11 @@ import type {
   MosaicBlock,
   Orientation,
 } from "../types";
+import {
+  gridOverlayDimensions,
+  gridOverlayPathData,
+  resolveGridOverlayStyle,
+} from "./gridOverlay";
 import { ringInnerRadius } from "./ringGeometry";
 
 export type RenderOptions = {
@@ -134,6 +139,31 @@ function drawBackground(
   drawCheckerboard(ctx, width, height);
 }
 
+const GRID_OVERLAY_LINE_WIDTH = 2;
+
+function drawGridOverlay(
+  ctx: CanvasRenderingContext2D,
+  orientation: Orientation,
+  settings: FrameSettings,
+  width: number,
+  height: number,
+): void {
+  const style = resolveGridOverlayStyle(settings);
+  if (!style) return;
+
+  const grid = gridOverlayDimensions(orientation, width, height, style);
+
+  ctx.save();
+  ctx.globalAlpha = style.opacity;
+  if (style.difference) {
+    ctx.globalCompositeOperation = "difference";
+  }
+  ctx.strokeStyle = style.color;
+  ctx.lineWidth = GRID_OVERLAY_LINE_WIDTH;
+  ctx.stroke(new Path2D(gridOverlayPathData(grid)));
+  ctx.restore();
+}
+
 export function renderMosaic(
   canvas: HTMLCanvasElement,
   options: RenderOptions,
@@ -169,6 +199,10 @@ export function renderMosaic(
     if (!block.color) continue;
     if (omitColors?.has(block.color)) continue;
     drawBlock(ctx, block, grid, settings.ringThickness);
+  }
+
+  if (settings.gridOverlay) {
+    drawGridOverlay(ctx, orientation, settings, width, height);
   }
 
   return grid;

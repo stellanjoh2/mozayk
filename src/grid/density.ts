@@ -3,7 +3,7 @@ import type { Density, Orientation } from "../types";
 /** Reference density — default size slider values are tuned for this level. */
 export const REFERENCE_DENSITY = 3;
 
-export const MAX_DENSITY = 8 as const;
+export const MAX_DENSITY = 9 as const;
 
 export type DensityInfo = {
   level: Density;
@@ -21,6 +21,7 @@ export const DENSITY_INFO: DensityInfo[] = [
   { level: 6, label: "6", landscape: { columns: 96, rows: 54 }, cellPx1080: 20 },
   { level: 7, label: "7", landscape: { columns: 112, rows: 63 }, cellPx1080: 17 },
   { level: 8, label: "8", landscape: { columns: 128, rows: 72 }, cellPx1080: 15 },
+  { level: 9, label: "9", landscape: { columns: 144, rows: 81 }, cellPx1080: 13 },
 ];
 
 export function densityScale(density: Density): number {

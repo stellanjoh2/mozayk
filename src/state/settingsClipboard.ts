@@ -1,4 +1,6 @@
+import { isValidHex, normalizeHex } from "../colorMath";
 import { MAX_COLORS } from "../config";
+import { MAX_DENSITY } from "../grid/density";
 import type { BackgroundMode, Density, FrameSettings, ShapePalette } from "../types";
 
 const CLIPBOARD_MIME = "application/x-mosaik-settings";
@@ -12,7 +14,7 @@ export type SettingsClipboardPayload = {
 let memoryClipboard: FrameSettings | null = null;
 
 function isDensity(value: number): value is Density {
-  return Number.isInteger(value) && value >= 1 && value <= 8;
+  return Number.isInteger(value) && value >= 1 && value <= MAX_DENSITY;
 }
 
 function isBackground(value: string): value is BackgroundMode {
@@ -91,22 +93,31 @@ export function parseSettingsClipboard(raw: string): FrameSettings | null {
       density,
       shapeMix: clampInt(candidate.shapeMix, 0, 100, 50),
       shapes: parseShapePalette(candidate.shapes),
-      ringThickness: clampInt(candidate.ringThickness, 0, 100, 45),
+      ringThickness: clampInt(candidate.ringThickness, 0, 100, 50),
       minCellSize: clampInt(candidate.minCellSize, 1, 999, 1),
       maxCellSize: clampInt(candidate.maxCellSize, 1, 999, 4),
       maxHeight: clampInt(candidate.maxHeight, 1, 999, 6),
       randomHeight: Boolean(candidate.randomHeight),
       maxWidth: clampInt(candidate.maxWidth, 1, 999, 6),
       randomWidth: Boolean(candidate.randomWidth),
-      fillAmount: clampInt(candidate.fillAmount, 0, 100, 85),
+      fillAmount: clampInt(candidate.fillAmount, 0, 100, 50),
       weight: clampInt(candidate.weight, 0, 100, 50),
-      scaleBlend: clampInt(candidate.scaleBlend, 1, 6, 3),
+      scaleBlend: clampInt(candidate.scaleBlend, 0, 6, 3),
       colors,
       colorAmounts: parseColorAmounts(candidate.colorAmounts, colors.length),
       ...(colorsLocked ? { colorsLocked } : {}),
       background: isBackground(String(candidate.background))
         ? (candidate.background as BackgroundMode)
         : "black",
+      gridOverlay: Boolean(candidate.gridOverlay),
+      gridOverlayDensity: isDensity(Number(candidate.gridOverlayDensity))
+        ? (Number(candidate.gridOverlayDensity) as Density)
+        : undefined,
+      gridOverlayColor: isValidHex(String(candidate.gridOverlayColor ?? ""))
+        ? normalizeHex(String(candidate.gridOverlayColor))
+        : undefined,
+      gridOverlayOpacity: clampInt(candidate.gridOverlayOpacity, 0, 100, 100),
+      gridOverlayDifference: Boolean(candidate.gridOverlayDifference),
       showSourceImage: Boolean(candidate.showSourceImage),
     };
   } catch {

@@ -1,5 +1,10 @@
 import { MAX_COLORS } from "../config";
-import { defaultMaxCellSize, defaultMinCellSize } from "../grid/density";
+import {
+  defaultMaxCellSize,
+  defaultMinCellSize,
+  maxHeightSliderMax,
+  maxWidthSliderMax,
+} from "../grid/density";
 import { getGridCounts } from "../grid/gridMath";
 import { transposeBlocks } from "../grid/gridMath";
 import {
@@ -28,7 +33,7 @@ function createId(): string {
 }
 
 export function createDefaultShapePalette(): FrameSettings["shapes"] {
-  return { sphere: false, ring: false, triangle: false };
+  return { sphere: true, ring: true, triangle: true };
 }
 
 export function equalColorAmounts(count: number): number[] {
@@ -63,19 +68,22 @@ export function lockedColorsSet(settings: FrameSettings): Set<string> {
 }
 
 export function createDefaultSettings(): FrameSettings {
-  const density = 6 as Density;
+  const density = 5 as Density;
+  const orientation: Orientation = "landscape";
+  const heightMax = maxHeightSliderMax(density, orientation);
+  const widthMax = maxWidthSliderMax(density, orientation);
   return {
     density,
     shapeMix: 50,
     shapes: createDefaultShapePalette(),
-    ringThickness: 45,
+    ringThickness: 50,
     minCellSize: defaultMinCellSize(),
     maxCellSize: defaultMaxCellSize(density),
-    maxHeight: 18,
+    maxHeight: Math.max(1, Math.round(heightMax / 2)),
     randomHeight: true,
-    maxWidth: 24,
+    maxWidth: Math.max(1, Math.round(widthMax / 2)),
     randomWidth: true,
-    fillAmount: 85,
+    fillAmount: 50,
     weight: 50,
     scaleBlend: 3,
     colors: ["#ffffff"],

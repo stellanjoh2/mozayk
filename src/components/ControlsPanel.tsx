@@ -269,9 +269,9 @@ export function ControlsPanel({
         />
         <SliderRow
           label="Scale Blend"
-          hint="1 similar ← contrast → 6 large+small"
+          hint="0 similar ← contrast → 6 large+small"
           value={settings.scaleBlend}
-          min={1}
+          min={0}
           max={6}
           step={1}
           onChange={(scaleBlend) => onSettingsChange({ scaleBlend })}
@@ -373,6 +373,62 @@ export function ControlsPanel({
             <option value="transparent">Transparent</option>
           </select>
         </label>
+      </section>
+
+      <section className="panel-section">
+        <h2>Grid Overlay</h2>
+        <ToggleRow
+          label="Enabled"
+          hint="2px square grid drawn over the mosaic"
+          checked={Boolean(settings.gridOverlay)}
+          onChange={(gridOverlay) => onSettingsChange({ gridOverlay }, false)}
+        />
+        <label className="control-row">
+          <span className="control-row__label">Grid Density</span>
+          <select
+            value={settings.gridOverlayDensity ?? settings.density}
+            onChange={(e) =>
+              onSettingsChange(
+                {
+                  gridOverlayDensity: Number(e.target.value) as Density,
+                },
+                false,
+              )
+            }
+          >
+            {DENSITY_INFO.map((info) => (
+              <option key={info.level} value={info.level}>
+                {info.level}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="control-row">
+          <span className="control-row__label">Colour</span>
+          <ColorSwatch
+            color={settings.gridOverlayColor ?? "#ffffff"}
+            onChange={(gridOverlayColor) =>
+              onSettingsChange({ gridOverlayColor }, false)
+            }
+          />
+        </div>
+        <SliderRow
+          label="Opacity"
+          value={settings.gridOverlayOpacity ?? 100}
+          min={0}
+          max={100}
+          onChange={(gridOverlayOpacity) =>
+            onSettingsChange({ gridOverlayOpacity }, false)
+          }
+        />
+        <ToggleRow
+          label="Difference"
+          hint="Invert grid against colours underneath"
+          checked={Boolean(settings.gridOverlayDifference)}
+          onChange={(gridOverlayDifference) =>
+            onSettingsChange({ gridOverlayDifference }, false)
+          }
+        />
       </section>
 
       <section className="panel-section">

@@ -134,9 +134,9 @@ function shuffleCells<T>(items: T[], rng: Rng): T[] {
   return next;
 }
 
-/** Scale blend 1..6 → contrast 0..1 (similar → large+small). */
+/** Scale blend 0..6 → contrast 0..1 (similar → large+small). */
 function contrastFromScaleBlend(scaleBlend: number): number {
-  return Math.min(1, Math.max(0, (scaleBlend - 1) / 5));
+  return Math.min(1, Math.max(0, scaleBlend / 6));
 }
 
 /** Macro pool grows with contrast; 1 at low contrast (no coarsen). */

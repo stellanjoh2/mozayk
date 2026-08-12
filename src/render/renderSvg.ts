@@ -1,5 +1,10 @@
 import { blockPixelRect, getGridDimensions } from "../grid/gridMath";
-import type { GridDimensions, MosaicBlock } from "../types";
+import type { FrameSettings, GridDimensions, MosaicBlock } from "../types";
+import {
+  gridOverlayDimensions,
+  gridOverlayPathData,
+  resolveGridOverlayStyle,
+} from "./gridOverlay";
 import type { RenderOptions } from "./renderFrame";
 import { ringInnerRadius } from "./ringGeometry";
 
@@ -87,6 +92,21 @@ function svgBackground(
   return `<rect width="${width}" height="${height}" fill="#000000"/>`;
 }
 
+function svgGridOverlay(
+  orientation: RenderOptions["orientation"],
+  settings: FrameSettings,
+  width: number,
+  height: number,
+): string {
+  const style = resolveGridOverlayStyle(settings);
+  if (!style) return "";
+
+  const grid = gridOverlayDimensions(orientation, width, height, style);
+  const blend = style.difference ? ` style="mix-blend-mode:difference"` : "";
+
+  return `<path d="${gridOverlayPathData(grid)}" fill="none" stroke="${style.color}" stroke-width="2" stroke-opacity="${style.opacity}"${blend}/>`;
+}
+
 export type SvgRenderOptions = RenderOptions & {
   sourceDataUrl?: string;
 };
@@ -109,6 +129,10 @@ export function renderMosaicToSvg(options: SvgRenderOptions): string {
     .map((block) => svgBlock(block, grid, settings.ringThickness))
     .join("\n  ");
 
+  const overlay = settings.gridOverlay
+    ? svgGridOverlay(orientation, settings, width, height)
+    : "";
+
   return [
     `<?xml version="1.0" encoding="UTF-8"?>`,
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
@@ -120,6 +144,7 @@ export function renderMosaicToSvg(options: SvgRenderOptions): string {
       transparentBackground,
     ),
     shapes,
+    overlay,
     `</svg>`,
   ]
     .filter(Boolean)
