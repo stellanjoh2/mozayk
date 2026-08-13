@@ -250,7 +250,7 @@ export function applyGridBlur(
     );
     if (!blurred) return;
 
-    const chaos = clampInt(settings.gridBlurChaos, 0, 100, 0);
+    const chaos = clampInt(settings.gridBlurChaos, 0, 100, 50);
     if (chaos > 0) {
       const sharp = context2d(width, height);
       if (!sharp) return;
@@ -259,12 +259,26 @@ export function applyGridBlur(
       const mask = context2d(width, height);
       if (!mask) return;
       drawSharpMask(mask, grid, chaos);
+
+      // Feather patch edges so restored sharp tiles don't cut hard seams
+      // through an otherwise blurred field (esp. high chaos + high amount).
+      // Skip on mild blur — hard mask is fine and saves a full-canvas pass.
+      const feather = Math.min(
+        Math.max(radius * 0.12, 1.5),
+        grid.cellSize * 0.35,
+      );
+      const softMask =
+        radius >= 2 && chaos >= 15
+          ? blurredCopy(mask.canvas, width, height, feather, false)
+          : null;
       sharp.globalCompositeOperation = "destination-in";
-      sharp.drawImage(mask.canvas, 0, 0);
+      sharp.drawImage(softMask ?? mask.canvas, 0, 0);
 
       ctx.clearRect(0, 0, width, height);
+      ctx.imageSmoothingEnabled = false;
       ctx.drawImage(blurred, 0, 0);
       ctx.drawImage(sharp.canvas, 0, 0);
+      ctx.imageSmoothingEnabled = true;
       if (opaqueBackdrop) {
         ctx.globalCompositeOperation = "destination-over";
         ctx.fillStyle = "#000000";
@@ -275,7 +289,9 @@ export function applyGridBlur(
     }
 
     ctx.clearRect(0, 0, width, height);
+    ctx.imageSmoothingEnabled = false;
     ctx.drawImage(blurred, 0, 0);
+    ctx.imageSmoothingEnabled = true;
   } catch {
     // CSS blur on large canvases can throw or fail to allocate — keep the sharp mosaic.
   }

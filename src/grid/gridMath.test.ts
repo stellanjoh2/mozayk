@@ -37,7 +37,18 @@ function run(): void {
     for (const density of DENSITIES) {
       for (const [width, height] of CANVASES[orientation]) {
         const grid = getGridDimensions(orientation, density, width, height);
-        assert(seamOverlapPx(grid) === 1, `expected overlap at ${width}×${height} d=${density}`);
+        const baseOverlap =
+          grid.cellSize >= 4 ? 1 : 0;
+        const heavyOverlap =
+          grid.cellSize >= 8 ? 2 : grid.cellSize >= 4 ? 1 : 0;
+        assert(
+          seamOverlapPx(grid) === baseOverlap,
+          `expected base overlap at ${width}×${height} d=${density}`,
+        );
+        assert(
+          seamOverlapPx(grid, true) === heavyOverlap,
+          `expected heavy overlap at ${width}×${height} d=${density}`,
+        );
 
         for (let col = 0; col < grid.columns; col++) {
           const left = blockPixelRect(grid, { col, row: 0, width: 1, height: 1 });
@@ -102,7 +113,8 @@ function run(): void {
 
   const thumb = getGridDimensions("landscape", 3, 96, 54);
   assert(thumb.cellSize === 2, "thumbnail cell is 2px");
-  assert(seamOverlapPx(thumb) === 0, "thumbnails skip 1px overlap");
+  assert(seamOverlapPx(thumb) === 0, "thumbnails skip overlap");
+  assert(seamOverlapPx(thumb, true) === 0, "thumbnails skip heavy overlap");
 }
 
 run();

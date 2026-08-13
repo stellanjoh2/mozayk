@@ -64,6 +64,8 @@ export function CanvasView({
   const stageRef = useRef<HTMLDivElement>(null);
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
   const [sourceImage, setSourceImage] = useState<HTMLImageElement | null>(null);
+  const [textureOverlayImage, setTextureOverlayImage] =
+    useState<HTMLImageElement | null>(null);
 
   const stagePadding = isFullscreen ? 0 : STAGE_PADDING;
   const [availW, availH] = stageAvailableSize(
@@ -120,6 +122,26 @@ export function CanvasView({
     frame.imageSource?.dataUrl,
   ]);
 
+  useEffect(() => {
+    if (!frame.textureOverlay) {
+      setTextureOverlayImage(null);
+      return;
+    }
+
+    let cancelled = false;
+    void ensureCachedSourceImage(frame.textureOverlay.dataUrl)
+      .then((image) => {
+        if (!cancelled) setTextureOverlayImage(image);
+      })
+      .catch(() => {
+        if (!cancelled) setTextureOverlayImage(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [frame.textureOverlay?.dataUrl]);
+
   useLayoutEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -139,6 +161,7 @@ export function CanvasView({
         width,
         height,
         sourceImage: frame.settings.showSourceImage ? sourceImage : null,
+        textureOverlayImage,
       });
     } catch (error) {
       console.error(error);
@@ -146,10 +169,12 @@ export function CanvasView({
   }, [
     viewOriginal,
     sourceImage,
+    textureOverlayImage,
     frame.settings,
     frame.blocks,
     frame.id,
     frame.imageSource,
+    frame.textureOverlay,
     orientation,
     width,
     height,
@@ -172,13 +197,14 @@ export function CanvasView({
     return () => observer.disconnect();
   }, []);
 
-  // Whole CSS pixels — fractional display size interpolates tile edges into hairlines.
+  // Whole CSS pixels, aspect locked — independent W/H rounding skews scale and
+  // resurrects 0.5px hairlines between tiles under CSS interpolation.
   const displayWidth = isInspecting
     ? nativeSize[0]
     : Math.max(1, Math.round(width * fitScale));
   const displayHeight = isInspecting
     ? nativeSize[1]
-    : Math.max(1, Math.round(height * fitScale));
+    : Math.max(1, Math.round(displayWidth * (height / width)));
 
   return (
     <div
@@ -261,6 +287,8 @@ function FrameThumbnail({
   const skippedClickRef = useRef(false);
   const [thumbW, thumbH] = getThumbnailSize(orientation);
   const [sourceImage, setSourceImage] = useState<HTMLImageElement | null>(null);
+  const [textureOverlayImage, setTextureOverlayImage] =
+    useState<HTMLImageElement | null>(null);
 
   useEffect(() => {
     if (!frame.settings.showSourceImage || !frame.imageSource) {
@@ -282,6 +310,26 @@ function FrameThumbnail({
     };
   }, [frame.settings.showSourceImage, frame.imageSource?.dataUrl]);
 
+  useEffect(() => {
+    if (!frame.textureOverlay) {
+      setTextureOverlayImage(null);
+      return;
+    }
+
+    let cancelled = false;
+    void ensureCachedSourceImage(frame.textureOverlay.dataUrl)
+      .then((image) => {
+        if (!cancelled) setTextureOverlayImage(image);
+      })
+      .catch(() => {
+        if (!cancelled) setTextureOverlayImage(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [frame.textureOverlay?.dataUrl]);
+
   useLayoutEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -293,6 +341,7 @@ function FrameThumbnail({
         width: thumbW,
         height: thumbH,
         sourceImage: frame.settings.showSourceImage ? sourceImage : null,
+        textureOverlayImage,
       });
     } catch (error) {
       console.error(error);
@@ -302,10 +351,12 @@ function FrameThumbnail({
     frame.blocks,
     frame.id,
     frame.imageSource,
+    frame.textureOverlay,
     orientation,
     thumbW,
     thumbH,
     sourceImage,
+    textureOverlayImage,
   ]);
 
   return (

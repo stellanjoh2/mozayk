@@ -44,6 +44,10 @@ import {
 } from "./state/undoHistory";
 import { importImageFileToMosaic } from "./import/imageImport";
 import {
+  ensureCachedSourceImage,
+  readImageFileAsDataUrl,
+} from "./import/imageSource";
+import {
   UnsupportedImageTypeError,
   unsupportedImageMessage,
   validateImageFile,
@@ -99,6 +103,7 @@ export default function App() {
   const [exportPreset, setExportPreset] = useState<ExportPreset>("1080p");
   const [canPasteSettings, setCanPasteSettings] = useState(hasStoredSettings);
   const [importingImage, setImportingImage] = useState(false);
+  const [uploadingTextureOverlay, setUploadingTextureOverlay] = useState(false);
   const [importErrorMessage, setImportErrorMessage] = useState<string | null>(
     null,
   );
@@ -500,6 +505,51 @@ export default function App() {
     [frames, pushUndoCheckpoint, updateActiveFrame],
   );
 
+  const handleTextureOverlayUpload = useCallback(
+    async (file: File) => {
+      try {
+        validateImageFile(file);
+      } catch (error) {
+        if (error instanceof UnsupportedImageTypeError) {
+          setImportErrorMessage(unsupportedImageMessage(error.label));
+          return;
+        }
+        setImportErrorMessage(
+          "This file could not be imported. Use JPEG, PNG, WebP, GIF, or AVIF instead.",
+        );
+        return;
+      }
+
+      setUploadingTextureOverlay(true);
+      try {
+        const dataUrl = await readImageFileAsDataUrl(file);
+        await ensureCachedSourceImage(dataUrl);
+        pushUndoCheckpoint();
+        updateActiveFrame((current) => ({
+          ...current,
+          textureOverlay: { dataUrl },
+        }));
+        setToast("Texture uploaded");
+      } catch {
+        setImportErrorMessage(
+          "This image could not be loaded. Try JPEG, PNG, WebP, GIF, or AVIF instead.",
+        );
+      } finally {
+        setUploadingTextureOverlay(false);
+      }
+    },
+    [pushUndoCheckpoint, updateActiveFrame],
+  );
+
+  const handleTextureOverlayClear = useCallback(() => {
+    pushUndoCheckpoint();
+    updateActiveFrame((current) => ({
+      ...current,
+      textureOverlay: undefined,
+    }));
+    setToast("Texture cleared");
+  }, [pushUndoCheckpoint, updateActiveFrame]);
+
   const handleResetCanvas = useCallback(() => {
     pushUndoCheckpoint();
     if (layoutRegenTimer.current) {
@@ -754,6 +804,9 @@ export default function App() {
         }
         onImportImage={(file) => void handleImportImage(file)}
         importingImage={importingImage}
+        onTextureOverlayUpload={(file) => void handleTextureOverlayUpload(file)}
+        onTextureOverlayClear={handleTextureOverlayClear}
+        uploadingTextureOverlay={uploadingTextureOverlay}
         onResetCanvas={handleResetCanvas}
       />
       ) : null}

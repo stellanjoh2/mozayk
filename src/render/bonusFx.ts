@@ -49,18 +49,29 @@ function getGrainTile(): HTMLCanvasElement {
   return grainTile;
 }
 
-function applyHue(
+/** Apply contrast, brightness + hue in one filter pass when any is non-default. */
+function applyColorFilters(
   ctx: CanvasRenderingContext2D,
-  degrees: number,
+  contrast: number,
+  brightness: number,
+  hueDegrees: number,
   width: number,
   height: number,
 ): void {
-  if (degrees === 0) return;
+  // sliders −100…100 → CSS factor (1 = unchanged)
+  const contrastFactor = 1 + contrast / 100;
+  const brightnessFactor = 1 + brightness / 100;
+  if (contrastFactor === 1 && brightnessFactor === 1 && hueDegrees === 0) return;
+
+  const parts: string[] = [];
+  if (contrastFactor !== 1) parts.push(`contrast(${contrastFactor})`);
+  if (brightnessFactor !== 1) parts.push(`brightness(${brightnessFactor})`);
+  if (hueDegrees !== 0) parts.push(`hue-rotate(${hueDegrees}deg)`);
 
   const copy = context2d(width, height);
   if (!copy) return;
   try {
-    copy.filter = `hue-rotate(${degrees}deg)`;
+    copy.filter = parts.join(" ");
     copy.drawImage(ctx.canvas, 0, 0);
     copy.filter = "none";
   } catch {
@@ -69,6 +80,19 @@ function applyHue(
 
   ctx.clearRect(0, 0, width, height);
   ctx.drawImage(copy.canvas, 0, 0);
+}
+
+/** Full-frame difference with white — inverts opaque RGB. */
+function applyInvert(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+): void {
+  ctx.save();
+  ctx.globalCompositeOperation = "difference";
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, width, height);
+  ctx.restore();
 }
 
 function applyNoise(
@@ -97,13 +121,18 @@ export function applyBonusFx(
   height: number,
 ): void {
   const hue = clampInt(settings.hueShift, -180, 180, 0);
+  const contrast = clampInt(settings.contrast, -100, 100, 0);
+  const brightness = clampInt(settings.brightness, -100, 100, 0);
   const noise = clampInt(settings.noiseAmount, 0, 100, 0);
-  if (hue === 0 && noise <= 0) return;
+  const invert = Boolean(settings.invert);
+  if (hue === 0 && contrast === 0 && brightness === 0 && noise <= 0 && !invert)
+    return;
 
   try {
-    applyHue(ctx, hue, width, height);
+    applyColorFilters(ctx, contrast, brightness, hue, width, height);
     applyNoise(ctx, noise, width, height);
+    if (invert) applyInvert(ctx, width, height);
   } catch {
-    // Hue/noise at 4K can fail to allocate a filter buffer — keep the mosaic.
+    // Color filters / noise at 4K can fail to allocate — keep the mosaic.
   }
 }

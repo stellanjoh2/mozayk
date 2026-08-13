@@ -52,9 +52,12 @@ export type PixelRect = { x: number; y: number; width: number; height: number };
 /**
  * Hairline overlap so adjacent fills cover canvas/SVG anti-aliasing and CSS
  * downscale interpolation. Skip on tiny thumbnail cells where 1px is huge.
+ * Pass `heavy` when grid blur will soften 1px seams (canvas / PNG only).
  */
-export function seamOverlapPx(grid: GridDimensions): number {
-  return grid.cellSize >= 4 ? 1 : 0;
+export function seamOverlapPx(grid: GridDimensions, heavy = false): number {
+  if (grid.cellSize >= 8) return heavy ? 2 : 1;
+  if (grid.cellSize >= 4) return 1;
+  return 0;
 }
 
 /** Pixel-snapped block bounds — shared edges stay identical for adjacent blocks. */
@@ -74,15 +77,16 @@ export function blockPixelRect(
 }
 
 /**
- * Draw bounds that overlap neighbours by 1px so background cannot show through
- * a 0.5px gap. Geometry of circles/triangles should still use `blockPixelRect`.
+ * Draw bounds that overlap neighbours so background cannot show through a
+ * 0.5px gap. Geometry of circles/triangles should still use `blockPixelRect`.
  */
 export function blockFillRect(
   grid: GridDimensions,
   block: Pick<MosaicBlock, "col" | "row" | "width" | "height">,
+  heavy = false,
 ): PixelRect {
   const rect = blockPixelRect(grid, block);
-  const overlap = seamOverlapPx(grid);
+  const overlap = seamOverlapPx(grid, heavy);
   if (overlap <= 0) return rect;
 
   const x = Math.max(0, rect.x - overlap);

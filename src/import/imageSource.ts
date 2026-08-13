@@ -75,6 +75,17 @@ export function ensureCachedSourceImage(
   });
 }
 
+/** Read a local image file as a data URL (keeps original format / alpha). */
+export function readImageFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () =>
+      reject(reader.error ?? new Error("Could not read image file"));
+    reader.readAsDataURL(file);
+  });
+}
+
 export function imageToDataUrl(image: HTMLImageElement): string {
   const canvas = document.createElement("canvas");
   canvas.width = image.naturalWidth || image.width;

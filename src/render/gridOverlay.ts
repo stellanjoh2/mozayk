@@ -3,21 +3,25 @@ import { getGridDimensions } from "../grid/gridMath";
 import type {
   Density,
   FrameSettings,
+  GridBlendMode,
   GridDimensions,
   GridOverlayStroke,
   Orientation,
 } from "../types";
 import {
   GRID_CROSS_SIZE_DEFAULT,
+  resolveGridBlendMode,
   resolveGridCrossSize,
   resolveGridOverlayStroke,
 } from "./gridOverlayParams";
 
 export {
+  GRID_BLEND_MODES,
   GRID_CROSS_SIZE_DEFAULT,
   GRID_CROSS_SIZE_MAX,
   GRID_CROSS_SIZE_MIN,
   GRID_OVERLAY_STROKES,
+  resolveGridBlendMode,
   resolveGridCrossSize,
   resolveGridOverlayStroke,
 } from "./gridOverlayParams";
@@ -29,7 +33,7 @@ export type GridOverlayStyle = {
   lineWidth: GridOverlayStroke;
   /** 0–1 */
   opacity: number;
-  difference: boolean;
+  blendMode: GridBlendMode;
   /** 0–100; 0 = perfect square hatch */
   chaos: number;
   /** Cross arm span in px. Unused for lines. */
@@ -48,7 +52,7 @@ export function resolveGridOverlayStyle(
     color: normalizeHex(settings.gridOverlayColor, "#ffffff"),
     lineWidth: resolveGridOverlayStroke(settings.gridOverlayStroke),
     opacity: Math.min(100, Math.max(0, opacityRaw)) / 100,
-    difference: Boolean(settings.gridOverlayDifference),
+    blendMode: resolveGridBlendMode(settings.gridOverlayBlend),
     chaos: Math.min(100, Math.max(0, chaosRaw)),
   };
 }
@@ -61,11 +65,11 @@ export function resolveGridCrossesStyle(
   const opacityRaw = settings.gridCrossesOpacity ?? 100;
   const chaosRaw = settings.gridCrossesChaos ?? 0;
   return {
-    density: settings.gridCrossesDensity ?? settings.density,
+    density: settings.gridCrossesDensity ?? 1,
     color: normalizeHex(settings.gridCrossesColor, "#ffffff"),
     lineWidth: resolveGridOverlayStroke(settings.gridCrossesStroke),
     opacity: Math.min(100, Math.max(0, opacityRaw)) / 100,
-    difference: Boolean(settings.gridCrossesDifference),
+    blendMode: resolveGridBlendMode(settings.gridCrossesBlend),
     chaos: Math.min(100, Math.max(0, chaosRaw)),
     size: resolveGridCrossSize(settings.gridCrossesSize),
   };

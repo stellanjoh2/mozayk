@@ -116,7 +116,10 @@ function svgBackground(
 }
 
 function svgOverlayPath(style: GridOverlayStyle, d: string): string {
-  const blend = style.difference ? ` style="mix-blend-mode:difference"` : "";
+  const blend =
+    style.blendMode !== "normal"
+      ? ` style="mix-blend-mode:${style.blendMode}"`
+      : "";
   return `<path d="${d}" fill="none" stroke="${style.color}" stroke-width="${style.lineWidth}" stroke-opacity="${style.opacity}"${blend}/>`;
 }
 

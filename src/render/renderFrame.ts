@@ -24,6 +24,7 @@ import {
   type GridOverlayStyle,
 } from "./gridOverlay";
 import { ringInnerRadius } from "./ringGeometry";
+import { applyTextureOverlay } from "./textureOverlay";
 
 export type RenderOptions = {
   orientation: Orientation;
@@ -33,6 +34,8 @@ export type RenderOptions = {
   height: number;
   /** Loaded source photo — required when settings.showSourceImage is enabled. */
   sourceImage?: HTMLImageElement | null;
+  /** Local texture overlay image when frame.textureOverlay is set. */
+  textureOverlayImage?: HTMLImageElement | null;
   /** Skip drawing blocks with these colours (export holes). */
   omitColors?: ReadonlySet<string>;
   /** Clear alpha background instead of black/checkerboard. */
@@ -83,8 +86,10 @@ function drawBlock(
   block: MosaicBlock,
   grid: GridDimensions,
   ringThickness: number,
+  heavySeams = false,
 ): void {
   const { x, y, width: drawW, height: drawH } = blockPixelRect(grid, block);
+  const overlap = seamOverlapPx(grid, heavySeams);
 
   if (block.shape === "ring") {
     const diameter = Math.min(drawW, drawH);
@@ -114,7 +119,7 @@ function drawBlock(
   if (block.shape === "triangle") {
     const points = triangleFillPoints(
       { x, y, width: drawW, height: drawH },
-      seamOverlapPx(grid),
+      overlap,
     );
     ctx.fillStyle = block.color;
     ctx.beginPath();
@@ -129,7 +134,7 @@ function drawBlock(
   if (block.shape === "cross") {
     const { horizontal, vertical } = crossFillRects(
       { x, y, width: drawW, height: drawH },
-      seamOverlapPx(grid),
+      overlap,
     );
     ctx.fillStyle = block.color;
     ctx.fillRect(
@@ -142,7 +147,7 @@ function drawBlock(
     return;
   }
 
-  const fill = blockFillRect(grid, block);
+  const fill = blockFillRect(grid, block, heavySeams);
   ctx.fillStyle = block.color;
   ctx.fillRect(fill.x, fill.y, fill.width, fill.height);
 }
@@ -175,8 +180,8 @@ function strokeOverlayPath(
 ): void {
   ctx.save();
   ctx.globalAlpha = style.opacity;
-  if (style.difference) {
-    ctx.globalCompositeOperation = "difference";
+  if (style.blendMode !== "normal") {
+    ctx.globalCompositeOperation = style.blendMode;
   }
   ctx.strokeStyle = style.color;
   ctx.lineWidth = style.lineWidth;
@@ -219,6 +224,7 @@ export function renderMosaic(
     width,
     height,
     sourceImage,
+    textureOverlayImage,
     omitColors,
     transparentBackground,
   } = options;
@@ -239,10 +245,11 @@ export function renderMosaic(
     drawBackground(ctx, settings, width, height, sourceImage);
   }
 
+  const heavySeams = Boolean(settings.gridBlur);
   for (const block of blocks) {
     if (!block.color) continue;
     if (omitColors?.has(block.color)) continue;
-    drawBlock(ctx, block, grid, settings.ringThickness);
+    drawBlock(ctx, block, grid, settings.ringThickness, heavySeams);
   }
 
   try {
@@ -262,6 +269,20 @@ export function renderMosaic(
     !transparentBackground,
   );
   applyBonusFx(ctx, settings, width, height);
+
+  if (textureOverlayImage) {
+    try {
+      applyTextureOverlay(
+        ctx,
+        textureOverlayImage,
+        settings,
+        width,
+        height,
+      );
+    } catch (error) {
+      console.error(error);
+    }
+  }
 
   return grid;
 }

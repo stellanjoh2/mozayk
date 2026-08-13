@@ -6,13 +6,28 @@ import {
   maxWidthSliderMax,
 } from "../grid/density";
 import {
+  GRID_BLEND_LABELS,
+  GRID_BLEND_MODES,
   GRID_CROSS_SIZE_DEFAULT,
   GRID_CROSS_SIZE_MAX,
   GRID_CROSS_SIZE_MIN,
   GRID_OVERLAY_STROKES,
   resolveGridOverlayStroke,
 } from "../render/gridOverlayParams";
-import type { Density, Frame, FrameSettings, Orientation } from "../types";
+import {
+  TEXTURE_OVERLAY_BLEND_LABELS,
+  TEXTURE_OVERLAY_BLEND_MODES,
+  TEXTURE_OVERLAY_OPACITY_DEFAULT,
+  TEXTURE_OVERLAY_TINT_DEFAULT,
+} from "../render/textureOverlay";
+import type {
+  Density,
+  Frame,
+  FrameSettings,
+  GridBlendMode,
+  Orientation,
+  TextureOverlayBlendMode,
+} from "../types";
 import { SUPPORTED_IMAGE_ACCEPT } from "../import/supportedImageTypes";
 import { BrandLogo } from "./BrandLogo";
 import { ColorSwatch } from "./ColorSwatch";
@@ -46,6 +61,9 @@ type ControlsPanelProps = {
   onExportSvgFrame: () => void;
   onImportImage: (file: File) => void;
   importingImage?: boolean;
+  onTextureOverlayUpload: (file: File) => void;
+  onTextureOverlayClear: () => void;
+  uploadingTextureOverlay?: boolean;
   onResetCanvas: () => void;
 };
 
@@ -76,10 +94,14 @@ export function ControlsPanel({
   onExportSvgFrame,
   onImportImage,
   importingImage = false,
+  onTextureOverlayUpload,
+  onTextureOverlayClear,
+  uploadingTextureOverlay = false,
   onResetCanvas,
 }: ControlsPanelProps) {
   const { settings } = frame;
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textureInputRef = useRef<HTMLInputElement>(null);
   const shapes = settings.shapes ?? {
     sphere: false,
     ring: false,
@@ -498,14 +520,30 @@ export function ControlsPanel({
               onSettingsChange({ gridOverlayChaos }, false)
             }
           />
-          <ToggleRow
-            label="Difference"
-            hint="Invert grid against colours underneath"
-            checked={Boolean(settings.gridOverlayDifference)}
-            onChange={(gridOverlayDifference) =>
-              onSettingsChange({ gridOverlayDifference }, false)
-            }
-          />
+          <label className="control-row">
+            <span className="control-row__label">
+              <HintLabel hint="How grid strokes mix with colours underneath">
+                Blend
+              </HintLabel>
+            </span>
+            <select
+              value={settings.gridOverlayBlend ?? "normal"}
+              onChange={(e) =>
+                onSettingsChange(
+                  {
+                    gridOverlayBlend: e.target.value as GridBlendMode,
+                  },
+                  false,
+                )
+              }
+            >
+              {GRID_BLEND_MODES.map((mode) => (
+                <option key={mode} value={mode}>
+                  {GRID_BLEND_LABELS[mode]}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
         <div className="export-group">
           <h3 className="export-group__title">Crosses</h3>
@@ -518,7 +556,7 @@ export function ControlsPanel({
           <label className="control-row">
             <span className="control-row__label">Grid Density</span>
             <select
-              value={settings.gridCrossesDensity ?? settings.density}
+              value={settings.gridCrossesDensity ?? 1}
               onChange={(e) =>
                 onSettingsChange(
                   {
@@ -591,14 +629,30 @@ export function ControlsPanel({
               onSettingsChange({ gridCrossesChaos }, false)
             }
           />
-          <ToggleRow
-            label="Difference"
-            hint="Invert crosses against colours underneath"
-            checked={Boolean(settings.gridCrossesDifference)}
-            onChange={(gridCrossesDifference) =>
-              onSettingsChange({ gridCrossesDifference }, false)
-            }
-          />
+          <label className="control-row">
+            <span className="control-row__label">
+              <HintLabel hint="How crosses mix with colours underneath">
+                Blend
+              </HintLabel>
+            </span>
+            <select
+              value={settings.gridCrossesBlend ?? "normal"}
+              onChange={(e) =>
+                onSettingsChange(
+                  {
+                    gridCrossesBlend: e.target.value as GridBlendMode,
+                  },
+                  false,
+                )
+              }
+            >
+              {GRID_BLEND_MODES.map((mode) => (
+                <option key={mode} value={mode}>
+                  {GRID_BLEND_LABELS[mode]}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
       </section>
 
@@ -643,7 +697,7 @@ export function ControlsPanel({
         <SliderRow
           label="Randomness"
           hint="Break uniform blur into irregular on-grid patches"
-          value={settings.gridBlurChaos ?? 0}
+          value={settings.gridBlurChaos ?? 50}
           min={0}
           max={100}
           onChange={(gridBlurChaos) =>
@@ -653,7 +707,102 @@ export function ControlsPanel({
       </section>
 
       <section className="panel-section">
-        <h2>Bonus</h2>
+        <h2>Texture Overlay</h2>
+        <input
+          ref={textureInputRef}
+          type="file"
+          accept={SUPPORTED_IMAGE_ACCEPT}
+          className="import-file-input"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            if (file) onTextureOverlayUpload(file);
+          }}
+        />
+        <button
+          type="button"
+          className="panel-btn"
+          disabled={uploadingTextureOverlay}
+          onClick={() => textureInputRef.current?.click()}
+        >
+          {uploadingTextureOverlay
+            ? "Uploading…"
+            : frame.textureOverlay
+              ? "Replace Texture"
+              : "Upload Texture"}
+        </button>
+        {frame.textureOverlay ? (
+          <>
+            <button
+              type="button"
+              className="panel-btn panel-btn--ghost"
+              onClick={onTextureOverlayClear}
+            >
+              Clear Texture
+            </button>
+            <label className="control-row">
+              <span className="control-row__label">
+                <HintLabel hint="How the texture mixes with the mosaic · PNG only">
+                  Blend
+                </HintLabel>
+              </span>
+              <select
+                value={settings.textureOverlayBlend ?? "multiply"}
+                onChange={(e) =>
+                  onSettingsChange(
+                    {
+                      textureOverlayBlend: e.target
+                        .value as TextureOverlayBlendMode,
+                    },
+                    false,
+                  )
+                }
+              >
+                {TEXTURE_OVERLAY_BLEND_MODES.map((mode) => (
+                  <option key={mode} value={mode}>
+                    {TEXTURE_OVERLAY_BLEND_LABELS[mode]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <SliderRow
+              label="Opacity"
+              hint="Strength of the texture overlay · PNG only"
+              value={
+                settings.textureOverlayOpacity ?? TEXTURE_OVERLAY_OPACITY_DEFAULT
+              }
+              min={0}
+              max={100}
+              onChange={(textureOverlayOpacity) =>
+                onSettingsChange({ textureOverlayOpacity }, false)
+              }
+            />
+            <div className="control-row">
+              <span className="control-row__label">
+                <HintLabel hint="Multiply tint on the texture before blending · white leaves it unchanged">
+                  Tint
+                </HintLabel>
+              </span>
+              <ColorSwatch
+                color={
+                  settings.textureOverlayTint ?? TEXTURE_OVERLAY_TINT_DEFAULT
+                }
+                onChange={(textureOverlayTint) =>
+                  onSettingsChange({ textureOverlayTint }, false)
+                }
+              />
+            </div>
+          </>
+        ) : (
+          <p className="panel-hint">
+            Local dirt / paper / grain image · blends over the finished mosaic ·
+            PNG only
+          </p>
+        )}
+      </section>
+
+      <section className="panel-section">
+        <h2>Extras</h2>
         <SliderRow
           label="Noise"
           hint="Film grain over the finished image · PNG only"
@@ -673,55 +822,27 @@ export function ControlsPanel({
           formatValue={(v) => `${v}°`}
           onChange={(hueShift) => onSettingsChange({ hueShift }, false)}
         />
-      </section>
-
-      <section className="panel-section">
-        <h2>Grid Blur</h2>
+        <SliderRow
+          label="Contrast"
+          hint="Boost or flatten tonal range · PNG only"
+          value={settings.contrast ?? 0}
+          min={-100}
+          max={100}
+          onChange={(contrast) => onSettingsChange({ contrast }, false)}
+        />
+        <SliderRow
+          label="Brightness"
+          hint="Lighten or darken the finished image · PNG only"
+          value={settings.brightness ?? 0}
+          min={-100}
+          max={100}
+          onChange={(brightness) => onSettingsChange({ brightness }, false)}
+        />
         <ToggleRow
-          label="Enabled"
-          hint="Gaussian blur over the finished mosaic · PNG only"
-          checked={Boolean(settings.gridBlur)}
-          onChange={(gridBlur) => onSettingsChange({ gridBlur }, false)}
-        />
-        <label className="control-row">
-          <span className="control-row__label">Grid Density</span>
-          <select
-            value={settings.gridBlurDensity ?? settings.density}
-            onChange={(e) =>
-              onSettingsChange(
-                {
-                  gridBlurDensity: Number(e.target.value) as Density,
-                },
-                false,
-              )
-            }
-          >
-            {DENSITY_INFO.map((info) => (
-              <option key={info.level} value={info.level}>
-                {info.level}
-              </option>
-            ))}
-          </select>
-        </label>
-        <SliderRow
-          label="Amount"
-          hint="Blur radius relative to cell size"
-          value={settings.gridBlurAmount ?? 50}
-          min={0}
-          max={100}
-          onChange={(gridBlurAmount) =>
-            onSettingsChange({ gridBlurAmount }, false)
-          }
-        />
-        <SliderRow
-          label="Randomness"
-          hint="Keep irregular sharp patches"
-          value={settings.gridBlurChaos ?? 0}
-          min={0}
-          max={100}
-          onChange={(gridBlurChaos) =>
-            onSettingsChange({ gridBlurChaos }, false)
-          }
+          label="Invert"
+          hint="Full-frame difference with white · PNG only"
+          checked={Boolean(settings.invert)}
+          onChange={(invert) => onSettingsChange({ invert }, false)}
         />
       </section>
 

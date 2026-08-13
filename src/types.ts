@@ -3,6 +3,16 @@ import type { ImageSourceData } from "./import/imageSource";
 export type Orientation = "landscape" | "portrait" | "square";
 export type Density = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 export type GridOverlayStroke = 1 | 2 | 4;
+/** Blend mode for grid overlay strokes over the mosaic. */
+export type GridBlendMode = "normal" | "difference" | "screen";
+/** Blend mode for a full-frame texture overlay (dirt / grain / etc.). */
+export type TextureOverlayBlendMode =
+  | "multiply"
+  | "overlay"
+  | "soft-light"
+  | "hard-light"
+  | "screen"
+  | "difference";
 export type ShapeType = "block" | "sphere" | "ring" | "triangle" | "cross";
 export type BackgroundMode = "black" | "transparent";
 export type LayoutSource = "procedural" | "imported";
@@ -64,40 +74,56 @@ export type FrameSettings = {
   gridOverlayOpacity?: number;
   /** Break square grid into irregular paths 0–100. Defaults to 0. */
   gridOverlayChaos?: number;
-  /** When true, grid uses difference blend mode over the mosaic. */
-  gridOverlayDifference?: boolean;
-  /** 8×8px crosses on overlay-grid intersections. */
+  /** Blend mode for grid lines over the mosaic. Defaults to normal. */
+  gridOverlayBlend?: GridBlendMode;
+  /** Plus marks on a dedicated crosses grid. */
   gridCrosses?: boolean;
-  /** Crosses grid density — independent of overlay / layout density. */
+  /** Crosses grid density — independent of overlay / layout density. Defaults to 1. */
   gridCrossesDensity?: Density;
   /** Cross stroke colour (hex). Defaults to white. */
   gridCrossesColor?: string;
   /** Cross stroke width in px: 1, 2, or 4. Defaults to 2. */
   gridCrossesStroke?: GridOverlayStroke;
-  /** How far each plus extends, in px (full span). Defaults to 8. */
+  /** How far each plus extends, in px (full span). Defaults to 24. */
   gridCrossesSize?: number;
   /** Cross opacity 0–100. Defaults to 100. */
   gridCrossesOpacity?: number;
   /** Randomly omit crosses 0–100. Defaults to 0. */
   gridCrossesChaos?: number;
-  /** When true, crosses use difference blend mode. */
-  gridCrossesDifference?: boolean;
+  /** Blend mode for crosses over the mosaic. Defaults to normal. */
+  gridCrossesBlend?: GridBlendMode;
   /** Final Gaussian blur over the finished mosaic (canvas / PNG only). */
   gridBlur?: boolean;
   /** Blur grid density — independent of layout density. */
   gridBlurDensity?: Density;
   /** Blur radius 0–100, relative to grid cell size. Defaults to 50. */
   gridBlurAmount?: number;
-  /** Break uniform blur into irregular on-grid patches 0–100. Defaults to 0. */
+  /** Break uniform blur into irregular on-grid patches 0–100. Defaults to 50. */
   gridBlurChaos?: number;
   /** Film grain over the finished image 0–100. Defaults to 0. */
   noiseAmount?: number;
   /** Hue rotation in degrees −180–180. Defaults to 0. */
   hueShift?: number;
+  /** Contrast −100–100. Defaults to 0 (unchanged). */
+  contrast?: number;
+  /** Brightness −100–100. Defaults to 0 (unchanged). */
+  brightness?: number;
+  /** Invert the finished image (full-frame difference with white). */
+  invert?: boolean;
   /** Reveal the imported photo in gaps between mosaic shapes. Requires imageSource. */
   showSourceImage?: boolean;
+  /** Blend mode for the local texture overlay. Defaults to multiply. */
+  textureOverlayBlend?: TextureOverlayBlendMode;
+  /** Texture overlay opacity 0–100. Defaults to 40. */
+  textureOverlayOpacity?: number;
+  /** Multiply tint applied to the texture before blending (hex). Defaults to white. */
+  textureOverlayTint?: string;
   /** Imported image layouts are reshuffled instead of procedurally regenerated. */
   layoutSource?: LayoutSource;
+};
+
+export type TextureOverlayData = {
+  dataUrl: string;
 };
 
 export type Frame = {
@@ -106,6 +132,8 @@ export type Frame = {
   blocks: MosaicBlock[];
   /** Source photo used to target colours/shapes when randomizing imported layouts. */
   imageSource?: ImageSourceData;
+  /** Local texture overlay image (dirt / paper / etc.). Not pasted with settings. */
+  textureOverlay?: TextureOverlayData;
 };
 
 export type GridDimensions = {

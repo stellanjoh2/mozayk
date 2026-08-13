@@ -5,8 +5,13 @@ import {
   GRID_CROSS_SIZE_DEFAULT,
   GRID_CROSS_SIZE_MAX,
   GRID_CROSS_SIZE_MIN,
+  resolveGridBlendMode,
   resolveGridOverlayStroke,
 } from "../render/gridOverlayParams";
+import {
+  TEXTURE_OVERLAY_OPACITY_DEFAULT,
+  resolveTextureOverlayBlend,
+} from "../render/textureOverlay";
 import type { BackgroundMode, Density, FrameSettings, ShapePalette } from "../types";
 
 const CLIPBOARD_MIME = "application/x-mozayk-settings";
@@ -126,7 +131,10 @@ export function parseSettingsClipboard(raw: string): FrameSettings | null {
       gridOverlayStroke: resolveGridOverlayStroke(candidate.gridOverlayStroke),
       gridOverlayOpacity: clampInt(candidate.gridOverlayOpacity, 0, 100, 100),
       gridOverlayChaos: clampInt(candidate.gridOverlayChaos, 0, 100, 0),
-      gridOverlayDifference: Boolean(candidate.gridOverlayDifference),
+      gridOverlayBlend: resolveGridBlendMode(
+        candidate.gridOverlayBlend,
+        candidate.gridOverlayDifference,
+      ),
       gridCrosses: Boolean(candidate.gridCrosses),
       gridCrossesDensity: isDensity(Number(candidate.gridCrossesDensity))
         ? (Number(candidate.gridCrossesDensity) as Density)
@@ -143,16 +151,34 @@ export function parseSettingsClipboard(raw: string): FrameSettings | null {
       ),
       gridCrossesOpacity: clampInt(candidate.gridCrossesOpacity, 0, 100, 100),
       gridCrossesChaos: clampInt(candidate.gridCrossesChaos, 0, 100, 0),
-      gridCrossesDifference: Boolean(candidate.gridCrossesDifference),
+      gridCrossesBlend: resolveGridBlendMode(
+        candidate.gridCrossesBlend,
+        candidate.gridCrossesDifference,
+      ),
       gridBlur: Boolean(candidate.gridBlur),
       gridBlurDensity: isDensity(Number(candidate.gridBlurDensity))
         ? (Number(candidate.gridBlurDensity) as Density)
         : undefined,
       gridBlurAmount: clampInt(candidate.gridBlurAmount, 0, 100, 50),
-      gridBlurChaos: clampInt(candidate.gridBlurChaos, 0, 100, 0),
+      gridBlurChaos: clampInt(candidate.gridBlurChaos, 0, 100, 50),
       noiseAmount: clampInt(candidate.noiseAmount, 0, 100, 0),
       hueShift: clampInt(candidate.hueShift, -180, 180, 0),
+      contrast: clampInt(candidate.contrast, -100, 100, 0),
+      brightness: clampInt(candidate.brightness, -100, 100, 0),
+      invert: Boolean(candidate.invert),
       showSourceImage: Boolean(candidate.showSourceImage),
+      textureOverlayBlend: resolveTextureOverlayBlend(
+        candidate.textureOverlayBlend,
+      ),
+      textureOverlayOpacity: clampInt(
+        candidate.textureOverlayOpacity,
+        0,
+        100,
+        TEXTURE_OVERLAY_OPACITY_DEFAULT,
+      ),
+      textureOverlayTint: isValidHex(String(candidate.textureOverlayTint ?? ""))
+        ? normalizeHex(String(candidate.textureOverlayTint))
+        : undefined,
     };
   } catch {
     return null;

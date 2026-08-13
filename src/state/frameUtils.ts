@@ -121,6 +121,9 @@ export function duplicateFrame(frame: Frame): Frame {
     imageSource: frame.imageSource
       ? structuredClone(frame.imageSource)
       : undefined,
+    textureOverlay: frame.textureOverlay
+      ? structuredClone(frame.textureOverlay)
+      : undefined,
   };
 }
 
