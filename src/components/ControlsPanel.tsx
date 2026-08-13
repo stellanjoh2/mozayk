@@ -447,6 +447,56 @@ export function ControlsPanel({
       </section>
 
       <section className="panel-section">
+        <h2>Grid Blur</h2>
+        <ToggleRow
+          label="Enabled"
+          hint="Gaussian blur over the finished mosaic · PNG only"
+          checked={Boolean(settings.gridBlur)}
+          onChange={(gridBlur) => onSettingsChange({ gridBlur }, false)}
+        />
+        <label className="control-row">
+          <span className="control-row__label">Grid Density</span>
+          <select
+            value={settings.gridBlurDensity ?? settings.density}
+            onChange={(e) =>
+              onSettingsChange(
+                {
+                  gridBlurDensity: Number(e.target.value) as Density,
+                },
+                false,
+              )
+            }
+          >
+            {DENSITY_INFO.map((info) => (
+              <option key={info.level} value={info.level}>
+                {info.level}
+              </option>
+            ))}
+          </select>
+        </label>
+        <SliderRow
+          label="Amount"
+          hint="Blur radius relative to cell size"
+          value={settings.gridBlurAmount ?? 50}
+          min={0}
+          max={100}
+          onChange={(gridBlurAmount) =>
+            onSettingsChange({ gridBlurAmount }, false)
+          }
+        />
+        <SliderRow
+          label="Randomness"
+          hint="Keep irregular sharp patches"
+          value={settings.gridBlurChaos ?? 0}
+          min={0}
+          max={100}
+          onChange={(gridBlurChaos) =>
+            onSettingsChange({ gridBlurChaos }, false)
+          }
+        />
+      </section>
+
+      <section className="panel-section">
         <h2>Export</h2>
 
         <div className="export-group">

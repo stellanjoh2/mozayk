@@ -6,6 +6,7 @@ import type {
   MosaicBlock,
   Orientation,
 } from "../types";
+import { applyGridBlur } from "./gridBlur";
 import {
   gridOverlayDimensions,
   gridOverlayPathData,
@@ -202,6 +203,15 @@ export function renderMosaic(
   if (settings.gridOverlay) {
     drawGridOverlay(ctx, orientation, settings, width, height);
   }
+
+  applyGridBlur(
+    ctx,
+    orientation,
+    settings,
+    width,
+    height,
+    !transparentBackground,
+  );
 
   return grid;
 }

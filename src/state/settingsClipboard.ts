@@ -121,6 +121,12 @@ export function parseSettingsClipboard(raw: string): FrameSettings | null {
       gridOverlayOpacity: clampInt(candidate.gridOverlayOpacity, 0, 100, 100),
       gridOverlayChaos: clampInt(candidate.gridOverlayChaos, 0, 100, 0),
       gridOverlayDifference: Boolean(candidate.gridOverlayDifference),
+      gridBlur: Boolean(candidate.gridBlur),
+      gridBlurDensity: isDensity(Number(candidate.gridBlurDensity))
+        ? (Number(candidate.gridBlurDensity) as Density)
+        : undefined,
+      gridBlurAmount: clampInt(candidate.gridBlurAmount, 0, 100, 50),
+      gridBlurChaos: clampInt(candidate.gridBlurChaos, 0, 100, 0),
       showSourceImage: Boolean(candidate.showSourceImage),
     };
   } catch {

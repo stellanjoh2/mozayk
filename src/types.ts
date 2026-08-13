@@ -64,6 +64,14 @@ export type FrameSettings = {
   gridOverlayChaos?: number;
   /** When true, grid uses difference blend mode over the mosaic. */
   gridOverlayDifference?: boolean;
+  /** Final Gaussian blur over the finished mosaic (canvas / PNG only). */
+  gridBlur?: boolean;
+  /** Blur grid density — independent of layout density. */
+  gridBlurDensity?: Density;
+  /** Blur radius 0–100, relative to grid cell size. Defaults to 50. */
+  gridBlurAmount?: number;
+  /** Break uniform blur into irregular on-grid patches 0–100. Defaults to 0. */
+  gridBlurChaos?: number;
   /** Reveal the imported photo in gaps between mosaic shapes. Requires imageSource. */
   showSourceImage?: boolean;
   /** Imported image layouts are reshuffled instead of procedurally regenerated. */
