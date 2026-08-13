@@ -11,6 +11,7 @@ import {
 } from "../render/gridOverlay";
 import type { Density, Frame, FrameSettings, Orientation } from "../types";
 import { SUPPORTED_IMAGE_ACCEPT } from "../import/supportedImageTypes";
+import { BrandLogo } from "./BrandLogo";
 import { ColorSwatch } from "./ColorSwatch";
 import { SliderRow, ToggleRow } from "./ControlRow";
 import { HintLabel } from "./HintLabel";
@@ -79,11 +80,7 @@ export function ControlsPanel({
   return (
     <aside className="controls-panel">
       <header className="controls-panel__head">
-        <img
-          className="controls-panel__logo"
-          src={`${import.meta.env.BASE_URL}mosaik_logo.png`}
-          alt="Mosaik"
-        />
+        <BrandLogo className="controls-panel__logo" />
       </header>
 
       <section className="panel-section">
@@ -183,19 +180,6 @@ export function ControlsPanel({
         >
           Randomize All
         </button>
-        <div className="button-row">
-          <button type="button" className="panel-btn panel-btn--ghost" onClick={onCopySettings}>
-            Copy Settings
-          </button>
-          <button
-            type="button"
-            className="panel-btn panel-btn--ghost"
-            disabled={!canPasteSettings}
-            onClick={onPasteSettings}
-          >
-            Paste Settings
-          </button>
-        </div>
         <p className="control-row__label control-row__label--solo">
           <HintLabel hint="Blocks always on · toggle extras to mix in">Additional Shapes</HintLabel>
         </p>
@@ -525,6 +509,23 @@ export function ControlsPanel({
             onClick={onResetCanvas}
           >
             Reset Canvas
+          </button>
+        </div>
+      </section>
+
+      <section className="panel-section">
+        <h2>Copy / Paste Settings</h2>
+        <div className="button-row">
+          <button type="button" className="panel-btn panel-btn--ghost" onClick={onCopySettings}>
+            Copy Settings
+          </button>
+          <button
+            type="button"
+            className="panel-btn panel-btn--ghost"
+            disabled={!canPasteSettings}
+            onClick={onPasteSettings}
+          >
+            Paste Settings
           </button>
         </div>
       </section>

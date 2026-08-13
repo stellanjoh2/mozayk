@@ -37,7 +37,7 @@ export async function exportCurrentFrame(
     sourceImage,
   });
   if (!blob) return;
-  downloadBlob(blob, `mosaik_${padFrameIndex(0)}.png`);
+  downloadBlob(blob, `mozayk_${padFrameIndex(0)}.png`);
 }
 
 export async function exportCurrentFrameTransparent(
@@ -58,7 +58,7 @@ export async function exportCurrentFrameTransparent(
     transparentBackground: true,
   });
   if (!blob) return;
-  downloadBlob(blob, `mosaik_${padFrameIndex(0)}_transparent.png`);
+  downloadBlob(blob, `mozayk_${padFrameIndex(0)}_transparent.png`);
 }
 
 export async function exportAllFrames(
@@ -81,9 +81,9 @@ export async function exportAllFrames(
     });
     if (!blob) continue;
     const buffer = new Uint8Array(await blob.arrayBuffer());
-    files[`mosaik_${padFrameIndex(i)}.png`] = buffer;
+    files[`mozayk_${padFrameIndex(i)}.png`] = buffer;
   }
 
   const zipped = zipSync(files);
-  downloadBlob(new Blob([zipped], { type: "application/zip" }), "mosaik_sequence.zip");
+  downloadBlob(new Blob([zipped], { type: "application/zip" }), "mozayk_sequence.zip");
 }

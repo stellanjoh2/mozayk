@@ -1,7 +1,16 @@
 :root {
-  /* Brand — change --brand + --brand-rgb to retheme UI accents */
-  --brand: #ff3600;
-  --brand-rgb: 255, 54, 0;
+  /* Brand — change these hex values to retheme UI accents.
+     The logotype is tokenized: each mosaic tile is filled from
+     --logo-fill-1/2/3 at random on every page load. Those slots
+     alias the three brand colours, so swapping hex here always
+     recolors the logo without touching the SVG. */
+  --brand: #41ebf2;
+  --brand-rgb: 65, 235, 242;
+  --brand-secondary: #8d00ff;
+  --brand-green: #1ebc53;
+  --logo-fill-1: var(--brand);
+  --logo-fill-2: var(--brand-secondary);
+  --logo-fill-3: var(--brand-green);
   --on-brand: #111111;
 
   /* Surfaces */
@@ -182,8 +191,12 @@ body {
   display: block;
   width: 100%;
   height: auto;
-  transform: scale(0.75);
-  transform-origin: center;
+}
+
+.controls-panel__logo svg {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
 .panel-section {
@@ -494,6 +507,49 @@ body {
   align-items: center;
 }
 
+.control-row--toggle input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: var(--control-radius);
+  background: transparent;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: border-color 0.15s var(--ui-ease);
+}
+
+.control-row--toggle input[type="checkbox"]::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--brand-green);
+  transform: scale(0);
+  transition: transform 0.15s var(--ui-ease);
+}
+
+.control-row--toggle input[type="checkbox"]:hover {
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.control-row--toggle input[type="checkbox"]:checked {
+  border-color: var(--brand-green);
+}
+
+.control-row--toggle input[type="checkbox"]:checked::after {
+  transform: scale(1);
+}
+
+.control-row--toggle input[type="checkbox"]:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 3px;
+}
+
 .color-list {
   display: flex;
   flex-direction: column;
@@ -713,6 +769,7 @@ body {
   background: rgb(21, 21, 21);
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
 }
 
 .rfrct-color-picker__head {
@@ -762,7 +819,8 @@ body {
   position: relative;
   width: 100%;
   aspect-ratio: 1;
-  border-radius: 4px;
+  border-radius: 0;
+  overflow: hidden;
   cursor: crosshair;
   touch-action: none;
 }

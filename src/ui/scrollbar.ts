@@ -1,4 +1,4 @@
-const STYLE_ID = "mosaik-scrollbar";
+const STYLE_ID = "mozayk-scrollbar";
 
 const SCROLLBAR_CSS = `
 * {

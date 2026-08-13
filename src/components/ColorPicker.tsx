@@ -59,6 +59,8 @@ export function ColorPicker({
   onClose,
 }: ColorPickerProps) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const svRef = useRef<HTMLDivElement>(null);
+  const hueRef = useRef<HTMLDivElement>(null);
   const hexInputRef = useRef<HTMLInputElement>(null);
   const [hsv, setHsv] = useState<Hsv>(() => hexToHsv(normalizeHex(value)));
   const [scale, setScale] = useState<ColorScale>("hex");
@@ -73,6 +75,8 @@ export function ColorPicker({
   hsvRef.current = hsv;
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
 
   const closePicker = (commitRecent: boolean) => {
     if (commitRecent) {
@@ -89,8 +93,31 @@ export function ColorPicker({
     setHexDraft(hex);
     setRgbDraft(hexToRgb(hex));
     setHslDraft(hexToHsl(hex));
-    if (emit) onChange(hex);
+    if (emit) onChangeRef.current(hex);
   };
+
+  const applyHsvRef = useRef(applyHsv);
+  applyHsvRef.current = applyHsv;
+
+  const sampleFromPointer = (
+    mode: "sv" | "hue",
+    clientX: number,
+    clientY: number,
+  ) => {
+    const el = mode === "sv" ? svRef.current : hueRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    if (mode === "hue") {
+      const x = clamp01((clientX - rect.left) / Math.max(1, rect.width));
+      applyHsvRef.current({ ...hsvRef.current, h: x * 360 });
+      return;
+    }
+    const x = clamp01((clientX - rect.left) / Math.max(1, rect.width));
+    const y = clamp01((clientY - rect.top) / Math.max(1, rect.height));
+    applyHsvRef.current({ ...hsvRef.current, s: x, v: 1 - y });
+  };
+  const sampleFromPointerRef = useRef(sampleFromPointer);
+  sampleFromPointerRef.current = sampleFromPointer;
 
   useLayoutEffect(() => {
     const anchor = anchorRef.current;
@@ -161,29 +188,38 @@ export function ColorPicker({
     };
   }, [anchorRef]);
 
-  const sampleFromPointer = (
-    mode: "sv" | "hue",
-    clientX: number,
-    clientY: number,
-    el: HTMLElement,
-  ) => {
-    const rect = el.getBoundingClientRect();
-    if (mode === "hue") {
-      const x = clamp01((clientX - rect.left) / Math.max(1, rect.width));
-      applyHsv({ ...hsvRef.current, h: x * 360 });
-      return;
-    }
-    const x = clamp01((clientX - rect.left) / Math.max(1, rect.width));
-    const y = clamp01((clientY - rect.top) / Math.max(1, rect.height));
-    applyHsv({ ...hsvRef.current, s: x, v: 1 - y });
-  };
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      const mode = dragModeRef.current;
+      if (!mode) return;
+      e.preventDefault();
+      sampleFromPointerRef.current(mode, e.clientX, e.clientY);
+    };
+    const onUp = (e: PointerEvent) => {
+      if (!dragModeRef.current) return;
+      for (const el of [svRef.current, hueRef.current]) {
+        if (el?.hasPointerCapture(e.pointerId)) {
+          el.releasePointerCapture(e.pointerId);
+        }
+      }
+      dragModeRef.current = null;
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+    };
+  }, []);
 
   const onSvPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
     e.currentTarget.setPointerCapture(e.pointerId);
     dragModeRef.current = "sv";
-    sampleFromPointer("sv", e.clientX, e.clientY, e.currentTarget);
+    sampleFromPointer("sv", e.clientX, e.clientY);
   };
 
   const onHuePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -191,25 +227,7 @@ export function ColorPicker({
     e.stopPropagation();
     e.currentTarget.setPointerCapture(e.pointerId);
     dragModeRef.current = "hue";
-    sampleFromPointer("hue", e.clientX, e.clientY, e.currentTarget);
-  };
-
-  const onDragMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    const mode = dragModeRef.current;
-    if (!mode) return;
-    e.preventDefault();
-    sampleFromPointer(mode, e.clientX, e.clientY, e.currentTarget);
-  };
-
-  const onDragEnd = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (dragModeRef.current) {
-      try {
-        e.currentTarget.releasePointerCapture(e.pointerId);
-      } catch {
-        /* already released */
-      }
-    }
-    dragModeRef.current = null;
+    sampleFromPointer("hue", e.clientX, e.clientY);
   };
 
   const hueCss = hsvToHex(hsv.h, 1, 1);
@@ -252,6 +270,7 @@ export function ColorPicker({
       </div>
 
       <div
+        ref={svRef}
         className="rfrct-color-picker__sv"
         style={{
           background: `
@@ -263,9 +282,6 @@ export function ColorPicker({
         role="slider"
         aria-label="Saturation and brightness"
         onPointerDown={onSvPointerDown}
-        onPointerMove={onDragMove}
-        onPointerUp={onDragEnd}
-        onPointerCancel={onDragEnd}
       >
         <div
           className="rfrct-color-picker__sv-thumb"
@@ -275,15 +291,13 @@ export function ColorPicker({
 
       <div className="rfrct-color-picker__body">
         <div
+          ref={hueRef}
           className="rfrct-color-picker__hue"
           style={{ ["--hue-ratio" as string]: hsv.h / 360 }}
           tabIndex={0}
           role="slider"
           aria-label="Hue"
           onPointerDown={onHuePointerDown}
-          onPointerMove={onDragMove}
-          onPointerUp={onDragEnd}
-          onPointerCancel={onDragEnd}
         >
           <div className="rfrct-color-picker__hue-track" />
           <div className="rfrct-color-picker__hue-thumb" />

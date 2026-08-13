@@ -25,5 +25,5 @@ export function exportCurrentFrameSvg(
   });
 
   const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
-  downloadBlob(blob, "mosaik_001.svg");
+  downloadBlob(blob, "mozayk_001.svg");
 }

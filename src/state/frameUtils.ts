@@ -247,16 +247,15 @@ export function randomizeFrameCurrentColors(frame: Frame): Frame {
 export function randomizeFrameNewColors(frame: Frame): Frame {
   const locked = colorsLockedForSettings(frame.settings);
   const generated = generateRandomPalette(frame.settings.colors.length);
-  const colors = frame.settings.colors.map((color, index) =>
+  const previous = frame.settings.colors;
+  const colors = previous.map((color, index) =>
     locked[index] ? color : generated[index],
   );
-  const blocks = randomizeColors(
-    frame.blocks,
-    colors,
-    colorAmountsForSettings(frame.settings),
-    Math.random,
-    locked,
-  );
+  const blocks = frame.blocks.map((block) => {
+    const index = previous.indexOf(block.color);
+    if (index < 0 || locked[index]) return block;
+    return { ...block, color: colors[index] };
+  });
   return { ...frame, settings: { ...frame.settings, colors }, blocks };
 }
 

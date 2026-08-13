@@ -4,11 +4,11 @@ import { MAX_DENSITY } from "../grid/density";
 import { resolveGridOverlayStroke } from "../render/gridOverlay";
 import type { BackgroundMode, Density, FrameSettings, ShapePalette } from "../types";
 
-const CLIPBOARD_MIME = "application/x-mosaik-settings";
+const CLIPBOARD_MIME = "application/x-mozayk-settings";
 
 export type SettingsClipboardPayload = {
   v: 1;
-  mosaik: "settings";
+  mozayk: "settings";
   settings: FrameSettings;
 };
 
@@ -133,7 +133,7 @@ export function serializeSettingsClipboard(
 ): string {
   const payload: SettingsClipboardPayload = {
     v: 1,
-    mosaik: "settings",
+    mozayk: "settings",
     settings: structuredClone(settings),
   };
   return JSON.stringify(payload);
