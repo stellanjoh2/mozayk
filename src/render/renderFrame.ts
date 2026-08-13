@@ -24,6 +24,7 @@ import {
   type GridOverlayStyle,
 } from "./gridOverlay";
 import { ringInnerRadius } from "./ringGeometry";
+import { chromeShapeTightenPx } from "./shapeTighten";
 import { applyTextureOverlay } from "./textureOverlay";
 
 export type RenderOptions = {
@@ -81,6 +82,19 @@ function drawRing(
   ctx.fill();
 }
 
+function insetRect(
+  rect: { x: number; y: number; width: number; height: number },
+  inset: number,
+): { x: number; y: number; width: number; height: number } {
+  if (inset <= 0) return rect;
+  return {
+    x: rect.x + inset,
+    y: rect.y + inset,
+    width: Math.max(0, rect.width - inset * 2),
+    height: Math.max(0, rect.height - inset * 2),
+  };
+}
+
 function drawBlock(
   ctx: CanvasRenderingContext2D,
   block: MosaicBlock,
@@ -89,7 +103,8 @@ function drawBlock(
   heavySeams = false,
 ): void {
   const { x, y, width: drawW, height: drawH } = blockPixelRect(grid, block);
-  const overlap = seamOverlapPx(grid, heavySeams);
+  const tighten = chromeShapeTightenPx();
+  const overlap = Math.max(0, seamOverlapPx(grid, heavySeams) - tighten);
 
   if (block.shape === "ring") {
     const diameter = Math.min(drawW, drawH);
@@ -97,7 +112,7 @@ function drawBlock(
       ctx,
       x + drawW / 2,
       y + drawH / 2,
-      diameter / 2,
+      Math.max(0, diameter / 2 - tighten),
       ringThickness,
       grid.cellSize,
       block.color,
@@ -111,7 +126,7 @@ function drawBlock(
     const cy = y + drawH / 2;
     ctx.fillStyle = block.color;
     ctx.beginPath();
-    ctx.arc(cx, cy, diameter / 2, 0, Math.PI * 2);
+    ctx.arc(cx, cy, Math.max(0, diameter / 2 - tighten), 0, Math.PI * 2);
     ctx.fill();
     return;
   }
@@ -147,7 +162,7 @@ function drawBlock(
     return;
   }
 
-  const fill = blockFillRect(grid, block, heavySeams);
+  const fill = insetRect(blockFillRect(grid, block, heavySeams), tighten);
   ctx.fillStyle = block.color;
   ctx.fillRect(fill.x, fill.y, fill.width, fill.height);
 }
