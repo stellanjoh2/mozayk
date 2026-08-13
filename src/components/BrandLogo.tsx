@@ -14,6 +14,14 @@ const LOGO_FILL_TOKENS = [
 const PART_SELECTOR = "rect, circle, polygon, polyline, path, ellipse";
 const CELL = 0.5;
 const PACK = 1024;
+const GRID = 9;
+const UNIT_KINDS = ["square", "circle", "triangle"] as const;
+const NS = "http://www.w3.org/2000/svg";
+
+type UnitKind = (typeof UNIT_KINDS)[number];
+type Box = { minX: number; minY: number; maxX: number; maxY: number };
+type Corner = "tl" | "tr" | "bl" | "br";
+type UnitShape = { kind: UnitKind; corner: Corner };
 
 function shuffle<T>(items: T[]): T[] {
   const next = [...items];
@@ -165,6 +173,104 @@ function colorGraph(adj: number[][]): number[] {
   return colors;
 }
 
+function isUnitCell(box: { minX: number; minY: number; maxX: number; maxY: number }): boolean {
+  return Math.abs(box.maxX - box.minX - GRID) < 0.2 && Math.abs(box.maxY - box.minY - GRID) < 0.2;
+}
+
+function unitKind(el: Element): UnitKind {
+  const tag = el.tagName.toLowerCase();
+  if (tag === "circle" || tag === "ellipse") return "circle";
+  if (tag === "rect") return "square";
+  const full = (GRID / CELL) * (GRID / CELL);
+  return occupancy(el).size < full * 0.7 ? "triangle" : "square";
+}
+
+function near(a: number, b: number): boolean {
+  return Math.abs(a - b) < 0.6;
+}
+
+function pointCorner(x: number, y: number, box: Box): Corner | null {
+  const left = near(x, box.minX);
+  const right = near(x, box.maxX);
+  const top = near(y, box.minY);
+  const bottom = near(y, box.maxY);
+  if (left && top) return "tl";
+  if (right && top) return "tr";
+  if (left && bottom) return "bl";
+  if (right && bottom) return "br";
+  return null;
+}
+
+function triangleCorner(el: Element, box: Box): Corner {
+  const present = new Set<Corner>();
+  for (const p of parsePts(el)) {
+    const c = pointCorner(p.x, p.y, box);
+    if (c) present.add(c);
+  }
+  const adjacent: Record<Corner, [Corner, Corner]> = {
+    tl: ["tr", "bl"],
+    tr: ["tl", "br"],
+    bl: ["tl", "br"],
+    br: ["tr", "bl"],
+  };
+  for (const c of ["tl", "tr", "bl", "br"] as const) {
+    if (present.has(c) && adjacent[c].every((n) => present.has(n))) return c;
+  }
+  return "tr";
+}
+
+function trianglePoints(box: Box, corner: Corner): string {
+  const { minX: x, minY: y, maxX, maxY } = box;
+  if (corner === "tl") return `${x},${y} ${maxX},${y} ${x},${maxY}`;
+  if (corner === "tr") return `${x},${y} ${maxX},${y} ${maxX},${maxY}`;
+  if (corner === "bl") return `${x},${y} ${x},${maxY} ${maxX},${maxY}`;
+  return `${maxX},${y} ${x},${maxY} ${maxX},${maxY}`;
+}
+
+function readUnitShape(el: Element, box: Box): UnitShape {
+  const kind = unitKind(el);
+  return { kind, corner: kind === "triangle" ? triangleCorner(el, box) : "tr" };
+}
+
+function makeUnitModule(doc: Document, shape: UnitShape, box: Box): Element {
+  const { minX: x, minY: y, maxX, maxY } = box;
+  const w = maxX - x;
+  const h = maxY - y;
+  if (shape.kind === "square") {
+    const el = doc.createElementNS(NS, "rect");
+    el.setAttribute("x", String(x));
+    el.setAttribute("y", String(y));
+    el.setAttribute("width", String(w));
+    el.setAttribute("height", String(h));
+    return el;
+  }
+  if (shape.kind === "circle") {
+    const el = doc.createElementNS(NS, "circle");
+    el.setAttribute("cx", String(x + w / 2));
+    el.setAttribute("cy", String(y + h / 2));
+    el.setAttribute("r", String(Math.min(w, h) / 2));
+    return el;
+  }
+  const el = doc.createElementNS(NS, "polygon");
+  el.setAttribute("points", trianglePoints(box, shape.corner));
+  return el;
+}
+
+function morphUnitModules(svg: Element): void {
+  const doc = svg.ownerDocument;
+  if (!doc) return;
+  const slots: { el: Element; box: Box }[] = [];
+  for (const el of svg.querySelectorAll(PART_SELECTOR)) {
+    const box = bbox(el);
+    if (!isUnitCell(box)) continue;
+    slots.push({ el, box });
+  }
+  const shapes = shuffle(slots.map(({ el, box }) => readUnitShape(el, box)));
+  slots.forEach((slot, i) => {
+    slot.el.replaceWith(makeUnitModule(doc, shapes[i], slot.box));
+  });
+}
+
 function paintLogoWithBrandTokens(svgMarkup: string): string {
   const doc = new DOMParser().parseFromString(svgMarkup, "image/svg+xml");
   const svg = doc.documentElement;
@@ -173,6 +279,8 @@ function paintLogoWithBrandTokens(svgMarkup: string): string {
   svg.querySelector("style")?.remove();
   const defs = svg.querySelector("defs");
   if (defs && defs.childElementCount === 0) defs.remove();
+
+  morphUnitModules(svg);
 
   const parts = [...svg.querySelectorAll(PART_SELECTOR)];
   const cells = parts.map(occupancy);

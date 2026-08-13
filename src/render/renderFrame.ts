@@ -13,11 +13,15 @@ import type {
   MosaicBlock,
   Orientation,
 } from "../types";
+import { applyBonusFx } from "./bonusFx";
 import { applyGridBlur } from "./gridBlur";
 import {
+  gridCrossesPathData,
   gridOverlayDimensions,
   gridOverlayPathData,
+  resolveGridCrossesStyle,
   resolveGridOverlayStyle,
+  type GridOverlayStyle,
 } from "./gridOverlay";
 import { ringInnerRadius } from "./ringGeometry";
 
@@ -164,18 +168,11 @@ function drawBackground(
   drawCheckerboard(ctx, width, height);
 }
 
-function drawGridOverlay(
+function strokeOverlayPath(
   ctx: CanvasRenderingContext2D,
-  orientation: Orientation,
-  settings: FrameSettings,
-  width: number,
-  height: number,
+  style: GridOverlayStyle,
+  d: string,
 ): void {
-  const style = resolveGridOverlayStyle(settings);
-  if (!style) return;
-
-  const grid = gridOverlayDimensions(orientation, width, height, style);
-
   ctx.save();
   ctx.globalAlpha = style.opacity;
   if (style.difference) {
@@ -183,8 +180,32 @@ function drawGridOverlay(
   }
   ctx.strokeStyle = style.color;
   ctx.lineWidth = style.lineWidth;
-  ctx.stroke(new Path2D(gridOverlayPathData(grid, style.chaos)));
+  ctx.stroke(new Path2D(d));
   ctx.restore();
+}
+
+function drawGridOverlay(
+  ctx: CanvasRenderingContext2D,
+  orientation: Orientation,
+  settings: FrameSettings,
+  width: number,
+  height: number,
+): void {
+  const lines = resolveGridOverlayStyle(settings);
+  if (lines) {
+    const grid = gridOverlayDimensions(orientation, width, height, lines);
+    strokeOverlayPath(ctx, lines, gridOverlayPathData(grid, lines.chaos));
+  }
+
+  const crosses = resolveGridCrossesStyle(settings);
+  if (crosses) {
+    const grid = gridOverlayDimensions(orientation, width, height, crosses);
+    strokeOverlayPath(
+      ctx,
+      crosses,
+      gridCrossesPathData(grid, crosses.chaos, crosses.size),
+    );
+  }
 }
 
 export function renderMosaic(
@@ -224,8 +245,12 @@ export function renderMosaic(
     drawBlock(ctx, block, grid, settings.ringThickness);
   }
 
-  if (settings.gridOverlay) {
-    drawGridOverlay(ctx, orientation, settings, width, height);
+  try {
+    if (settings.gridOverlay || settings.gridCrosses) {
+      drawGridOverlay(ctx, orientation, settings, width, height);
+    }
+  } catch (error) {
+    console.error(error);
   }
 
   applyGridBlur(
@@ -236,6 +261,7 @@ export function renderMosaic(
     height,
     !transparentBackground,
   );
+  applyBonusFx(ctx, settings, width, height);
 
   return grid;
 }
@@ -262,7 +288,15 @@ export function renderMosaicToBlob(
   options: RenderOptions,
 ): Promise<Blob | null> {
   const offscreen = document.createElement("canvas");
-  renderMosaic(offscreen, options);
+  try {
+    renderMosaic(offscreen, options);
+  } catch (error) {
+    console.error(error);
+    return Promise.resolve(null);
+  }
+  if (offscreen.width === 0 || offscreen.height === 0) {
+    return Promise.resolve(null);
+  }
   const output = options.transparentBackground
     ? offscreen
     : stackPngPasses(offscreen, PNG_STACK_PASSES);

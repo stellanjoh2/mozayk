@@ -40,6 +40,8 @@ export function randomizeLayoutSettings(
     maxWidth: randomWidth ? pickInt(rng, 2, widthMax) : 1,
     maxHeight: randomHeight ? pickInt(rng, 2, heightMax) : 1,
     gridOverlayChaos: pickInt(rng, 0, 100),
+    gridCrossesChaos: pickInt(rng, 0, 100),
+    gridBlurChaos: pickInt(rng, 0, 100),
   };
 }
 

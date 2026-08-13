@@ -36,7 +36,7 @@ export async function exportCurrentFrame(
     height,
     sourceImage,
   });
-  if (!blob) return;
+  if (!blob) throw new Error("PNG export failed");
   downloadBlob(blob, `mozayk_${padFrameIndex(0)}.png`);
 }
 
@@ -57,7 +57,7 @@ export async function exportCurrentFrameTransparent(
     omitColors: lockedColorsSet(frame.settings),
     transparentBackground: true,
   });
-  if (!blob) return;
+  if (!blob) throw new Error("PNG export failed");
   downloadBlob(blob, `mozayk_${padFrameIndex(0)}_transparent.png`);
 }
 
@@ -79,7 +79,7 @@ export async function exportAllFrames(
       height,
       sourceImage,
     });
-    if (!blob) continue;
+    if (!blob) throw new Error("PNG export failed");
     const buffer = new Uint8Array(await blob.arrayBuffer());
     files[`mozayk_${padFrameIndex(i)}.png`] = buffer;
   }

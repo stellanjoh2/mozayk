@@ -8,9 +8,12 @@ import {
 } from "../grid/gridMath";
 import type { FrameSettings, GridDimensions, MosaicBlock } from "../types";
 import {
+  gridCrossesPathData,
   gridOverlayDimensions,
   gridOverlayPathData,
+  resolveGridCrossesStyle,
   resolveGridOverlayStyle,
+  type GridOverlayStyle,
 } from "./gridOverlay";
 import type { RenderOptions } from "./renderFrame";
 import { ringInnerRadius } from "./ringGeometry";
@@ -112,19 +115,37 @@ function svgBackground(
   return `<rect width="${width}" height="${height}" fill="#000000"/>`;
 }
 
+function svgOverlayPath(style: GridOverlayStyle, d: string): string {
+  const blend = style.difference ? ` style="mix-blend-mode:difference"` : "";
+  return `<path d="${d}" fill="none" stroke="${style.color}" stroke-width="${style.lineWidth}" stroke-opacity="${style.opacity}"${blend}/>`;
+}
+
 function svgGridOverlay(
   orientation: RenderOptions["orientation"],
   settings: FrameSettings,
   width: number,
   height: number,
 ): string {
-  const style = resolveGridOverlayStyle(settings);
-  if (!style) return "";
+  const parts: string[] = [];
 
-  const grid = gridOverlayDimensions(orientation, width, height, style);
-  const blend = style.difference ? ` style="mix-blend-mode:difference"` : "";
+  const lines = resolveGridOverlayStyle(settings);
+  if (lines) {
+    const grid = gridOverlayDimensions(orientation, width, height, lines);
+    parts.push(svgOverlayPath(lines, gridOverlayPathData(grid, lines.chaos)));
+  }
 
-  return `<path d="${gridOverlayPathData(grid, style.chaos)}" fill="none" stroke="${style.color}" stroke-width="${style.lineWidth}" stroke-opacity="${style.opacity}"${blend}/>`;
+  const crosses = resolveGridCrossesStyle(settings);
+  if (crosses) {
+    const grid = gridOverlayDimensions(orientation, width, height, crosses);
+    parts.push(
+      svgOverlayPath(
+        crosses,
+        gridCrossesPathData(grid, crosses.chaos, crosses.size),
+      ),
+    );
+  }
+
+  return parts.join("\n  ");
 }
 
 export type SvgRenderOptions = RenderOptions & {
@@ -149,9 +170,10 @@ export function renderMosaicToSvg(options: SvgRenderOptions): string {
     .map((block) => svgBlock(block, grid, settings.ringThickness))
     .join("\n  ");
 
-  const overlay = settings.gridOverlay
-    ? svgGridOverlay(orientation, settings, width, height)
-    : "";
+  const overlay =
+    settings.gridOverlay || settings.gridCrosses
+      ? svgGridOverlay(orientation, settings, width, height)
+      : "";
 
   return [
     `<?xml version="1.0" encoding="UTF-8"?>`,

@@ -7,18 +7,20 @@ import type {
   GridOverlayStroke,
   Orientation,
 } from "../types";
+import {
+  GRID_CROSS_SIZE_DEFAULT,
+  resolveGridCrossSize,
+  resolveGridOverlayStroke,
+} from "./gridOverlayParams";
 
-export const GRID_OVERLAY_STROKES: readonly GridOverlayStroke[] = [1, 2, 4];
-
-export function resolveGridOverlayStroke(
-  value: unknown,
-  fallback: GridOverlayStroke = 2,
-): GridOverlayStroke {
-  const n = Number(value);
-  return GRID_OVERLAY_STROKES.includes(n as GridOverlayStroke)
-    ? (n as GridOverlayStroke)
-    : fallback;
-}
+export {
+  GRID_CROSS_SIZE_DEFAULT,
+  GRID_CROSS_SIZE_MAX,
+  GRID_CROSS_SIZE_MIN,
+  GRID_OVERLAY_STROKES,
+  resolveGridCrossSize,
+  resolveGridOverlayStroke,
+} from "./gridOverlayParams";
 
 export type GridOverlayStyle = {
   density: Density;
@@ -30,6 +32,8 @@ export type GridOverlayStyle = {
   difference: boolean;
   /** 0–100; 0 = perfect square hatch */
   chaos: number;
+  /** Cross arm span in px. Unused for lines. */
+  size?: number;
 };
 
 export function resolveGridOverlayStyle(
@@ -46,6 +50,24 @@ export function resolveGridOverlayStyle(
     opacity: Math.min(100, Math.max(0, opacityRaw)) / 100,
     difference: Boolean(settings.gridOverlayDifference),
     chaos: Math.min(100, Math.max(0, chaosRaw)),
+  };
+}
+
+export function resolveGridCrossesStyle(
+  settings: FrameSettings,
+): GridOverlayStyle | null {
+  if (!settings.gridCrosses) return null;
+
+  const opacityRaw = settings.gridCrossesOpacity ?? 100;
+  const chaosRaw = settings.gridCrossesChaos ?? 0;
+  return {
+    density: settings.gridCrossesDensity ?? settings.density,
+    color: normalizeHex(settings.gridCrossesColor, "#ffffff"),
+    lineWidth: resolveGridOverlayStroke(settings.gridCrossesStroke),
+    opacity: Math.min(100, Math.max(0, opacityRaw)) / 100,
+    difference: Boolean(settings.gridCrossesDifference),
+    chaos: Math.min(100, Math.max(0, chaosRaw)),
+    size: resolveGridCrossSize(settings.gridCrossesSize),
   };
 }
 
@@ -218,4 +240,34 @@ export function gridOverlayPathData(
 ): string {
   if (chaos <= 0) return perfectGridPathData(grid);
   return brokenGridPathData(grid, Math.min(100, chaos));
+}
+
+/** Pluses on interior hatch intersections. Size is full arm span in px. */
+export function gridCrossesPathData(
+  grid: GridDimensions,
+  chaos = 0,
+  size = GRID_CROSS_SIZE_DEFAULT,
+): string {
+  const { columns, rows, width, height } = grid;
+  const half = resolveGridCrossSize(size) / 2;
+  const t = Math.min(100, Math.max(0, chaos)) / 100;
+  const rng =
+    t > 0
+      ? mulberry32(hashSeed(columns, rows, width, height, chaos, 8))
+      : null;
+  const dropRate = t * 0.55;
+  const parts: string[] = [];
+
+  for (let c = 1; c < columns; c++) {
+    const x = Math.round((c / columns) * width);
+    for (let r = 1; r < rows; r++) {
+      if (rng && rng() < dropRate) continue;
+      const y = Math.round((r / rows) * height);
+      parts.push(
+        `M ${x - half} ${y} H ${x + half} M ${x} ${y - half} V ${y + half}`,
+      );
+    }
+  }
+
+  return parts.join(" ");
 }

@@ -1,7 +1,12 @@
 import { isValidHex, normalizeHex } from "../colorMath";
 import { MAX_COLORS } from "../config";
 import { MAX_DENSITY } from "../grid/density";
-import { resolveGridOverlayStroke } from "../render/gridOverlay";
+import {
+  GRID_CROSS_SIZE_DEFAULT,
+  GRID_CROSS_SIZE_MAX,
+  GRID_CROSS_SIZE_MIN,
+  resolveGridOverlayStroke,
+} from "../render/gridOverlayParams";
 import type { BackgroundMode, Density, FrameSettings, ShapePalette } from "../types";
 
 const CLIPBOARD_MIME = "application/x-mozayk-settings";
@@ -122,12 +127,31 @@ export function parseSettingsClipboard(raw: string): FrameSettings | null {
       gridOverlayOpacity: clampInt(candidate.gridOverlayOpacity, 0, 100, 100),
       gridOverlayChaos: clampInt(candidate.gridOverlayChaos, 0, 100, 0),
       gridOverlayDifference: Boolean(candidate.gridOverlayDifference),
+      gridCrosses: Boolean(candidate.gridCrosses),
+      gridCrossesDensity: isDensity(Number(candidate.gridCrossesDensity))
+        ? (Number(candidate.gridCrossesDensity) as Density)
+        : undefined,
+      gridCrossesColor: isValidHex(String(candidate.gridCrossesColor ?? ""))
+        ? normalizeHex(String(candidate.gridCrossesColor))
+        : undefined,
+      gridCrossesStroke: resolveGridOverlayStroke(candidate.gridCrossesStroke),
+      gridCrossesSize: clampInt(
+        candidate.gridCrossesSize,
+        GRID_CROSS_SIZE_MIN,
+        GRID_CROSS_SIZE_MAX,
+        GRID_CROSS_SIZE_DEFAULT,
+      ),
+      gridCrossesOpacity: clampInt(candidate.gridCrossesOpacity, 0, 100, 100),
+      gridCrossesChaos: clampInt(candidate.gridCrossesChaos, 0, 100, 0),
+      gridCrossesDifference: Boolean(candidate.gridCrossesDifference),
       gridBlur: Boolean(candidate.gridBlur),
       gridBlurDensity: isDensity(Number(candidate.gridBlurDensity))
         ? (Number(candidate.gridBlurDensity) as Density)
         : undefined,
       gridBlurAmount: clampInt(candidate.gridBlurAmount, 0, 100, 50),
       gridBlurChaos: clampInt(candidate.gridBlurChaos, 0, 100, 0),
+      noiseAmount: clampInt(candidate.noiseAmount, 0, 100, 0),
+      hueShift: clampInt(candidate.hueShift, -180, 180, 0),
       showSourceImage: Boolean(candidate.showSourceImage),
     };
   } catch {

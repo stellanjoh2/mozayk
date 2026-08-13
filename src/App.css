@@ -101,6 +101,30 @@ body {
   transition: padding 0.4s var(--ui-ease);
 }
 
+.canvas-stage__frame {
+  display: contents;
+}
+
+.canvas-stage.is-inspecting {
+  padding: 0;
+  place-items: stretch;
+}
+
+.canvas-stage.is-inspecting .canvas-stage__frame {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 24px;
+}
+
+.canvas-stage.is-inspecting .mosaic-canvas {
+  flex-shrink: 0;
+}
+
 .canvas-stage.is-fullscreen {
   padding: 0;
 }
@@ -143,6 +167,11 @@ body {
 .canvas-fullscreen-toggle:hover {
   background: var(--accent-hover);
   color: var(--text);
+}
+
+.canvas-fullscreen-toggle[aria-pressed="true"] {
+  color: var(--text);
+  background: var(--accent-dim);
 }
 
 .canvas-view-original-badge {
@@ -219,6 +248,38 @@ body {
   color: var(--muted);
   font-size: 11px;
   line-height: 1.45;
+}
+
+.panel-credit {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--panel-border);
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.panel-credit p {
+  margin: 0;
+}
+
+.panel-credit a {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-left: 8px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.panel-credit svg {
+  display: block;
+  width: 14px;
+  height: 14px;
+}
+
+.panel-credit a:hover {
+  color: var(--text);
 }
 
 .import-file-input {
@@ -374,6 +435,61 @@ body {
 .button-row button.is-active {
   background: var(--accent);
   color: var(--on-brand);
+}
+
+.orientation-inspect {
+  position: relative;
+  min-width: 0;
+}
+
+.orientation-inspect > button:first-child {
+  width: 100%;
+}
+
+.button-row .orientation-inspect__loupe {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  min-height: 0;
+  padding: 0;
+  opacity: 0;
+  pointer-events: none;
+  background: rgba(15, 15, 15, 0.88);
+  color: var(--text);
+  border: 1px solid var(--panel-border);
+  cursor: zoom-in;
+  transition:
+    opacity 0.15s var(--ui-ease),
+    background 0.18s var(--ui-ease),
+    color 0.18s var(--ui-ease);
+}
+
+.orientation-inspect:hover .orientation-inspect__loupe,
+.orientation-inspect:focus-within .orientation-inspect__loupe,
+.button-row .orientation-inspect__loupe.is-active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.button-row .orientation-inspect__loupe:hover {
+  background: var(--accent);
+  color: var(--on-brand);
+}
+
+.button-row .orientation-inspect__loupe.is-active {
+  background: var(--on-brand);
+  color: var(--accent);
+}
+
+.orientation-inspect__loupe svg {
+  display: block;
+  width: 14px;
+  height: 14px;
 }
 
 .control-row {

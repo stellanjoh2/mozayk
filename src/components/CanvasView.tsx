@@ -46,7 +46,9 @@ type CanvasViewProps = {
   orientation: Orientation;
   viewOriginal?: boolean;
   isFullscreen?: boolean;
+  isInspecting?: boolean;
   onToggleFullscreen?: () => void;
+  onToggleInspect?: () => void;
 };
 
 export function CanvasView({
@@ -54,7 +56,9 @@ export function CanvasView({
   orientation,
   viewOriginal = false,
   isFullscreen = false,
+  isInspecting = false,
   onToggleFullscreen,
+  onToggleInspect,
 }: CanvasViewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -67,25 +71,27 @@ export function CanvasView({
     stageSize.height,
     stagePadding,
   );
-  const [width, height] =
-    stageSize.width > 0
+  const nativeSize = getPreviewSize(orientation);
+  const [width, height] = isInspecting
+    ? nativeSize
+    : stageSize.width > 0
       ? getPreviewSizeForDisplay(
           orientation,
           availW,
           availH,
           typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1,
         )
-      : getPreviewSize(orientation);
+      : nativeSize;
   const fitScale =
-    stageSize.width > 0
-      ? computeFitScale(
+    isInspecting || stageSize.width <= 0
+      ? 1
+      : computeFitScale(
           stageSize.width,
           stageSize.height,
           width,
           height,
           stagePadding,
-        )
-      : 1;
+        );
 
   useEffect(() => {
     const needsSource =
@@ -125,14 +131,18 @@ export function CanvasView({
       return;
     }
 
-    renderMosaic(canvas, {
-      orientation,
-      settings: frame.settings,
-      blocks: frame.blocks,
-      width,
-      height,
-      sourceImage: frame.settings.showSourceImage ? sourceImage : null,
-    });
+    try {
+      renderMosaic(canvas, {
+        orientation,
+        settings: frame.settings,
+        blocks: frame.blocks,
+        width,
+        height,
+        sourceImage: frame.settings.showSourceImage ? sourceImage : null,
+      });
+    } catch (error) {
+      console.error(error);
+    }
   }, [
     viewOriginal,
     sourceImage,
@@ -163,30 +173,53 @@ export function CanvasView({
   }, []);
 
   // Whole CSS pixels — fractional display size interpolates tile edges into hairlines.
-  const displayWidth = Math.max(1, Math.round(width * fitScale));
-  const displayHeight = Math.max(1, Math.round(height * fitScale));
+  const displayWidth = isInspecting
+    ? nativeSize[0]
+    : Math.max(1, Math.round(width * fitScale));
+  const displayHeight = isInspecting
+    ? nativeSize[1]
+    : Math.max(1, Math.round(height * fitScale));
 
   return (
     <div
       ref={stageRef}
-      className={["canvas-stage", isFullscreen ? "is-fullscreen" : ""]
+      className={[
+        "canvas-stage",
+        isFullscreen ? "is-fullscreen" : "",
+        isInspecting ? "is-inspecting" : "",
+      ]
         .filter(Boolean)
         .join(" ")}
     >
-      <canvas
-        ref={canvasRef}
-        className="mosaic-canvas"
-        width={width}
-        height={height}
-        style={{ width: displayWidth, height: displayHeight }}
-        aria-label={
-          viewOriginal && frame.imageSource
-            ? "Original photo preview"
-            : "Mosaic preview"
-        }
-      />
-      {onToggleFullscreen || (viewOriginal && frame.imageSource) ? (
+      <div className="canvas-stage__frame">
+        <canvas
+          ref={canvasRef}
+          className="mosaic-canvas"
+          width={width}
+          height={height}
+          style={{ width: displayWidth, height: displayHeight }}
+          aria-label={
+            viewOriginal && frame.imageSource
+              ? "Original photo preview"
+              : "Mosaic preview"
+          }
+        />
+      </div>
+      {onToggleFullscreen ||
+      onToggleInspect ||
+      (viewOriginal && frame.imageSource) ? (
         <div className="canvas-stage-controls">
+          {onToggleInspect && isInspecting ? (
+            <button
+              type="button"
+              className="canvas-fullscreen-toggle"
+              onClick={onToggleInspect}
+              aria-label="Exit 100% inspect"
+              aria-pressed
+            >
+              100%
+            </button>
+          ) : null}
           {onToggleFullscreen ? (
             <button
               type="button"
@@ -252,14 +285,18 @@ function FrameThumbnail({
   useLayoutEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    renderMosaic(canvas, {
-      orientation,
-      settings: frame.settings,
-      blocks: frame.blocks,
-      width: thumbW,
-      height: thumbH,
-      sourceImage: frame.settings.showSourceImage ? sourceImage : null,
-    });
+    try {
+      renderMosaic(canvas, {
+        orientation,
+        settings: frame.settings,
+        blocks: frame.blocks,
+        width: thumbW,
+        height: thumbH,
+        sourceImage: frame.settings.showSourceImage ? sourceImage : null,
+      });
+    } catch (error) {
+      console.error(error);
+    }
   }, [
     frame.settings,
     frame.blocks,

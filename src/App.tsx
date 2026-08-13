@@ -103,6 +103,8 @@ export default function App() {
     null,
   );
   const [viewOriginal, setViewOriginal] = useState(false);
+  const [inspecting, setInspecting] = useState(false);
+  const inspectingRef = useRef(inspecting);
   const [toast, setToast] = useState<string | null>(null);
   const layoutRegenTimer = useRef<number | null>(null);
   const appRef = useRef<HTMLDivElement>(null);
@@ -118,6 +120,7 @@ export default function App() {
   activeIndexRef.current = activeIndex;
   orientationRef.current = orientation;
   framesRef.current = frames;
+  inspectingRef.current = inspecting;
 
   const activeFrame = frames[activeIndex] ?? frames[0];
 
@@ -452,6 +455,14 @@ export default function App() {
     setToast("Settings pasted");
   }, [pushUndoCheckpoint, updateActiveFrame]);
 
+  const runExport = useCallback(async (task: () => Promise<void> | void) => {
+    try {
+      await task();
+    } catch {
+      setToast("Export failed");
+    }
+  }, []);
+
   const handleImportImage = useCallback(
     async (file: File) => {
       try {
@@ -506,6 +517,7 @@ export default function App() {
     setPlaying(false);
     setExportPreset("1080p");
     setViewOriginal(false);
+    setInspecting(false);
 
     if (getFullscreenElement() === appRef.current) {
       void exitAppFullscreen();
@@ -526,6 +538,16 @@ export default function App() {
     setPlaying((value) => !value);
   }, []);
 
+  const toggleInspect = useCallback(() => {
+    if (isFullscreen) return;
+    if (orientation !== "portrait") {
+      handleOrientationChange("portrait");
+      setInspecting(true);
+      return;
+    }
+    setInspecting((value) => !value);
+  }, [handleOrientationChange, isFullscreen, orientation]);
+
   const toggleFullscreen = useCallback(() => {
     const app = appRef.current;
     if (getFullscreenElement() === app) {
@@ -536,9 +558,18 @@ export default function App() {
       setIsFullscreen(false);
       return;
     }
+    setInspecting(false);
     setIsFullscreen(true);
     if (!app) return;
     void requestAppFullscreen(app).catch(() => {});
+  }, [isFullscreen]);
+
+  useEffect(() => {
+    if (orientation !== "portrait") setInspecting(false);
+  }, [orientation]);
+
+  useEffect(() => {
+    if (isFullscreen) setInspecting(false);
   }, [isFullscreen]);
 
   useEffect(() => {
@@ -573,6 +604,12 @@ export default function App() {
       if (mod && event.code === "KeyY") {
         event.preventDefault();
         redo();
+        return;
+      }
+
+      if (event.key === "Escape" && inspectingRef.current) {
+        event.preventDefault();
+        setInspecting(false);
         return;
       }
 
@@ -688,22 +725,32 @@ export default function App() {
           });
         }}
         onOrientationChange={handleOrientationChange}
+        inspecting={inspecting}
+        onToggleInspect={toggleInspect}
         onExportPresetChange={setExportPreset}
         onExportPngFrame={() =>
-          void exportCurrentFrame(activeFrame, orientation, exportPreset)
+          void runExport(() =>
+            exportCurrentFrame(activeFrame, orientation, exportPreset),
+          )
         }
         onExportPngTransparent={() =>
-          void exportCurrentFrameTransparent(
-            activeFrame,
-            orientation,
-            exportPreset,
+          void runExport(() =>
+            exportCurrentFrameTransparent(
+              activeFrame,
+              orientation,
+              exportPreset,
+            ),
           )
         }
         onExportPngSequence={() =>
-          void exportAllFrames(frames, orientation, exportPreset)
+          void runExport(() =>
+            exportAllFrames(frames, orientation, exportPreset),
+          )
         }
         onExportSvgFrame={() =>
-          exportCurrentFrameSvg(activeFrame, orientation, exportPreset)
+          void runExport(() => {
+            exportCurrentFrameSvg(activeFrame, orientation, exportPreset);
+          })
         }
         onImportImage={(file) => void handleImportImage(file)}
         importingImage={importingImage}
@@ -717,7 +764,9 @@ export default function App() {
           orientation={orientation}
           viewOriginal={viewOriginal}
           isFullscreen={isFullscreen}
+          isInspecting={inspecting}
           onToggleFullscreen={toggleFullscreen}
+          onToggleInspect={toggleInspect}
         />
         {!isFullscreen ? (
         <Timeline

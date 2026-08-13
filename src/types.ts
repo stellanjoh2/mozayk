@@ -66,6 +66,22 @@ export type FrameSettings = {
   gridOverlayChaos?: number;
   /** When true, grid uses difference blend mode over the mosaic. */
   gridOverlayDifference?: boolean;
+  /** 8×8px crosses on overlay-grid intersections. */
+  gridCrosses?: boolean;
+  /** Crosses grid density — independent of overlay / layout density. */
+  gridCrossesDensity?: Density;
+  /** Cross stroke colour (hex). Defaults to white. */
+  gridCrossesColor?: string;
+  /** Cross stroke width in px: 1, 2, or 4. Defaults to 2. */
+  gridCrossesStroke?: GridOverlayStroke;
+  /** How far each plus extends, in px (full span). Defaults to 8. */
+  gridCrossesSize?: number;
+  /** Cross opacity 0–100. Defaults to 100. */
+  gridCrossesOpacity?: number;
+  /** Randomly omit crosses 0–100. Defaults to 0. */
+  gridCrossesChaos?: number;
+  /** When true, crosses use difference blend mode. */
+  gridCrossesDifference?: boolean;
   /** Final Gaussian blur over the finished mosaic (canvas / PNG only). */
   gridBlur?: boolean;
   /** Blur grid density — independent of layout density. */
@@ -74,6 +90,10 @@ export type FrameSettings = {
   gridBlurAmount?: number;
   /** Break uniform blur into irregular on-grid patches 0–100. Defaults to 0. */
   gridBlurChaos?: number;
+  /** Film grain over the finished image 0–100. Defaults to 0. */
+  noiseAmount?: number;
+  /** Hue rotation in degrees −180–180. Defaults to 0. */
+  hueShift?: number;
   /** Reveal the imported photo in gaps between mosaic shapes. Requires imageSource. */
   showSourceImage?: boolean;
   /** Imported image layouts are reshuffled instead of procedurally regenerated. */
