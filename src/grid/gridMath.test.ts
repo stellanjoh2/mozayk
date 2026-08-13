@@ -1,6 +1,7 @@
 import {
   blockFillRect,
   blockPixelRect,
+  crossFillRects,
   getGridDimensions,
   inscribedPixelSquare,
   seamOverlapPx,
@@ -90,6 +91,14 @@ function run(): void {
   assert(square.width === 17 && square.height === 17, "inscribed size is min side");
   assert(square.x === 10 && square.y === 20, "inscribed square stays on integer pixels");
   assert(Number.isInteger(square.x) && Number.isInteger(square.y), "square origin is integer");
+
+  const { horizontal, vertical } = crossFillRects(oddRect, 0);
+  assert(horizontal.width === square.width, "cross bar spans inscribed width");
+  assert(vertical.height === square.height, "cross stem spans inscribed height");
+  assert(
+    horizontal.height === Math.max(1, Math.round(square.width / 3)),
+    "cross arm thickness is ~1/3 of square",
+  );
 
   const thumb = getGridDimensions("landscape", 3, 96, 54);
   assert(thumb.cellSize === 2, "thumbnail cell is 2px");

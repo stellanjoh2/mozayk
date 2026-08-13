@@ -33,7 +33,7 @@ function createId(): string {
 }
 
 export function createDefaultShapePalette(): FrameSettings["shapes"] {
-  return { sphere: true, ring: true, triangle: true };
+  return { sphere: true, ring: true, triangle: true, cross: true };
 }
 
 export function equalColorAmounts(count: number): number[] {

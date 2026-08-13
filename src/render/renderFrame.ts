@@ -1,6 +1,7 @@
 import {
   blockFillRect,
   blockPixelRect,
+  crossFillRects,
   getGridDimensions,
   seamOverlapPx,
   triangleFillPoints,
@@ -118,6 +119,22 @@ function drawBlock(
     ctx.lineTo(points[2][0], points[2][1]);
     ctx.closePath();
     ctx.fill();
+    return;
+  }
+
+  if (block.shape === "cross") {
+    const { horizontal, vertical } = crossFillRects(
+      { x, y, width: drawW, height: drawH },
+      seamOverlapPx(grid),
+    );
+    ctx.fillStyle = block.color;
+    ctx.fillRect(
+      horizontal.x,
+      horizontal.y,
+      horizontal.width,
+      horizontal.height,
+    );
+    ctx.fillRect(vertical.x, vertical.y, vertical.width, vertical.height);
     return;
   }
 

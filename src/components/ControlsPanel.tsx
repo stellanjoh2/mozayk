@@ -73,7 +73,12 @@ export function ControlsPanel({
 }: ControlsPanelProps) {
   const { settings } = frame;
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const shapes = settings.shapes ?? { sphere: false, ring: false, triangle: false };
+  const shapes = settings.shapes ?? {
+    sphere: false,
+    ring: false,
+    triangle: false,
+    cross: false,
+  };
   const widthMax = maxWidthSliderMax(settings.density, orientation);
   const heightMax = maxHeightSliderMax(settings.density, orientation);
 
@@ -183,7 +188,7 @@ export function ControlsPanel({
         <p className="control-row__label control-row__label--solo">
           <HintLabel hint="Blocks always on · toggle extras to mix in">Additional Shapes</HintLabel>
         </p>
-        <div className="button-row button-row--3 button-row--shape-icons">
+        <div className="button-row button-row--4 button-row--shape-icons">
           <button
             type="button"
             aria-label="Spheres"
@@ -234,6 +239,24 @@ export function ControlsPanel({
           >
             <svg className="shape-icon" viewBox="0 0 24 24" aria-hidden="true">
               <polygon points="2,2 22,2 22,22" fill="currentColor" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            aria-label="Crosses"
+            aria-pressed={Boolean(shapes.cross)}
+            className={shapes.cross ? "is-active" : ""}
+            onClick={() =>
+              onSettingsChange({
+                shapes: { ...shapes, cross: !shapes.cross },
+              })
+            }
+          >
+            <svg className="shape-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                fill="currentColor"
+                d="M9 2h6v7h7v6h-7v7H9v-7H2V9h7V2z"
+              />
             </svg>
           </button>
         </div>

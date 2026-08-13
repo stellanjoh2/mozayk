@@ -117,6 +117,37 @@ export function triangleFillPoints(
   ];
 }
 
+/**
+ * Plus-shaped cross: full-span bars through the inscribed square.
+ * Arm thickness is ~1/3 of the square so the silhouette stays readable at
+ * small cell sizes. Expanded by `overlap` for seam coverage.
+ */
+export function crossFillRects(
+  rect: PixelRect,
+  overlap = 0,
+): { horizontal: PixelRect; vertical: PixelRect } {
+  const square = inscribedPixelSquare(rect);
+  const { x: ox, y: oy, width: size } = square;
+  const arm = Math.max(1, Math.round(size / 3));
+  const mid = ox + Math.floor((size - arm) / 2);
+  const midY = oy + Math.floor((size - arm) / 2);
+
+  return {
+    horizontal: {
+      x: ox - overlap,
+      y: midY - overlap,
+      width: size + overlap * 2,
+      height: arm + overlap * 2,
+    },
+    vertical: {
+      x: mid - overlap,
+      y: oy - overlap,
+      width: arm + overlap * 2,
+      height: size + overlap * 2,
+    },
+  };
+}
+
 export function transposeBlocks(blocks: MosaicBlock[]): MosaicBlock[] {
   return blocks.map((block) => ({
     ...block,

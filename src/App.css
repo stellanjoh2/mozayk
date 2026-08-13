@@ -350,6 +350,10 @@ body {
   grid-template-columns: repeat(3, 1fr);
 }
 
+.button-row--4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
 .button-row--shape-icons button {
   aspect-ratio: 1;
   display: flex;

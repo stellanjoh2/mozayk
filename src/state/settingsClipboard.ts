@@ -63,13 +63,14 @@ function parseColors(value: unknown): string[] {
 
 function parseShapePalette(value: unknown): ShapePalette {
   if (!value || typeof value !== "object") {
-    return { sphere: false, ring: false, triangle: false };
+    return { sphere: false, ring: false, triangle: false, cross: false };
   }
   const record = value as Record<string, unknown>;
   return {
     sphere: Boolean(record.sphere),
     ring: Boolean(record.ring),
     triangle: Boolean(record.triangle),
+    cross: Boolean(record.cross),
   };
 }
 

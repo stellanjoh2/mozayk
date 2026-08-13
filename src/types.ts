@@ -3,7 +3,7 @@ import type { ImageSourceData } from "./import/imageSource";
 export type Orientation = "landscape" | "portrait" | "square";
 export type Density = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 export type GridOverlayStroke = 1 | 2 | 4;
-export type ShapeType = "block" | "sphere" | "ring" | "triangle";
+export type ShapeType = "block" | "sphere" | "ring" | "triangle" | "cross";
 export type BackgroundMode = "black" | "transparent";
 export type LayoutSource = "procedural" | "imported";
 
@@ -12,6 +12,8 @@ export type ShapePalette = {
   ring: boolean;
   /** Upper-right half of a diagonally split square. */
   triangle: boolean;
+  /** Plus-shaped cross inscribed in the cell. */
+  cross: boolean;
 };
 
 export type MosaicBlock = {

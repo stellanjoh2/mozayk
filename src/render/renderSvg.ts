@@ -1,6 +1,7 @@
 import {
   blockFillRect,
   blockPixelRect,
+  crossFillRects,
   getGridDimensions,
   seamOverlapPx,
   triangleFillPoints,
@@ -76,6 +77,17 @@ function svgBlock(
       .map(([px, py]) => `${px},${py}`)
       .join(" ");
     return `<polygon points="${points}" fill="${block.color}"/>`;
+  }
+
+  if (block.shape === "cross") {
+    const { horizontal, vertical } = crossFillRects(
+      { x, y, width: drawW, height: drawH },
+      seamOverlapPx(grid),
+    );
+    return [
+      `<rect x="${horizontal.x}" y="${horizontal.y}" width="${horizontal.width}" height="${horizontal.height}" fill="${block.color}"/>`,
+      `<rect x="${vertical.x}" y="${vertical.y}" width="${vertical.width}" height="${vertical.height}" fill="${block.color}"/>`,
+    ].join("");
   }
 
   const fill = blockFillRect(grid, block);

@@ -4,13 +4,19 @@ export type Rng = () => number;
 
 export type OptionalShape = Exclude<ShapeType, "block">;
 
-export const OPTIONAL_SHAPES: OptionalShape[] = ["sphere", "ring", "triangle"];
+export const OPTIONAL_SHAPES: OptionalShape[] = [
+  "sphere",
+  "ring",
+  "triangle",
+  "cross",
+];
 
 export function getShapePool(settings: FrameSettings): ShapeType[] {
   const pool: ShapeType[] = ["block"];
   if (settings.shapes.sphere) pool.push("sphere");
   if (settings.shapes.ring) pool.push("ring");
   if (settings.shapes.triangle) pool.push("triangle");
+  if (settings.shapes.cross) pool.push("cross");
   return pool;
 }
 
