@@ -216,12 +216,33 @@ export function renderMosaic(
   return grid;
 }
 
+/** Photoshop: duplicate the export layer 3 times, then flatten. */
+const PNG_STACK_PASSES = 3;
+
+function stackPngPasses(
+  source: HTMLCanvasElement,
+  passes: number,
+): HTMLCanvasElement {
+  const out = document.createElement("canvas");
+  out.width = source.width;
+  out.height = source.height;
+  const ctx = out.getContext("2d");
+  if (!ctx) return source;
+  for (let i = 0; i < passes; i++) {
+    ctx.drawImage(source, 0, 0);
+  }
+  return out;
+}
+
 export function renderMosaicToBlob(
   options: RenderOptions,
 ): Promise<Blob | null> {
   const offscreen = document.createElement("canvas");
   renderMosaic(offscreen, options);
+  const output = options.transparentBackground
+    ? offscreen
+    : stackPngPasses(offscreen, PNG_STACK_PASSES);
   return new Promise((resolve) => {
-    offscreen.toBlob((blob) => resolve(blob), "image/png");
+    output.toBlob((blob) => resolve(blob), "image/png");
   });
 }
