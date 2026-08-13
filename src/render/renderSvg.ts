@@ -1,4 +1,10 @@
-import { blockPixelRect, getGridDimensions } from "../grid/gridMath";
+import {
+  blockFillRect,
+  blockPixelRect,
+  getGridDimensions,
+  seamOverlapPx,
+  triangleFillPoints,
+} from "../grid/gridMath";
 import type { FrameSettings, GridDimensions, MosaicBlock } from "../types";
 import {
   gridOverlayDimensions,
@@ -63,15 +69,17 @@ function svgBlock(
   }
 
   if (block.shape === "triangle") {
-    // Always half of a square (never stretch with the cell).
-    const size = Math.min(drawW, drawH);
-    const ox = x + (drawW - size) / 2;
-    const oy = y + (drawH - size) / 2;
-    const points = `${ox},${oy} ${ox + size},${oy} ${ox + size},${oy + size}`;
+    const points = triangleFillPoints(
+      { x, y, width: drawW, height: drawH },
+      seamOverlapPx(grid),
+    )
+      .map(([px, py]) => `${px},${py}`)
+      .join(" ");
     return `<polygon points="${points}" fill="${block.color}"/>`;
   }
 
-  return `<rect x="${x}" y="${y}" width="${drawW}" height="${drawH}" fill="${block.color}"/>`;
+  const fill = blockFillRect(grid, block);
+  return `<rect x="${fill.x}" y="${fill.y}" width="${fill.width}" height="${fill.height}" fill="${block.color}"/>`;
 }
 
 function svgBackground(

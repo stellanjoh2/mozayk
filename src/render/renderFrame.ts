@@ -1,4 +1,10 @@
-import { blockPixelRect, getGridDimensions } from "../grid/gridMath";
+import {
+  blockFillRect,
+  blockPixelRect,
+  getGridDimensions,
+  seamOverlapPx,
+  triangleFillPoints,
+} from "../grid/gridMath";
 import { drawCoverImage } from "../import/imageSource";
 import type {
   FrameSettings,
@@ -100,22 +106,23 @@ function drawBlock(
   }
 
   if (block.shape === "triangle") {
-    // Always half of a square (never stretch with the cell).
-    const size = Math.min(drawW, drawH);
-    const ox = x + (drawW - size) / 2;
-    const oy = y + (drawH - size) / 2;
+    const points = triangleFillPoints(
+      { x, y, width: drawW, height: drawH },
+      seamOverlapPx(grid),
+    );
     ctx.fillStyle = block.color;
     ctx.beginPath();
-    ctx.moveTo(ox, oy);
-    ctx.lineTo(ox + size, oy);
-    ctx.lineTo(ox + size, oy + size);
+    ctx.moveTo(points[0][0], points[0][1]);
+    ctx.lineTo(points[1][0], points[1][1]);
+    ctx.lineTo(points[2][0], points[2][1]);
     ctx.closePath();
     ctx.fill();
     return;
   }
 
+  const fill = blockFillRect(grid, block);
   ctx.fillStyle = block.color;
-  ctx.fillRect(x, y, drawW, drawH);
+  ctx.fillRect(fill.x, fill.y, fill.width, fill.height);
 }
 
 function drawBackground(

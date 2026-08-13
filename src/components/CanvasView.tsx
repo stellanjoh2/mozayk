@@ -162,8 +162,9 @@ export function CanvasView({
     return () => observer.disconnect();
   }, []);
 
-  const displayWidth = width * fitScale;
-  const displayHeight = height * fitScale;
+  // Whole CSS pixels — fractional display size interpolates tile edges into hairlines.
+  const displayWidth = Math.max(1, Math.round(width * fitScale));
+  const displayHeight = Math.max(1, Math.round(height * fitScale));
 
   return (
     <div
