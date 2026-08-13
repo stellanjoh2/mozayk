@@ -24,7 +24,7 @@ import {
   type GridOverlayStyle,
 } from "./gridOverlay";
 import { ringInnerRadius } from "./ringGeometry";
-import { chromeShapeTightenPx } from "./shapeTighten";
+import { shapeTightenPx } from "./shapeTighten";
 import { applyTextureOverlay } from "./textureOverlay";
 
 export type RenderOptions = {
@@ -82,19 +82,6 @@ function drawRing(
   ctx.fill();
 }
 
-function insetRect(
-  rect: { x: number; y: number; width: number; height: number },
-  inset: number,
-): { x: number; y: number; width: number; height: number } {
-  if (inset <= 0) return rect;
-  return {
-    x: rect.x + inset,
-    y: rect.y + inset,
-    width: Math.max(0, rect.width - inset * 2),
-    height: Math.max(0, rect.height - inset * 2),
-  };
-}
-
 function drawBlock(
   ctx: CanvasRenderingContext2D,
   block: MosaicBlock,
@@ -103,8 +90,11 @@ function drawBlock(
   heavySeams = false,
 ): void {
   const { x, y, width: drawW, height: drawH } = blockPixelRect(grid, block);
-  const tighten = chromeShapeTightenPx();
-  const overlap = Math.max(0, seamOverlapPx(grid, heavySeams) - tighten);
+  const tighten = shapeTightenPx();
+  const seam = seamOverlapPx(grid, heavySeams);
+  // Circles: radius − tighten. Seam fills: pull 1px expand down to ~0.25px
+  // (heavy 2 → ~1.25) so adjacent colours don't bleed.
+  const overlap = Math.max(0, seam - (1 - tighten));
 
   if (block.shape === "ring") {
     const diameter = Math.min(drawW, drawH);
@@ -162,7 +152,7 @@ function drawBlock(
     return;
   }
 
-  const fill = insetRect(blockFillRect(grid, block, heavySeams), tighten);
+  const fill = blockFillRect(grid, block, heavySeams, overlap);
   ctx.fillStyle = block.color;
   ctx.fillRect(fill.x, fill.y, fill.width, fill.height);
 }

@@ -84,9 +84,11 @@ export function blockFillRect(
   grid: GridDimensions,
   block: Pick<MosaicBlock, "col" | "row" | "width" | "height">,
   heavy = false,
+  /** Override seam expand (e.g. Chrome-tightened overlap). */
+  overlapPx?: number,
 ): PixelRect {
   const rect = blockPixelRect(grid, block);
-  const overlap = seamOverlapPx(grid, heavy);
+  const overlap = overlapPx ?? seamOverlapPx(grid, heavy);
   if (overlap <= 0) return rect;
 
   const x = Math.max(0, rect.x - overlap);
