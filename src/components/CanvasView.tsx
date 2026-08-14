@@ -6,8 +6,12 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { createPortal } from "react-dom";
-import { getThumbnailSize } from "../grid/gridMath";
-import { ensureCachedSourceImage, drawCoverImage } from "../import/imageSource";
+import { getThumbnailRenderSize, getThumbnailSize } from "../grid/gridMath";
+import {
+  drawCoverImage,
+  ensureCachedSourceImage,
+  getCachedSourceImage,
+} from "../import/imageSource";
 import { renderMosaic } from "../render/renderFrame";
 import { getPreviewSize, getPreviewSizeForDisplay } from "../config";
 import type { Frame, Orientation } from "../types";
@@ -286,9 +290,13 @@ function FrameThumbnail({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const skippedClickRef = useRef(false);
   const [thumbW, thumbH] = getThumbnailSize(orientation);
+  const [renderW, renderH] = getThumbnailRenderSize(orientation);
+  const overlayDataUrl = frame.textureOverlay?.dataUrl;
   const [sourceImage, setSourceImage] = useState<HTMLImageElement | null>(null);
   const [textureOverlayImage, setTextureOverlayImage] =
-    useState<HTMLImageElement | null>(null);
+    useState<HTMLImageElement | null>(() =>
+      overlayDataUrl ? getCachedSourceImage(overlayDataUrl) ?? null : null,
+    );
 
   useEffect(() => {
     if (!frame.settings.showSourceImage || !frame.imageSource) {
@@ -311,13 +319,19 @@ function FrameThumbnail({
   }, [frame.settings.showSourceImage, frame.imageSource?.dataUrl]);
 
   useEffect(() => {
-    if (!frame.textureOverlay) {
+    if (!overlayDataUrl) {
       setTextureOverlayImage(null);
       return;
     }
 
+    const cached = getCachedSourceImage(overlayDataUrl);
+    if (cached) {
+      setTextureOverlayImage(cached);
+      return;
+    }
+
     let cancelled = false;
-    void ensureCachedSourceImage(frame.textureOverlay.dataUrl)
+    void ensureCachedSourceImage(overlayDataUrl)
       .then((image) => {
         if (!cancelled) setTextureOverlayImage(image);
       })
@@ -328,7 +342,7 @@ function FrameThumbnail({
     return () => {
       cancelled = true;
     };
-  }, [frame.textureOverlay?.dataUrl]);
+  }, [overlayDataUrl]);
 
   useLayoutEffect(() => {
     const canvas = canvasRef.current;
@@ -338,8 +352,8 @@ function FrameThumbnail({
         orientation,
         settings: frame.settings,
         blocks: frame.blocks,
-        width: thumbW,
-        height: thumbH,
+        width: renderW,
+        height: renderH,
         sourceImage: frame.settings.showSourceImage ? sourceImage : null,
         textureOverlayImage,
       });
@@ -353,8 +367,8 @@ function FrameThumbnail({
     frame.imageSource,
     frame.textureOverlay,
     orientation,
-    thumbW,
-    thumbH,
+    renderW,
+    renderH,
     sourceImage,
     textureOverlayImage,
   ]);
@@ -384,7 +398,7 @@ function FrameThumbnail({
       }}
       aria-label={`Frame preview${active ? ", selected" : ""}`}
     >
-      <canvas ref={canvasRef} width={thumbW} height={thumbH} />
+      <canvas ref={canvasRef} width={renderW} height={renderH} />
     </button>
   );
 }

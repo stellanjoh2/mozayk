@@ -11,13 +11,29 @@ export function getGridAspect(orientation: Orientation): { cols: number; rows: n
   return GRID_ASPECT[orientation];
 }
 
+/** CSS size of timeline thumbs — 2px per cell at reference density (96×54 landscape). */
+export const THUMBNAIL_DISPLAY_PIXELS_PER_CELL = 2;
+
+/**
+ * Backing-store size for timeline thumbs. Blur, grain, and the texture overlay
+ * need more pixels than the display size or they collapse to a sharp mosaic.
+ * 10px/cell at reference density is 480×270 landscape — a 16:9 mosaic size.
+ */
+export const THUMBNAIL_RENDER_PIXELS_PER_CELL = 10;
+
 export function getThumbnailSize(
   orientation: Orientation,
-  pixelsPerCell = 2,
+  pixelsPerCell = THUMBNAIL_DISPLAY_PIXELS_PER_CELL,
 ): [number, number] {
   const density = REFERENCE_DENSITY;
   const { cols, rows } = getGridAspect(orientation);
   return [cols * density * pixelsPerCell, rows * density * pixelsPerCell];
+}
+
+export function getThumbnailRenderSize(
+  orientation: Orientation,
+): [number, number] {
+  return getThumbnailSize(orientation, THUMBNAIL_RENDER_PIXELS_PER_CELL);
 }
 
 export function getGridCounts(

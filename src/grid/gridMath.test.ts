@@ -3,6 +3,8 @@ import {
   blockPixelRect,
   crossFillRects,
   getGridDimensions,
+  getThumbnailRenderSize,
+  getThumbnailSize,
   gridEdge,
   inscribedPixelSquare,
   seamOverlapPx,
@@ -184,6 +186,21 @@ function run(): void {
   assert(thumb.cellSize === 2, "thumbnail cell is 2px");
   assert(seamOverlapPx(thumb) === 0, "thumbnails skip overlap");
   assert(seamOverlapPx(thumb, true) === 0, "thumbnails skip heavy overlap");
+
+  const display = getThumbnailSize("landscape");
+  assert(display[0] === 96 && display[1] === 54, "display thumb is 96×54");
+  const render = getThumbnailRenderSize("landscape");
+  assert(render[0] === 480 && render[1] === 270, "render thumb is 480×270");
+  for (const orientation of ORIENTATIONS) {
+    const [rw, rh] = getThumbnailRenderSize(orientation);
+    for (const density of DENSITIES) {
+      const grid = getGridDimensions(orientation, density, rw, rh);
+      assert(
+        grid.cellSize > 0,
+        `render thumb ${rw}×${rh} is a valid mosaic at d=${density}`,
+      );
+    }
+  }
 }
 
 run();
