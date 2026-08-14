@@ -20,11 +20,13 @@ import {
 import { buildMergedLayoutFromImage } from "../import/imageImport";
 import type { ImageImportResult } from "../import/imageImport";
 import { getCachedSourceImage } from "../import/imageSource";
+import type { SettingsClipboard } from "./settingsClipboard";
 import type {
   BackgroundMode,
   Density,
   Frame,
   FrameSettings,
+  MosaicBlock,
   Orientation,
 } from "../types";
 
@@ -137,19 +139,83 @@ export function updateFrameSettings(
   };
 }
 
+function canTransposeOrientation(from: Orientation, to: Orientation): boolean {
+  return (
+    (from === "landscape" && to === "portrait") ||
+    (from === "portrait" && to === "landscape")
+  );
+}
+
+function blocksFitGrid(
+  blocks: MosaicBlock[],
+  columns: number,
+  rows: number,
+): boolean {
+  return blocks.every(
+    (block) =>
+      block.col >= 0 &&
+      block.row >= 0 &&
+      block.width >= 1 &&
+      block.height >= 1 &&
+      block.col + block.width <= columns &&
+      block.row + block.height <= rows,
+  );
+}
+
+function restorePastedBlocks(
+  pastedBlocks: MosaicBlock[] | undefined,
+  sourceOrientation: Orientation | undefined,
+  orientation: Orientation,
+  columns: number,
+  rows: number,
+): MosaicBlock[] | null {
+  if (!pastedBlocks || pastedBlocks.length === 0) return null;
+
+  let blocks = pastedBlocks.map((block) => ({ ...block }));
+  if (sourceOrientation && sourceOrientation !== orientation) {
+    if (!canTransposeOrientation(sourceOrientation, orientation)) return null;
+    blocks = transposeBlocks(blocks);
+  }
+
+  if (!blocksFitGrid(blocks, columns, rows)) return null;
+  return blocks;
+}
+
 export function applyPastedSettings(
   frame: Frame,
-  pasted: FrameSettings,
+  pasted: SettingsClipboard,
   orientation: Orientation,
 ): Frame {
-  const settings = clampSettingsForOrientation(pasted, orientation);
+  const settings = clampSettingsForOrientation(pasted.settings, orientation);
+  const { columns, rows } = getGridCounts(orientation, settings.density);
+  const restored = restorePastedBlocks(
+    pasted.blocks,
+    pasted.orientation,
+    orientation,
+    columns,
+    rows,
+  );
+
+  if (restored) {
+    const nextSettings =
+      settings.layoutSource === "imported" && !frame.imageSource
+        ? { ...settings, layoutSource: "procedural" as const }
+        : settings;
+    return { ...frame, settings: nextSettings, blocks: restored };
+  }
+
+  const nextFrame = { ...frame, settings };
+  if (nextFrame.imageSource) {
+    return relayoutImportedFrame(nextFrame, orientation);
+  }
+
   let blocks = generateLayout(orientation, settings);
   blocks = randomizeColors(
     blocks,
     settings.colors,
     colorAmountsForSettings(settings),
   );
-  return { ...frame, settings, blocks };
+  return { ...nextFrame, blocks };
 }
 
 export function relayoutImportedFrame(
