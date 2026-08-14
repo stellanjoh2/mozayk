@@ -87,7 +87,7 @@ export function HeadlineToggle({
 }: HeadlineToggleProps) {
   const Tag = level === 3 ? "h3" : "h2";
   return (
-    <label
+    <div
       className={
         level === 3
           ? "headline-toggle headline-toggle--sub"
@@ -97,12 +97,18 @@ export function HeadlineToggle({
       <Tag className={level === 3 ? "export-group__title" : undefined}>
         <HintLabel hint={hint}>{title}</HintLabel>
       </Tag>
-      <input
-        type="checkbox"
-        checked={checked}
-        aria-label={title}
-        onChange={(e) => onChange(e.target.checked)}
-      />
-    </label>
+      <button
+        type="button"
+        className={
+          checked
+            ? "headline-toggle__btn is-active"
+            : "headline-toggle__btn"
+        }
+        aria-pressed={checked}
+        onClick={() => onChange(!checked)}
+      >
+        Activate
+      </button>
+    </div>
   );
 }

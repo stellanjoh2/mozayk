@@ -643,7 +643,6 @@ body {
   justify-content: space-between;
   gap: 12px;
   margin: 0 0 16px;
-  cursor: pointer;
 }
 
 .headline-toggle--sub {
@@ -655,8 +654,41 @@ body {
   margin: 0;
 }
 
-.control-row--toggle input[type="checkbox"],
-.headline-toggle input[type="checkbox"] {
+.headline-toggle__btn {
+  appearance: none;
+  flex-shrink: 0;
+  border: none;
+  min-height: 32px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  border-radius: var(--control-radius);
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background 0.18s var(--ui-ease),
+    color 0.18s var(--ui-ease);
+}
+
+.headline-toggle__btn:hover {
+  background: var(--accent-hover);
+}
+
+.headline-toggle__btn.is-active {
+  background: var(--accent);
+  color: var(--on-brand);
+}
+
+.headline-toggle__btn:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.control-row--toggle input[type="checkbox"] {
   -webkit-appearance: none;
   appearance: none;
   flex-shrink: 0;
@@ -673,8 +705,7 @@ body {
   transition: border-color 0.15s var(--ui-ease);
 }
 
-.control-row--toggle input[type="checkbox"]::after,
-.headline-toggle input[type="checkbox"]::after {
+.control-row--toggle input[type="checkbox"]::after {
   content: "";
   width: 6px;
   height: 6px;
@@ -684,23 +715,19 @@ body {
   transition: transform 0.15s var(--ui-ease);
 }
 
-.control-row--toggle input[type="checkbox"]:hover,
-.headline-toggle input[type="checkbox"]:hover {
+.control-row--toggle input[type="checkbox"]:hover {
   border-color: rgba(255, 255, 255, 0.5);
 }
 
-.control-row--toggle input[type="checkbox"]:checked,
-.headline-toggle input[type="checkbox"]:checked {
+.control-row--toggle input[type="checkbox"]:checked {
   border-color: var(--brand-green);
 }
 
-.control-row--toggle input[type="checkbox"]:checked::after,
-.headline-toggle input[type="checkbox"]:checked::after {
+.control-row--toggle input[type="checkbox"]:checked::after {
   transform: scale(1);
 }
 
-.control-row--toggle input[type="checkbox"]:focus-visible,
-.headline-toggle input[type="checkbox"]:focus-visible {
+.control-row--toggle input[type="checkbox"]:focus-visible {
   outline: 1px solid var(--accent);
   outline-offset: 3px;
 }
