@@ -162,8 +162,104 @@ function shareEdge(a: Set<number>, b: Set<number>): boolean {
   return false;
 }
 
-function colorGraph(adj: number[][]): number[] {
+function boxCenter(box: Box): { cx: number; cy: number } {
+  return { cx: (box.minX + box.maxX) / 2, cy: (box.minY + box.maxY) / 2 };
+}
+
+/** Split mosaic parts into letterforms by centre-x gutters between glyphs. */
+function letterClusters(boxes: Box[]): number[][] {
+  const indexed = boxes
+    .map((box, i) => ({ i, cx: boxCenter(box).cx }))
+    .sort((a, b) => a.cx - b.cx);
+  if (indexed.length === 0) return [];
+  const letters: number[][] = [];
+  let cur = [indexed[0].i];
+  let maxCx = indexed[0].cx;
+  for (let k = 1; k < indexed.length; k++) {
+    const gap = indexed[k].cx - maxCx;
+    if (gap > GRID + 0.5) {
+      letters.push(cur);
+      cur = [indexed[k].i];
+      maxCx = indexed[k].cx;
+    } else {
+      cur.push(indexed[k].i);
+      maxCx = Math.max(maxCx, indexed[k].cx);
+    }
+  }
+  letters.push(cur);
+  return letters;
+}
+
+function axisAlignedNeighbor(boxes: Box[], i: number, j: number): boolean {
+  const a = boxCenter(boxes[i]);
+  const b = boxCenter(boxes[j]);
+  const dx = Math.abs(a.cx - b.cx);
+  const dy = Math.abs(a.cy - b.cy);
+  return (dy < 1 && Math.abs(dx - GRID) < 1) || (dx < 1 && Math.abs(dy - GRID) < 1);
+}
+
+/**
+ * At most one same-colour run per letter (ideally one): a collinear chain of
+ * 2–4 edge-adjacent tiles that collapse into a single rect after colouring.
+ */
+function pickSameColorRuns(adj: number[][], boxes: Box[]): number[][] {
+  const runs: number[][] = [];
+  for (const letter of letterClusters(boxes)) {
+    const set = new Set(letter);
+    const axisAdj = new Map<number, number[]>();
+    for (const i of letter) axisAdj.set(i, []);
+    for (const i of letter) {
+      for (const j of adj[i]) {
+        if (!set.has(j) || j <= i) continue;
+        if (!axisAlignedNeighbor(boxes, i, j)) continue;
+        axisAdj.get(i)!.push(j);
+        axisAdj.get(j)!.push(i);
+      }
+    }
+
+    const candidates: number[][] = [];
+    const seen = new Set<string>();
+    const dfs = (path: number[]) => {
+      if (path.length >= 2 && path.length <= 4) {
+        const key = [...path].sort((a, b) => a - b).join(",");
+        if (!seen.has(key)) {
+          seen.add(key);
+          candidates.push([...path]);
+        }
+      }
+      if (path.length === 4) return;
+      const last = path[path.length - 1];
+      for (const next of axisAdj.get(last) ?? []) {
+        if (path.includes(next)) continue;
+        if (path.length >= 2) {
+          const a = boxCenter(boxes[path[0]]);
+          const b = boxCenter(boxes[path[1]]);
+          const c = boxCenter(boxes[next]);
+          const horiz = Math.abs(a.cy - b.cy) < 1;
+          if (horiz ? Math.abs(c.cy - a.cy) >= 1 : Math.abs(c.cx - a.cx) >= 1) continue;
+        }
+        dfs([...path, next]);
+      }
+    };
+    for (const start of letter) dfs([start]);
+    if (candidates.length === 0) continue;
+
+    const lengths = [...new Set(candidates.map((r) => r.length))];
+    const len = lengths[Math.floor(Math.random() * lengths.length)];
+    const pool = candidates.filter((r) => r.length === len);
+    runs.push(pool[Math.floor(Math.random() * pool.length)]);
+  }
+  return runs;
+}
+
+function colorGraph(adj: number[][], runs: number[][] = []): number[] {
   const n = adj.length;
+  const groupOf = new Array<number>(n).fill(-1);
+  for (let gi = 0; gi < runs.length; gi++) {
+    for (const v of runs[gi]) groupOf[v] = gi;
+  }
+  const membersOf = (v: number) => (groupOf[v] >= 0 ? runs[groupOf[v]] : [v]);
+
   const palette = [...LOGO_FILL_TOKENS.keys()];
   const quota = weightedCounts(n, COLOR_WEIGHTS);
   // Guarantee every colour appears at least once when the graph is large enough.
@@ -180,6 +276,17 @@ function colorGraph(adj: number[][]): number[] {
     }
   }
 
+  const neighborColors = (members: number[], colors: number[]): Set<number> => {
+    const used = new Set<number>();
+    for (const m of members) {
+      for (const u of adj[m]) {
+        if (groupOf[m] >= 0 && groupOf[u] === groupOf[m]) continue;
+        if (colors[u] >= 0) used.add(colors[u]);
+      }
+    }
+    return used;
+  };
+
   for (let attempt = 0; attempt < 48; attempt++) {
     const remaining = [...quota];
     const colors = new Array<number>(n).fill(-1);
@@ -187,17 +294,19 @@ function colorGraph(adj: number[][]): number[] {
     const solve = (i: number): boolean => {
       if (i === n) return true;
       const v = order[i];
-      const used = new Set(adj[v].map((u) => colors[u]).filter((c) => c >= 0));
+      if (colors[v] >= 0) return solve(i + 1);
+      const members = membersOf(v);
+      const used = neighborColors(members, colors);
       const inQuota = shuffle(palette.filter((c) => remaining[c] > 0 && !used.has(c)));
       const options =
         inQuota.length > 0 ? inQuota : shuffle(palette.filter((c) => !used.has(c)));
       for (const c of options) {
-        const took = remaining[c] > 0;
-        if (took) remaining[c]--;
-        colors[v] = c;
+        const took = Math.min(remaining[c], members.length);
+        remaining[c] -= took;
+        for (const m of members) colors[m] = c;
         if (solve(i + 1)) return true;
-        colors[v] = -1;
-        if (took) remaining[c]++;
+        for (const m of members) colors[m] = -1;
+        remaining[c] += took;
       }
       return false;
     };
@@ -207,7 +316,9 @@ function colorGraph(adj: number[][]): number[] {
   const remaining = [...quota];
   const colors = new Array<number>(n).fill(-1);
   for (const v of shuffle([...Array(n).keys()])) {
-    const used = new Set(adj[v].map((u) => colors[u]).filter((c) => c >= 0));
+    if (colors[v] >= 0) continue;
+    const members = membersOf(v);
+    const used = neighborColors(members, colors);
     const legal = palette.filter((c) => !used.has(c));
     const preferred = legal.filter((c) => remaining[c] > 0);
     const pool = preferred.length > 0 ? preferred : legal;
@@ -215,8 +326,8 @@ function colorGraph(adj: number[][]): number[] {
       (a, b) => remaining[b] - remaining[a] || Math.random() - 0.5,
     );
     const c = ranked[0] ?? WHITE_FILL_INDEX;
-    colors[v] = c;
-    if (remaining[c] > 0) remaining[c]--;
+    for (const m of members) colors[m] = c;
+    remaining[c] = Math.max(0, remaining[c] - members.length);
   }
   return colors;
 }
@@ -342,6 +453,38 @@ function morphUnitModules(svg: Element): void {
   });
 }
 
+/** Replace each same-colour square run with a single rect spanning their union. */
+function mergeColorRuns(
+  doc: Document,
+  parts: Element[],
+  boxes: Box[],
+  colors: number[],
+  runs: number[][],
+): void {
+  for (const run of runs) {
+    if (run.length < 2) continue;
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const i of run) {
+      const b = boxes[i];
+      minX = Math.min(minX, b.minX);
+      minY = Math.min(minY, b.minY);
+      maxX = Math.max(maxX, b.maxX);
+      maxY = Math.max(maxY, b.maxY);
+    }
+    const rect = doc.createElementNS(NS, "rect");
+    rect.setAttribute("x", String(minX));
+    rect.setAttribute("y", String(minY));
+    rect.setAttribute("width", String(maxX - minX));
+    rect.setAttribute("height", String(maxY - minY));
+    rect.setAttribute("fill", LOGO_FILL_TOKENS[colors[run[0]] ?? 0]);
+    parts[run[0]].replaceWith(rect);
+    for (let k = 1; k < run.length; k++) parts[run[k]].remove();
+  }
+}
+
 function paintLogoWithBrandTokens(svgMarkup: string): string {
   const doc = new DOMParser().parseFromString(svgMarkup, "image/svg+xml");
   const svg = doc.documentElement;
@@ -355,6 +498,7 @@ function paintLogoWithBrandTokens(svgMarkup: string): string {
 
   const parts = [...svg.querySelectorAll(PART_SELECTOR)];
   const cells = parts.map(occupancy);
+  const boxes = parts.map(bbox);
   const adj = parts.map(() => [] as number[]);
   for (let i = 0; i < parts.length; i++) {
     for (let j = i + 1; j < parts.length; j++) {
@@ -364,11 +508,14 @@ function paintLogoWithBrandTokens(svgMarkup: string): string {
     }
   }
 
-  const colors = colorGraph(adj);
+  const runs = pickSameColorRuns(adj, boxes);
+  const colors = colorGraph(adj, runs);
   parts.forEach((el, i) => {
     el.removeAttribute("class");
     el.setAttribute("fill", LOGO_FILL_TOKENS[colors[i] ?? 0]);
   });
+  // Collapse each same-colour square run into one rect — no shared edges, no seams.
+  mergeColorRuns(doc, parts, boxes, colors, runs);
 
   svg.removeAttribute("id");
   svg.setAttribute("role", "img");
