@@ -77,8 +77,8 @@ export function gridEdge(index: number, count: number, size: number): number {
 }
 
 /**
- * Extra fill expand when grid blur would otherwise reveal seams.
- * Default drawing must stay at `blockPixelRect` — a uniform 1px expand
+ * Extra fill expand when deliberately overlapping neighbours.
+ * Default mosaic drawing must stay at `blockPixelRect` — any uniform expand
  * creates T-junction offshoots on edges that should be straight.
  */
 export function seamOverlapPx(grid: GridDimensions, heavy = false): number {

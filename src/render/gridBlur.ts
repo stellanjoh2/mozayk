@@ -222,6 +222,12 @@ function drawSharpMask(
   }
 }
 
+/** True when grid blur will actually run (toggle on and amount > 0). */
+export function isGridBlurActive(settings: FrameSettings): boolean {
+  if (!settings.gridBlur) return false;
+  return clampInt(settings.gridBlurAmount, 0, 100, 50) > 0;
+}
+
 export function applyGridBlur(
   ctx: CanvasRenderingContext2D,
   orientation: Orientation,
@@ -230,11 +236,10 @@ export function applyGridBlur(
   height: number,
   opaqueBackdrop = true,
 ): void {
-  if (!settings.gridBlur) return;
+  if (!isGridBlurActive(settings)) return;
 
   try {
     const amount = clampInt(settings.gridBlurAmount, 0, 100, 50);
-    if (amount <= 0) return;
 
     const density = settings.gridBlurDensity ?? settings.density;
     const grid = getGridDimensions(orientation, density, width, height);

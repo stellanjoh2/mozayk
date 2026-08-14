@@ -248,11 +248,12 @@ export function renderMosaic(
     drawBackground(ctx, settings, width, height, sourceImage);
   }
 
-  const heavySeams = Boolean(settings.gridBlur);
+  // Always draw on shared integer edges. Expanding fills "for blur" caused
+  // 1–2px overlaps / T-junction jogs and clipped rings & spheres.
   for (const block of blocks) {
     if (!block.color) continue;
     if (omitColors?.has(block.color)) continue;
-    drawBlock(ctx, block, grid, settings.ringThickness, heavySeams);
+    drawBlock(ctx, block, grid, settings.ringThickness, false);
   }
 
   try {
