@@ -1,9 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { DEFAULT_FPS, type ExportPreset } from "./config";
+import {
+  DEFAULT_FPS,
+  GIF_FRAME_DELAY_CS_DEFAULT,
+  clampGifFrameDelayCs,
+  type ExportPreset,
+  type GifExportPreset,
+} from "./config";
 import { CanvasView, Timeline } from "./components/CanvasView";
 import { ControlsPanel, MAX_FRAMES } from "./components/ControlsPanel";
 import { ImportErrorDialog } from "./components/ImportErrorDialog";
 import { ResetCanvasDialog } from "./components/ResetCanvasDialog";
+import { exportGif, gifExportToast } from "./export/exportGif";
 import { exportAllFrames, exportCurrentFrame, exportCurrentFrameTransparent } from "./export/exportPng";
 import { exportCurrentFrameSvg } from "./export/exportSvg";
 import {
@@ -101,6 +108,8 @@ export default function App() {
   const [playing, setPlaying] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [exportPreset, setExportPreset] = useState<ExportPreset>("1080p");
+  const [gifPreset, setGifPreset] = useState<GifExportPreset>("480p");
+  const [gifFrameDelayCs, setGifFrameDelayCs] = useState(GIF_FRAME_DELAY_CS_DEFAULT);
   const [importingImage, setImportingImage] = useState(false);
   const [uploadingTextureOverlay, setUploadingTextureOverlay] = useState(false);
   const [importErrorMessage, setImportErrorMessage] = useState<string | null>(
@@ -569,6 +578,8 @@ export default function App() {
     setActiveIndex(0);
     setPlaying(false);
     setExportPreset("1080p");
+    setGifPreset("480p");
+    setGifFrameDelayCs(GIF_FRAME_DELAY_CS_DEFAULT);
     setViewOriginal(false);
     setInspecting(false);
 
@@ -717,6 +728,9 @@ export default function App() {
         frame={activeFrame}
         orientation={orientation}
         exportPreset={exportPreset}
+        gifPreset={gifPreset}
+        gifFrameDelayCs={gifFrameDelayCs}
+        frameCount={frames.length}
         onSettingsChange={handleSettingsChange}
         onRandomizeLayout={randomizeLayout}
         onRandomizeAll={randomizeAll}
@@ -790,7 +804,12 @@ export default function App() {
         onExportPresetChange={setExportPreset}
         onExportPngFrame={() =>
           void runExport(() =>
-            exportCurrentFrame(activeFrame, orientation, exportPreset),
+            exportCurrentFrame(
+              activeFrame,
+              orientation,
+              exportPreset,
+              activeIndex,
+            ),
           )
         }
         onExportPngTransparent={() =>
@@ -799,6 +818,7 @@ export default function App() {
               activeFrame,
               orientation,
               exportPreset,
+              activeIndex,
             ),
           )
         }
@@ -807,9 +827,28 @@ export default function App() {
             exportAllFrames(frames, orientation, exportPreset),
           )
         }
+        onGifPresetChange={setGifPreset}
+        onGifFrameDelayChange={setGifFrameDelayCs}
+        onExportGif={() =>
+          void runExport(async () => {
+            setToast("Exporting GIF…");
+            const bytes = await exportGif(
+              frames,
+              orientation,
+              gifPreset,
+              clampGifFrameDelayCs(gifFrameDelayCs, frames.length),
+            );
+            setToast(gifExportToast(bytes));
+          })
+        }
         onExportSvgFrame={() =>
           void runExport(() => {
-            exportCurrentFrameSvg(activeFrame, orientation, exportPreset);
+            exportCurrentFrameSvg(
+              activeFrame,
+              orientation,
+              exportPreset,
+              activeIndex,
+            );
           })
         }
         onImportImage={(file) => void handleImportImage(file)}

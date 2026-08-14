@@ -12,6 +12,7 @@
   "dependencies": {
     "@fontsource-variable/geist-mono": "^5.3.0",
     "fflate": "^0.8.3",
+    "gifski-wasm": "^2.2.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },

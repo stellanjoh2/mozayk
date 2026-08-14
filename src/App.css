@@ -355,6 +355,17 @@ body {
   color: var(--muted);
 }
 
+.export-group__meta {
+  margin: -4px 0 12px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.export-group__meta.is-warn {
+  color: var(--brand-warm);
+}
+
 .app-toast {
   position: fixed;
   z-index: 40;

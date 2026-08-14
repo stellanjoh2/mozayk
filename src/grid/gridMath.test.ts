@@ -18,16 +18,22 @@ function assert(condition: boolean, message: string): void {
 const ORIENTATIONS: Orientation[] = ["landscape", "portrait", "square"];
 const CANVASES: Record<Orientation, [number, number][]> = {
   landscape: [
+    [864, 486],
+    [1280, 720],
     [1920, 1080],
     [2400, 1350],
     [3840, 2160],
   ],
   portrait: [
+    [486, 864],
+    [720, 1280],
     [1080, 1920],
     [1350, 2400],
     [2160, 3840],
   ],
   square: [
+    [486, 486],
+    [720, 720],
     [1080, 1080],
     [1350, 1350],
     [2160, 2160],

@@ -1,5 +1,19 @@
 import { useRef } from "react";
-import { DEFAULT_FPS, EXPORT_PRESETS, MAX_COLORS, MAX_FRAMES, type ExportPreset } from "../config";
+import {
+  DEFAULT_FPS,
+  EXPORT_PRESETS,
+  GIF_EXPORT_PRESETS,
+  GIF_FRAME_DELAY_PRESETS,
+  GIPHY_DURATION_MAX_S,
+  GIPHY_DURATION_RECOMMENDED_S,
+  MAX_COLORS,
+  MAX_FRAMES,
+  clampGifFrameDelayCs,
+  gifDurationSeconds,
+  gifFpsFromDelayCs,
+  type ExportPreset,
+  type GifExportPreset,
+} from "../config";
 import {
   DENSITY_INFO,
   maxHeightSliderMax,
@@ -47,6 +61,9 @@ type ControlsPanelProps = {
   frame: Frame;
   orientation: Orientation;
   exportPreset: ExportPreset;
+  gifPreset: GifExportPreset;
+  gifFrameDelayCs: number;
+  frameCount: number;
   onSettingsChange: (patch: Partial<FrameSettings>, immediateLayout?: boolean) => void;
   onRandomizeLayout: () => void;
   onRandomizeAll: () => void;
@@ -66,6 +83,9 @@ type ControlsPanelProps = {
   onExportPngFrame: () => void;
   onExportPngTransparent: () => void;
   onExportPngSequence: () => void;
+  onGifPresetChange: (preset: GifExportPreset) => void;
+  onGifFrameDelayChange: (delayCs: number) => void;
+  onExportGif: () => void;
   onExportSvgFrame: () => void;
   onImportImage: (file: File) => void;
   importingImage?: boolean;
@@ -79,6 +99,9 @@ export function ControlsPanel({
   frame,
   orientation,
   exportPreset,
+  gifPreset,
+  gifFrameDelayCs,
+  frameCount,
   onSettingsChange,
   onRandomizeLayout,
   onRandomizeAll,
@@ -98,6 +121,9 @@ export function ControlsPanel({
   onExportPngFrame,
   onExportPngTransparent,
   onExportPngSequence,
+  onGifPresetChange,
+  onGifFrameDelayChange,
+  onExportGif,
   onExportSvgFrame,
   onImportImage,
   importingImage = false,
@@ -957,6 +983,57 @@ export function ControlsPanel({
         </div>
 
         <div className="export-group">
+          <h3 className="export-group__title">GIF</h3>
+          <label className="control-row">
+            <span className="control-row__label">
+              <HintLabel hint="GIPHY recommended 480p · max 720p">
+                Resolution
+              </HintLabel>
+            </span>
+            <select
+              value={gifPreset}
+              onChange={(e) =>
+                onGifPresetChange(e.target.value as GifExportPreset)
+              }
+            >
+              {Object.entries(GIF_EXPORT_PRESETS).map(([key, preset]) => (
+                <option key={key} value={key}>
+                  {preset.label} — {preset.note}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="control-row">
+            <span className="control-row__label">
+              <HintLabel hint="How long each frame holds · GIPHY prefers 15–24 fps">
+                Frame duration
+              </HintLabel>
+            </span>
+            <select
+              value={clampGifFrameDelayCs(gifFrameDelayCs, frameCount)}
+              onChange={(e) => onGifFrameDelayChange(Number(e.target.value))}
+            >
+              {GIF_FRAME_DELAY_PRESETS.map((preset) => (
+                <option
+                  key={preset.cs}
+                  value={preset.cs}
+                  disabled={
+                    gifDurationSeconds(frameCount, preset.cs) >
+                    GIPHY_DURATION_MAX_S
+                  }
+                >
+                  {preset.label} — {preset.note}
+                </option>
+              ))}
+            </select>
+          </label>
+          <GifExportMeta frameCount={frameCount} delayCs={gifFrameDelayCs} />
+          <button type="button" className="panel-btn" onClick={onExportGif}>
+            Export GIF
+          </button>
+        </div>
+
+        <div className="export-group">
           <h3 className="export-group__title">SVG</h3>
           <button
             type="button"
@@ -1014,6 +1091,37 @@ export function ControlsPanel({
         </p>
       </footer>
     </aside>
+  );
+}
+
+function GifExportMeta({
+  frameCount,
+  delayCs,
+}: {
+  frameCount: number;
+  delayCs: number;
+}) {
+  const heldCs = clampGifFrameDelayCs(delayCs, frameCount);
+  const durationS = gifDurationSeconds(frameCount, heldCs);
+  const fps = gifFpsFromDelayCs(heldCs);
+  const fpsLabel = Number.isInteger(fps) ? String(fps) : fps.toFixed(1);
+  const overLimit = durationS > GIPHY_DURATION_MAX_S;
+  const overRecommended = durationS > GIPHY_DURATION_RECOMMENDED_S;
+  const note = overLimit
+    ? " · over GIPHY’s 15s limit"
+    : overRecommended
+      ? " · over GIPHY’s 6s recommendation"
+      : "";
+
+  return (
+    <p
+      className={
+        overRecommended ? "export-group__meta is-warn" : "export-group__meta"
+      }
+    >
+      {frameCount} {frameCount === 1 ? "frame" : "frames"} · {durationS.toFixed(2)}s ·{" "}
+      {fpsLabel} fps{note}
+    </p>
   );
 }
 

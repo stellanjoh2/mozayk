@@ -1,5 +1,5 @@
 import { getExportSize, type ExportPreset } from "../config";
-import { downloadBlob } from "./downloadBlob";
+import { downloadBlob, mosaicFrameFileName } from "./downloadBlob";
 import { renderMosaicToSvg } from "../render/renderSvg";
 import { lockedColorsSet } from "../state/frameUtils";
 import type { Frame, Orientation } from "../types";
@@ -8,6 +8,7 @@ export function exportCurrentFrameSvg(
   frame: Frame,
   orientation: Orientation,
   preset: ExportPreset,
+  frameIndex: number,
 ): void {
   const [width, height] = getExportSize(orientation, preset);
 
@@ -25,5 +26,5 @@ export function exportCurrentFrameSvg(
   });
 
   const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
-  downloadBlob(blob, "mozayk_001.svg");
+  downloadBlob(blob, mosaicFrameFileName(frameIndex, "svg"));
 }

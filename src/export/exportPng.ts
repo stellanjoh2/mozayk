@@ -4,13 +4,9 @@ import { ensureCachedSourceImage } from "../import/imageSource";
 import { renderMosaicToBlob } from "../render/renderFrame";
 import { lockedColorsSet } from "../state/frameUtils";
 import type { Frame, Orientation } from "../types";
-import { downloadBlob } from "./downloadBlob";
+import { downloadBlob, mosaicFrameFileName } from "./downloadBlob";
 
-function padFrameIndex(index: number): string {
-  return String(index + 1).padStart(3, "0");
-}
-
-async function loadSourceImageForFrame(
+export async function loadSourceImageForFrame(
   frame: Frame,
 ): Promise<HTMLImageElement | null> {
   if (!frame.settings.showSourceImage || !frame.imageSource) return null;
@@ -21,7 +17,7 @@ async function loadSourceImageForFrame(
   }
 }
 
-async function loadTextureOverlayForFrame(
+export async function loadTextureOverlayForFrame(
   frame: Frame,
 ): Promise<HTMLImageElement | null> {
   if (!frame.textureOverlay) return null;
@@ -36,6 +32,7 @@ export async function exportCurrentFrame(
   frame: Frame,
   orientation: Orientation,
   preset: ExportPreset,
+  frameIndex: number,
 ): Promise<void> {
   const [width, height] = getExportSize(orientation, preset);
   const [sourceImage, textureOverlayImage] = await Promise.all([
@@ -52,13 +49,14 @@ export async function exportCurrentFrame(
     textureOverlayImage,
   });
   if (!blob) throw new Error("PNG export failed");
-  downloadBlob(blob, `mozayk_${padFrameIndex(0)}.png`);
+  downloadBlob(blob, mosaicFrameFileName(frameIndex, "png"));
 }
 
 export async function exportCurrentFrameTransparent(
   frame: Frame,
   orientation: Orientation,
   preset: ExportPreset,
+  frameIndex: number,
 ): Promise<void> {
   const [width, height] = getExportSize(orientation, preset);
   const [sourceImage, textureOverlayImage] = await Promise.all([
@@ -77,7 +75,7 @@ export async function exportCurrentFrameTransparent(
     transparentBackground: true,
   });
   if (!blob) throw new Error("PNG export failed");
-  downloadBlob(blob, `mozayk_${padFrameIndex(0)}_transparent.png`);
+  downloadBlob(blob, mosaicFrameFileName(frameIndex, "png", "_transparent"));
 }
 
 export async function exportAllFrames(
@@ -104,7 +102,7 @@ export async function exportAllFrames(
     });
     if (!blob) throw new Error("PNG export failed");
     const buffer = new Uint8Array(await blob.arrayBuffer());
-    files[`mozayk_${padFrameIndex(i)}.png`] = buffer;
+    files[mosaicFrameFileName(i, "png")] = buffer;
   }
 
   const zipped = zipSync(files);
