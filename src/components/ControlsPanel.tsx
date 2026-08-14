@@ -6,6 +6,13 @@ import {
   maxWidthSliderMax,
 } from "../grid/density";
 import {
+  DATA_FIELDS_COLOR_DEFAULT,
+  DATA_FIELDS_SIZE_DEFAULT,
+  DATA_FIELDS_SIZE_MAX,
+  DATA_FIELDS_SIZE_MIN,
+  DATA_FIELDS_SPAWN_DEFAULT,
+} from "../render/dataFields";
+import {
   GRID_BLEND_LABELS,
   GRID_BLEND_MODES,
   GRID_CROSS_SIZE_DEFAULT,
@@ -466,7 +473,7 @@ export function ControlsPanel({
           <label className="control-row">
             <span className="control-row__label">Grid Density</span>
             <select
-              value={settings.gridOverlayDensity ?? settings.density}
+              value={settings.gridOverlayDensity ?? 1}
               onChange={(e) =>
                 onSettingsChange(
                   {
@@ -861,6 +868,46 @@ export function ControlsPanel({
           checked={Boolean(settings.invert)}
           onChange={(invert) => onSettingsChange({ invert }, false)}
         />
+        <ToggleRow
+          label="Data fields"
+          hint="Sparse monospace coordinates in cell corners · PNG only"
+          checked={Boolean(settings.dataFields)}
+          onChange={(dataFields) => onSettingsChange({ dataFields }, false)}
+        />
+        {settings.dataFields ? (
+          <>
+            <SliderRow
+              label="Spawn rate"
+              hint="How often labels appear · sparse vertical strips · at most ~1/16 of cells"
+              value={settings.dataFieldsSpawnRate ?? DATA_FIELDS_SPAWN_DEFAULT}
+              min={0}
+              max={100}
+              onChange={(dataFieldsSpawnRate) =>
+                onSettingsChange({ dataFieldsSpawnRate }, false)
+              }
+            />
+            <SliderRow
+              label="Size"
+              hint="Bitmap glyph scale · 1 ≈ 8pt"
+              value={settings.dataFieldsSize ?? DATA_FIELDS_SIZE_DEFAULT}
+              min={DATA_FIELDS_SIZE_MIN}
+              max={DATA_FIELDS_SIZE_MAX}
+              formatValue={(v) => `${v}×`}
+              onChange={(dataFieldsSize) =>
+                onSettingsChange({ dataFieldsSize }, false)
+              }
+            />
+            <div className="control-row">
+              <span className="control-row__label">Colour</span>
+              <ColorSwatch
+                color={settings.dataFieldsColor ?? DATA_FIELDS_COLOR_DEFAULT}
+                onChange={(dataFieldsColor) =>
+                  onSettingsChange({ dataFieldsColor }, false)
+                }
+              />
+            </div>
+          </>
+        ) : null}
       </section>
 
       <section className="panel-section">

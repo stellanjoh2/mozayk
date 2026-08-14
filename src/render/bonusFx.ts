@@ -38,10 +38,10 @@ function getGrainTile(): HTMLCanvasElement {
   const pixels = ctx.createImageData(GRAIN_TILE, GRAIN_TILE);
   const data = pixels.data;
   for (let i = 0; i < data.length; i += 4) {
-    const v = (Math.random() * 256) | 0;
-    data[i] = v;
-    data[i + 1] = v;
-    data[i + 2] = v;
+    // Independent R/G/B — colored noise (Photoshop-style), not monochrome
+    data[i] = (Math.random() * 256) | 0;
+    data[i + 1] = (Math.random() * 256) | 0;
+    data[i + 2] = (Math.random() * 256) | 0;
     data[i + 3] = 255;
   }
   ctx.putImageData(pixels, 0, 0);

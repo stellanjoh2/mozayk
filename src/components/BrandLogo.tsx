@@ -2,7 +2,8 @@ import { useMemo } from "react";
 import logoSvg from "../assets/mozayk_logo.svg?raw";
 
 /**
- * Must match --logo-fill-1/2/3 in App.css :root.
+ * Must match --logo-fill-1/2/3 in App.css :root
+ * (brand / brand-secondary / brand-other — not brand-green).
  * The wordmark paints from these tokens — never from hardcoded hex.
  */
 const LOGO_FILL_TOKENS = [

@@ -64,7 +64,7 @@ export type FrameSettings = {
   background: BackgroundMode;
   /** Stroked grid over mosaic shapes. */
   gridOverlay?: boolean;
-  /** Overlay grid density — independent of layout density. */
+  /** Overlay grid density — independent of layout density. Defaults to 1. */
   gridOverlayDensity?: Density;
   /** Overlay stroke colour (hex). Defaults to white. */
   gridOverlayColor?: string;
@@ -110,6 +110,14 @@ export type FrameSettings = {
   brightness?: number;
   /** Invert the finished image (full-frame difference with white). */
   invert?: boolean;
+  /** Sparse monospace coordinate labels in cell corners (PNG). */
+  dataFields?: boolean;
+  /** Chance a candidate cell gets a label 0–100. At most ~1/16 of cells. Defaults to 50. */
+  dataFieldsSpawnRate?: number;
+  /** Glyph scale 1–8. Defaults to 1 (~8pt). */
+  dataFieldsSize?: number;
+  /** Label colour (hex). Defaults to white. */
+  dataFieldsColor?: string;
   /** Reveal the imported photo in gaps between mosaic shapes. Requires imageSource. */
   showSourceImage?: boolean;
   /** Blend mode for the local texture overlay. Defaults to multiply. */

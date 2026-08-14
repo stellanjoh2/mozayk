@@ -14,6 +14,7 @@ import type {
   Orientation,
 } from "../types";
 import { applyBonusFx } from "./bonusFx";
+import { drawDataFields } from "./dataFields";
 import { applyGridBlur } from "./gridBlur";
 import {
   gridCrossesPathData,
@@ -258,6 +259,12 @@ export function renderMosaic(
     if (settings.gridOverlay || settings.gridCrosses) {
       drawGridOverlay(ctx, orientation, settings, width, height);
     }
+  } catch (error) {
+    console.error(error);
+  }
+
+  try {
+    drawDataFields(ctx, orientation, settings, width, height);
   } catch (error) {
     console.error(error);
   }

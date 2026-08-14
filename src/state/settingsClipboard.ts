@@ -2,6 +2,12 @@ import { isValidHex, normalizeHex } from "../colorMath";
 import { MAX_COLORS } from "../config";
 import { MAX_DENSITY } from "../grid/density";
 import {
+  DATA_FIELDS_COLOR_DEFAULT,
+  DATA_FIELDS_SIZE_DEFAULT,
+  DATA_FIELDS_SPAWN_DEFAULT,
+  resolveDataFieldsSize,
+} from "../render/dataFields";
+import {
   GRID_CROSS_SIZE_DEFAULT,
   GRID_CROSS_SIZE_MAX,
   GRID_CROSS_SIZE_MIN,
@@ -234,6 +240,19 @@ function parseSettingsRecord(candidate: Record<string, unknown>): FrameSettings 
     contrast: clampInt(candidate.contrast, -100, 100, 0),
     brightness: clampInt(candidate.brightness, -100, 100, 0),
     invert: Boolean(candidate.invert),
+    dataFields: Boolean(candidate.dataFields),
+    dataFieldsSpawnRate: clampInt(
+      candidate.dataFieldsSpawnRate,
+      0,
+      100,
+      DATA_FIELDS_SPAWN_DEFAULT,
+    ),
+    dataFieldsSize: resolveDataFieldsSize(
+      candidate.dataFieldsSize ?? DATA_FIELDS_SIZE_DEFAULT,
+    ),
+    dataFieldsColor: isValidHex(String(candidate.dataFieldsColor ?? ""))
+      ? normalizeHex(String(candidate.dataFieldsColor))
+      : DATA_FIELDS_COLOR_DEFAULT,
     showSourceImage: Boolean(candidate.showSourceImage),
     textureOverlayBlend: resolveTextureOverlayBlend(
       candidate.textureOverlayBlend,

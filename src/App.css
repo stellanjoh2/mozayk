@@ -3,14 +3,16 @@
      The logotype is tokenized: each mosaic tile is filled from
      --logo-fill-1/2/3 at random on every page load. Those slots
      alias the three brand colours, so swapping hex here always
-     recolors the logo without touching the SVG. */
-  --brand: #41ebf2;
-  --brand-rgb: 65, 235, 242;
-  --brand-secondary: #8d00ff;
-  --brand-green: #1ebc53;
+     recolors the logo without touching the SVG.
+     --brand-green is toggles only — not used in the logo. */
+  --brand: #fdff00;
+  --brand-rgb: 253, 255, 0;
+  --brand-secondary: #f2419b;
+  --brand-other: #9a1ebc;
+  --brand-green: #41f24b;
   --logo-fill-1: var(--brand);
   --logo-fill-2: var(--brand-secondary);
-  --logo-fill-3: var(--brand-green);
+  --logo-fill-3: var(--brand-other);
   --on-brand: #111111;
 
   /* Surfaces */
