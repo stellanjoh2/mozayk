@@ -1,18 +1,18 @@
 :root {
   /* Brand — change these hex values to retheme UI accents.
-     The logotype is tokenized: each mosaic tile is filled from
-     --logo-fill-1/2/3 at random on every page load. Those slots
-     alias the three brand colours, so swapping hex here always
-     recolors the logo without touching the SVG.
-     --brand-green is toggles only — not used in the logo. */
-  --brand: #fdff00;
-  --brand-rgb: 253, 255, 0;
-  --brand-secondary: #f2419b;
-  --brand-other: #9a1ebc;
+     --brand is UI primary (white) so chrome stays quiet behind the artwork.
+     The logotype paints from --logo-fill-1/2/3/4 (three chromatics + white),
+     not from --brand. --brand-green is toggles only — not used in the logo. */
+  --brand: #ffffff;
+  --brand-rgb: 255, 255, 255;
+  --brand-secondary: #2e1ebc;
+  --brand-other: #cf41f2;
+  --brand-warm: #ff5300;
   --brand-green: #41f24b;
-  --logo-fill-1: var(--brand);
-  --logo-fill-2: var(--brand-secondary);
-  --logo-fill-3: var(--brand-other);
+  --logo-fill-1: var(--brand-secondary);
+  --logo-fill-2: var(--brand-other);
+  --logo-fill-3: var(--brand-warm);
+  --logo-fill-4: #ffffff;
   --on-brand: #111111;
 
   /* Surfaces */
@@ -238,8 +238,8 @@ body {
 
 .panel-section h2 {
   margin: 0 0 16px;
-  font-size: var(--panel-label-size);
-  font-weight: 400;
+  font-size: 15px;
+  font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--brand);

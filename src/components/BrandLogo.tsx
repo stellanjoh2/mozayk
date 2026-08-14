@@ -2,14 +2,15 @@ import { useMemo } from "react";
 import logoSvg from "../assets/mozayk_logo.svg?raw";
 
 /**
- * Must match --logo-fill-1/2/3 in App.css :root
- * (brand / brand-secondary / brand-other — not brand-green).
+ * Must match --logo-fill-1/2/3/4 in App.css :root
+ * (secondary / other / warm / white — not UI --brand or brand-green).
  * The wordmark paints from these tokens — never from hardcoded hex.
  */
 const LOGO_FILL_TOKENS = [
   "var(--logo-fill-1)",
   "var(--logo-fill-2)",
   "var(--logo-fill-3)",
+  "var(--logo-fill-4)",
 ] as const;
 
 const PART_SELECTOR = "rect, circle, polygon, polyline, path, ellipse";
@@ -145,7 +146,7 @@ function shareEdge(a: Set<number>, b: Set<number>): boolean {
 
 function colorGraph(adj: number[][]): number[] {
   const n = adj.length;
-  const palette = [0, 1, 2];
+  const palette = [...LOGO_FILL_TOKENS.keys()];
 
   for (let attempt = 0; attempt < 24; attempt++) {
     const colors = new Array<number>(n).fill(-1);

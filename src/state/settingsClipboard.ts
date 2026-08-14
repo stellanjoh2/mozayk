@@ -5,6 +5,8 @@ import {
   DATA_FIELDS_COLOR_DEFAULT,
   DATA_FIELDS_SIZE_DEFAULT,
   DATA_FIELDS_SPAWN_DEFAULT,
+  DATA_FIELDS_SPAWN_MAX,
+  DATA_FIELDS_SPAWN_MIN,
   resolveDataFieldsSize,
 } from "../render/dataFields";
 import {
@@ -243,8 +245,8 @@ function parseSettingsRecord(candidate: Record<string, unknown>): FrameSettings 
     dataFields: Boolean(candidate.dataFields),
     dataFieldsSpawnRate: clampInt(
       candidate.dataFieldsSpawnRate,
-      0,
-      100,
+      DATA_FIELDS_SPAWN_MIN,
+      DATA_FIELDS_SPAWN_MAX,
       DATA_FIELDS_SPAWN_DEFAULT,
     ),
     dataFieldsSize: resolveDataFieldsSize(

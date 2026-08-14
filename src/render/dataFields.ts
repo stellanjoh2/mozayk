@@ -18,7 +18,9 @@ export const DATA_FIELDS_SIZE_MIN = 1;
 export const DATA_FIELDS_SIZE_MAX = 8;
 export const DATA_FIELDS_SIZE_DEFAULT = 1;
 export const DATA_FIELDS_COLOR_DEFAULT = "#ffffff";
-export const DATA_FIELDS_SPAWN_DEFAULT = 50;
+export const DATA_FIELDS_SPAWN_MIN = 0;
+export const DATA_FIELDS_SPAWN_MAX = 5;
+export const DATA_FIELDS_SPAWN_DEFAULT = 3;
 
 /**
  * 5×7 bitmaps for digits / separator — filled rects, no canvas text AA.
@@ -160,8 +162,8 @@ export function drawDataFields(
 
   const spawnRate = clampInt(
     settings.dataFieldsSpawnRate,
-    0,
-    100,
+    DATA_FIELDS_SPAWN_MIN,
+    DATA_FIELDS_SPAWN_MAX,
     DATA_FIELDS_SPAWN_DEFAULT,
   );
   if (spawnRate <= 0) return;

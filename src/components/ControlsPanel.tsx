@@ -11,6 +11,8 @@ import {
   DATA_FIELDS_SIZE_MAX,
   DATA_FIELDS_SIZE_MIN,
   DATA_FIELDS_SPAWN_DEFAULT,
+  DATA_FIELDS_SPAWN_MAX,
+  DATA_FIELDS_SPAWN_MIN,
 } from "../render/dataFields";
 import {
   GRID_BLEND_LABELS,
@@ -880,8 +882,8 @@ export function ControlsPanel({
               label="Spawn rate"
               hint="How often labels appear · sparse vertical strips · at most ~1/16 of cells"
               value={settings.dataFieldsSpawnRate ?? DATA_FIELDS_SPAWN_DEFAULT}
-              min={0}
-              max={100}
+              min={DATA_FIELDS_SPAWN_MIN}
+              max={DATA_FIELDS_SPAWN_MAX}
               onChange={(dataFieldsSpawnRate) =>
                 onSettingsChange({ dataFieldsSpawnRate }, false)
               }
