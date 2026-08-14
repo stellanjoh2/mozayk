@@ -380,6 +380,7 @@ const HOVER_CYCLE_MS = 250;
 
 export function BrandLogo({ className }: { className?: string }) {
   const [html, setHtml] = useState(() => paintLogoWithBrandTokens(logoSvg));
+  const rootRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<number | null>(null);
 
   const stopCycling = () => {
@@ -392,6 +393,11 @@ export function BrandLogo({ className }: { className?: string }) {
     stopCycling();
     setHtml(paintLogoWithBrandTokens(logoSvg));
     intervalRef.current = window.setInterval(() => {
+      // SVG swaps can drop pointerleave; bail if the wrapper is no longer hovered.
+      if (!rootRef.current?.matches(":hover")) {
+        stopCycling();
+        return;
+      }
       setHtml(paintLogoWithBrandTokens(logoSvg));
     }, HOVER_CYCLE_MS);
   };
@@ -400,9 +406,11 @@ export function BrandLogo({ className }: { className?: string }) {
 
   return (
     <div
+      ref={rootRef}
       className={className}
       onPointerEnter={startCycling}
       onPointerLeave={stopCycling}
+      onPointerCancel={stopCycling}
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );
