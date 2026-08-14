@@ -1,9 +1,7 @@
 import {
-  blockFillRect,
   blockPixelRect,
   crossFillRects,
   getGridDimensions,
-  seamOverlapPx,
   triangleFillPoints,
 } from "../grid/gridMath";
 import type { FrameSettings, GridDimensions, MosaicBlock } from "../types";
@@ -73,10 +71,7 @@ function svgBlock(
   }
 
   if (block.shape === "triangle") {
-    const points = triangleFillPoints(
-      { x, y, width: drawW, height: drawH },
-      seamOverlapPx(grid),
-    )
+    const points = triangleFillPoints({ x, y, width: drawW, height: drawH }, 0)
       .map(([px, py]) => `${px},${py}`)
       .join(" ");
     return `<polygon points="${points}" fill="${block.color}"/>`;
@@ -85,7 +80,7 @@ function svgBlock(
   if (block.shape === "cross") {
     const { horizontal, vertical } = crossFillRects(
       { x, y, width: drawW, height: drawH },
-      seamOverlapPx(grid),
+      0,
     );
     return [
       `<rect x="${horizontal.x}" y="${horizontal.y}" width="${horizontal.width}" height="${horizontal.height}" fill="${block.color}"/>`,
@@ -93,8 +88,7 @@ function svgBlock(
     ].join("");
   }
 
-  const fill = blockFillRect(grid, block);
-  return `<rect x="${fill.x}" y="${fill.y}" width="${fill.width}" height="${fill.height}" fill="${block.color}"/>`;
+  return `<rect x="${x}" y="${y}" width="${drawW}" height="${drawH}" fill="${block.color}"/>`;
 }
 
 function svgBackground(

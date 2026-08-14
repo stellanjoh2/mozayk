@@ -3,6 +3,7 @@ import {
   blockPixelRect,
   crossFillRects,
   getGridDimensions,
+  gridEdge,
   inscribedPixelSquare,
   seamOverlapPx,
 } from "./gridMath";
@@ -37,17 +38,28 @@ function run(): void {
     for (const density of DENSITIES) {
       for (const [width, height] of CANVASES[orientation]) {
         const grid = getGridDimensions(orientation, density, width, height);
-        const baseOverlap =
-          grid.cellSize >= 4 ? 1 : 0;
         const heavyOverlap =
           grid.cellSize >= 8 ? 2 : grid.cellSize >= 4 ? 1 : 0;
         assert(
-          seamOverlapPx(grid) === baseOverlap,
-          `expected base overlap at ${width}×${height} d=${density}`,
+          seamOverlapPx(grid) === 0,
+          `default drawing has no overlap at ${width}×${height} d=${density}`,
         );
         assert(
           seamOverlapPx(grid, true) === heavyOverlap,
           `expected heavy overlap at ${width}×${height} d=${density}`,
+        );
+
+        let prevX = 0;
+        for (let col = 0; col <= grid.columns; col++) {
+          const x = gridEdge(col, grid.columns, width);
+          assert(Number.isInteger(x), `grid edge X is integer col ${col}`);
+          assert(x >= prevX, `grid edges are monotonic col ${col}`);
+          prevX = x;
+        }
+        assert(gridEdge(0, grid.columns, width) === 0, "first X edge is 0");
+        assert(
+          gridEdge(grid.columns, grid.columns, width) === width,
+          "last X edge is canvas width",
         );
 
         for (let col = 0; col < grid.columns; col++) {
@@ -55,6 +67,10 @@ function run(): void {
           const leftFill = blockFillRect(grid, { col, row: 0, width: 1, height: 1 });
 
           assert(left.x + left.width <= width, "snapped block exceeds canvas");
+          assert(
+            leftFill.x === left.x && leftFill.width === left.width,
+            "default fill matches snapped geometry",
+          );
           assert(leftFill.x >= 0 && leftFill.x + leftFill.width <= width, "fill exceeds canvas");
           assert(leftFill.y >= 0 && leftFill.y + leftFill.height <= height, "fill exceeds canvas");
 
@@ -70,16 +86,22 @@ function run(): void {
               `gap/overlap in snapped edges col ${col} at ${width} d=${density}: ${left.x + left.width} vs ${right.x}`,
             );
 
-            const rightFill = blockFillRect(grid, {
-              col: col + 1,
-              row: 0,
-              width: 1,
-              height: 1,
-            });
-            assert(
-              leftFill.x + leftFill.width > rightFill.x,
-              `fill rects must overlap col ${col} at ${width} d=${density}`,
-            );
+            if (heavyOverlap > 0) {
+              const leftHeavy = blockFillRect(
+                grid,
+                { col, row: 0, width: 1, height: 1 },
+                true,
+              );
+              const rightHeavy = blockFillRect(
+                grid,
+                { col: col + 1, row: 0, width: 1, height: 1 },
+                true,
+              );
+              assert(
+                leftHeavy.x + leftHeavy.width > rightHeavy.x,
+                `heavy fill rects must overlap col ${col} at ${width} d=${density}`,
+              );
+            }
           }
         }
 
@@ -93,6 +115,53 @@ function run(): void {
         assert(first.x === 0 && first.y === 0, "origin block should start at 0");
         assert(last.x + last.width === width, "last column should reach canvas width");
         assert(last.y + last.height === height, "last row should reach canvas height");
+
+        if (grid.columns >= 5 && grid.rows >= 5) {
+          const big = blockPixelRect(grid, {
+            col: 2,
+            row: 3,
+            width: 3,
+            height: 2,
+          });
+          const tl = blockPixelRect(grid, {
+            col: 2,
+            row: 3,
+            width: 1,
+            height: 1,
+          });
+          const br = blockPixelRect(grid, {
+            col: 4,
+            row: 4,
+            width: 1,
+            height: 1,
+          });
+          assert(big.x === tl.x && big.y === tl.y, "span origin matches unit cell");
+          assert(
+            big.x + big.width === br.x + br.width,
+            "span right edge matches last unit cell",
+          );
+          assert(
+            big.y + big.height === br.y + br.height,
+            "span bottom edge matches last unit cell",
+          );
+
+          const upper = blockPixelRect(grid, {
+            col: 2,
+            row: 1,
+            width: 3,
+            height: 1,
+          });
+          const lower = blockPixelRect(grid, {
+            col: 2,
+            row: 4,
+            width: 3,
+            height: 1,
+          });
+          assert(
+            upper.x === lower.x && upper.width === lower.width,
+            `same-column spans must share X at ${width} d=${density}: ${upper.x}+${upper.width} vs ${lower.x}+${lower.width}`,
+          );
+        }
       }
     }
   }

@@ -1,5 +1,5 @@
 import { normalizeHex } from "../colorMath";
-import { getGridDimensions } from "../grid/gridMath";
+import { getGridDimensions, gridEdge } from "../grid/gridMath";
 import type {
   Density,
   FrameSettings,
@@ -48,7 +48,7 @@ export function resolveGridOverlayStyle(
   const opacityRaw = settings.gridOverlayOpacity ?? 100;
   const chaosRaw = settings.gridOverlayChaos ?? 0;
   return {
-    density: settings.gridOverlayDensity ?? settings.density,
+    density: settings.gridOverlayDensity ?? 1,
     color: normalizeHex(settings.gridOverlayColor, "#ffffff"),
     lineWidth: resolveGridOverlayStroke(settings.gridOverlayStroke),
     opacity: Math.min(100, Math.max(0, opacityRaw)) / 100,
@@ -109,11 +109,11 @@ function perfectGridPathData(grid: GridDimensions): string {
   const parts: string[] = [];
 
   for (let c = 1; c < columns; c++) {
-    const x = Math.round((c / columns) * width);
+    const x = gridEdge(c, columns, width);
     parts.push(`M ${x} -1 V ${height + 1}`);
   }
   for (let r = 1; r < rows; r++) {
-    const y = Math.round((r / rows) * height);
+    const y = gridEdge(r, rows, height);
     parts.push(`M -1 ${y} H ${width + 1}`);
   }
 
@@ -218,9 +218,9 @@ function brokenGridPathData(grid: GridDimensions, chaos: number): string {
   }
 
   const xAt = (c: number) =>
-    c === 0 ? -1 : c === columns ? width + 1 : Math.round((c / columns) * width);
+    c === 0 ? -1 : c === columns ? width + 1 : gridEdge(c, columns, width);
   const yAt = (r: number) =>
-    r === 0 ? -1 : r === rows ? height + 1 : Math.round((r / rows) * height);
+    r === 0 ? -1 : r === rows ? height + 1 : gridEdge(r, rows, height);
 
   const parts: string[] = [];
   for (const key of hEdges) {
@@ -263,10 +263,10 @@ export function gridCrossesPathData(
   const parts: string[] = [];
 
   for (let c = 1; c < columns; c++) {
-    const x = Math.round((c / columns) * width);
+    const x = gridEdge(c, columns, width);
     for (let r = 1; r < rows; r++) {
       if (rng && rng() < dropRate) continue;
-      const y = Math.round((r / rows) * height);
+      const y = gridEdge(r, rows, height);
       parts.push(
         `M ${x - half} ${y} H ${x + half} M ${x} ${y - half} V ${y + half}`,
       );

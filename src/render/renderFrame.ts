@@ -24,7 +24,6 @@ import {
   type GridOverlayStyle,
 } from "./gridOverlay";
 import { ringInnerRadius } from "./ringGeometry";
-import { shapeTightenPx } from "./shapeTighten";
 import { applyTextureOverlay } from "./textureOverlay";
 
 export type RenderOptions = {
@@ -90,11 +89,9 @@ function drawBlock(
   heavySeams = false,
 ): void {
   const { x, y, width: drawW, height: drawH } = blockPixelRect(grid, block);
-  const tighten = shapeTightenPx();
-  const seam = seamOverlapPx(grid, heavySeams);
-  // Circles: radius − tighten. Seam fills: pull 1px expand down to ~0.25px
-  // (heavy 2 → ~1.25) so adjacent colours don't bleed.
-  const overlap = Math.max(0, seam - (1 - tighten));
+  // Only expand under grid blur. A uniform 0.25–1px overlap reads as a jog
+  // wherever a long edge meets a shorter neighbour.
+  const overlap = heavySeams ? seamOverlapPx(grid, true) : 0;
 
   if (block.shape === "ring") {
     const diameter = Math.min(drawW, drawH);
@@ -102,7 +99,7 @@ function drawBlock(
       ctx,
       x + drawW / 2,
       y + drawH / 2,
-      Math.max(0, diameter / 2 - tighten),
+      diameter / 2,
       ringThickness,
       grid.cellSize,
       block.color,
@@ -116,7 +113,7 @@ function drawBlock(
     const cy = y + drawH / 2;
     ctx.fillStyle = block.color;
     ctx.beginPath();
-    ctx.arc(cx, cy, Math.max(0, diameter / 2 - tighten), 0, Math.PI * 2);
+    ctx.arc(cx, cy, diameter / 2, 0, Math.PI * 2);
     ctx.fill();
     return;
   }

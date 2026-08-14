@@ -50,12 +50,24 @@ export function getGridDimensions(
 export type PixelRect = { x: number; y: number; width: number; height: number };
 
 /**
- * Hairline overlap so adjacent fills cover canvas/SVG anti-aliasing and CSS
- * downscale interpolation. Skip on tiny thumbnail cells where 1px is huge.
- * Pass `heavy` when grid blur will soften 1px seams (canvas / PNG only).
+ * Exclusive pixel coordinate of grid line `index` (0..count).
+ * Adjacent blocks share this value, so a straight run of the same column
+ * never jogs by a rounded pixel.
+ */
+export function gridEdge(index: number, count: number, size: number): number {
+  if (index <= 0) return 0;
+  if (index >= count) return size;
+  return Math.round((index / count) * size);
+}
+
+/**
+ * Extra fill expand when grid blur would otherwise reveal seams.
+ * Default drawing must stay at `blockPixelRect` — a uniform 1px expand
+ * creates T-junction offshoots on edges that should be straight.
  */
 export function seamOverlapPx(grid: GridDimensions, heavy = false): number {
-  if (grid.cellSize >= 8) return heavy ? 2 : 1;
+  if (!heavy) return 0;
+  if (grid.cellSize >= 8) return 2;
   if (grid.cellSize >= 4) return 1;
   return 0;
 }
@@ -65,26 +77,21 @@ export function blockPixelRect(
   grid: GridDimensions,
   block: Pick<MosaicBlock, "col" | "row" | "width" | "height">,
 ): PixelRect {
-  const x = Math.round((block.col / grid.columns) * grid.width);
-  const y = Math.round((block.row / grid.rows) * grid.height);
-  const x2 = Math.round(
-    ((block.col + block.width) / grid.columns) * grid.width,
-  );
-  const y2 = Math.round(
-    ((block.row + block.height) / grid.rows) * grid.height,
-  );
+  const x = gridEdge(block.col, grid.columns, grid.width);
+  const y = gridEdge(block.row, grid.rows, grid.height);
+  const x2 = gridEdge(block.col + block.width, grid.columns, grid.width);
+  const y2 = gridEdge(block.row + block.height, grid.rows, grid.height);
   return { x, y, width: x2 - x, height: y2 - y };
 }
 
 /**
- * Draw bounds that overlap neighbours so background cannot show through a
- * 0.5px gap. Geometry of circles/triangles should still use `blockPixelRect`.
+ * Draw bounds expanded by `overlapPx` (or heavy-blur seam overlap).
+ * Geometry of circles/triangles should still use `blockPixelRect`.
  */
 export function blockFillRect(
   grid: GridDimensions,
   block: Pick<MosaicBlock, "col" | "row" | "width" | "height">,
   heavy = false,
-  /** Override seam expand (e.g. Chrome-tightened overlap). */
   overlapPx?: number,
 ): PixelRect {
   const rect = blockPixelRect(grid, block);
