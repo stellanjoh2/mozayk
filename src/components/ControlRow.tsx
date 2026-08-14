@@ -69,3 +69,40 @@ export function ToggleRow({ label, hint, checked, onChange }: ToggleRowProps) {
     </label>
   );
 }
+
+type HeadlineToggleProps = {
+  title: string;
+  hint?: string;
+  level?: 2 | 3;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+};
+
+export function HeadlineToggle({
+  title,
+  hint,
+  level = 2,
+  checked,
+  onChange,
+}: HeadlineToggleProps) {
+  const Tag = level === 3 ? "h3" : "h2";
+  return (
+    <label
+      className={
+        level === 3
+          ? "headline-toggle headline-toggle--sub"
+          : "headline-toggle"
+      }
+    >
+      <Tag className={level === 3 ? "export-group__title" : undefined}>
+        <HintLabel hint={hint}>{title}</HintLabel>
+      </Tag>
+      <input
+        type="checkbox"
+        checked={checked}
+        aria-label={title}
+        onChange={(e) => onChange(e.target.checked)}
+      />
+    </label>
+  );
+}

@@ -31,7 +31,7 @@ import type {
 import { SUPPORTED_IMAGE_ACCEPT } from "../import/supportedImageTypes";
 import { BrandLogo } from "./BrandLogo";
 import { ColorSwatch } from "./ColorSwatch";
-import { SliderRow, ToggleRow } from "./ControlRow";
+import { HeadlineToggle, SliderRow, ToggleRow } from "./ControlRow";
 import { HintLabel } from "./HintLabel";
 
 type ControlsPanelProps = {
@@ -458,9 +458,9 @@ export function ControlsPanel({
             settings.gridOverlay ? "export-group" : "export-group is-off"
           }
         >
-          <h3 className="export-group__title">Lines</h3>
-          <ToggleRow
-            label="Enabled"
+          <HeadlineToggle
+            level={3}
+            title="Lines"
             hint="Grid drawn over the mosaic"
             checked={Boolean(settings.gridOverlay)}
             onChange={(gridOverlay) => onSettingsChange({ gridOverlay }, false)}
@@ -560,9 +560,9 @@ export function ControlsPanel({
             settings.gridCrosses ? "export-group" : "export-group is-off"
           }
         >
-          <h3 className="export-group__title">Crosses</h3>
-          <ToggleRow
-            label="Enabled"
+          <HeadlineToggle
+            level={3}
+            title="Crosses"
             hint="Pluses on grid intersections"
             checked={Boolean(settings.gridCrosses)}
             onChange={(gridCrosses) => onSettingsChange({ gridCrosses }, false)}
@@ -673,9 +673,8 @@ export function ControlsPanel({
       <section
         className={settings.gridBlur ? "panel-section" : "panel-section is-off"}
       >
-        <h2>Grid Blur</h2>
-        <ToggleRow
-          label="Enabled"
+        <HeadlineToggle
+          title="Grid Blur"
           hint="Gaussian blur over the finished mosaic · PNG only"
           checked={Boolean(settings.gridBlur)}
           onChange={(gridBlur) => onSettingsChange({ gridBlur }, false)}
