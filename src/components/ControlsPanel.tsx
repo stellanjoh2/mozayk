@@ -445,9 +445,19 @@ export function ControlsPanel({
         </label>
       </section>
 
-      <section className="panel-section">
+      <section
+        className={
+          settings.gridOverlay || settings.gridCrosses
+            ? "panel-section"
+            : "panel-section is-off"
+        }
+      >
         <h2>Grid Overlay</h2>
-        <div className="export-group">
+        <div
+          className={
+            settings.gridOverlay ? "export-group" : "export-group is-off"
+          }
+        >
           <h3 className="export-group__title">Lines</h3>
           <ToggleRow
             label="Enabled"
@@ -545,7 +555,11 @@ export function ControlsPanel({
             </select>
           </label>
         </div>
-        <div className="export-group">
+        <div
+          className={
+            settings.gridCrosses ? "export-group" : "export-group is-off"
+          }
+        >
           <h3 className="export-group__title">Crosses</h3>
           <ToggleRow
             label="Enabled"
@@ -656,7 +670,9 @@ export function ControlsPanel({
         </div>
       </section>
 
-      <section className="panel-section">
+      <section
+        className={settings.gridBlur ? "panel-section" : "panel-section is-off"}
+      >
         <h2>Grid Blur</h2>
         <ToggleRow
           label="Enabled"
@@ -706,7 +722,11 @@ export function ControlsPanel({
         />
       </section>
 
-      <section className="panel-section">
+      <section
+        className={
+          frame.textureOverlay ? "panel-section" : "panel-section is-off"
+        }
+      >
         <h2>Texture Overlay</h2>
         <input
           ref={textureInputRef}

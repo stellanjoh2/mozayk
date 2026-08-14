@@ -241,6 +241,11 @@ body {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--brand);
+  transition: color 0.18s var(--ui-ease);
+}
+
+.panel-section.is-off h2 {
+  color: var(--muted);
 }
 
 .panel-hint {
@@ -339,6 +344,11 @@ body {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text);
+  transition: color 0.18s var(--ui-ease);
+}
+
+.export-group.is-off .export-group__title {
+  color: var(--muted);
 }
 
 .app-toast {
