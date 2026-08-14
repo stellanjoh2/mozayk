@@ -528,7 +528,7 @@ export function ControlsPanel({
             }
           />
           <SliderRow
-            label="Randomness"
+            label="Lines Randomness"
             hint="Break the square grid into irregular paths"
             value={settings.gridOverlayChaos ?? 0}
             min={0}
@@ -641,7 +641,7 @@ export function ControlsPanel({
             }
           />
           <SliderRow
-            label="Randomness"
+            label="Crosses Randomness"
             hint="Omit crosses at random"
             value={settings.gridCrossesChaos ?? 0}
             min={0}
@@ -717,7 +717,7 @@ export function ControlsPanel({
           }
         />
         <SliderRow
-          label="Randomness"
+          label="Blur Randomness"
           hint="Break uniform blur into irregular on-grid patches"
           value={settings.gridBlurChaos ?? 50}
           min={0}

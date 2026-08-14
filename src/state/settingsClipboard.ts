@@ -1,6 +1,6 @@
 import { isValidHex, normalizeHex } from "../colorMath";
 import { MAX_COLORS } from "../config";
-import { MAX_DENSITY } from "../grid/density";
+import { clampDensity } from "../grid/density";
 import {
   DATA_FIELDS_COLOR_DEFAULT,
   DATA_FIELDS_SIZE_DEFAULT,
@@ -56,10 +56,6 @@ export type SettingsClipboard = {
 };
 
 let memoryClipboard: SettingsClipboard | null = null;
-
-function isDensity(value: number): value is Density {
-  return Number.isInteger(value) && value >= 1 && value <= MAX_DENSITY;
-}
 
 function isBackground(value: string): value is BackgroundMode {
   return value === "black" || value === "transparent";
@@ -167,9 +163,15 @@ function parseBlocks(value: unknown): MosaicBlock[] | undefined {
   return blocks;
 }
 
+function parseOptionalDensity(value: unknown): Density | undefined {
+  if (value === undefined || value === null || value === "") return undefined;
+  const n = Number(value);
+  if (!Number.isFinite(n)) return undefined;
+  return clampDensity(n);
+}
+
 function parseSettingsRecord(candidate: Record<string, unknown>): FrameSettings | null {
-  const density = Number(candidate.density);
-  if (!isDensity(density)) return null;
+  const density = clampDensity(Number(candidate.density));
 
   const colors = parseColors(candidate.colors);
   const colorsLocked = parseColorsLocked(candidate.colorsLocked, colors.length);
@@ -198,9 +200,7 @@ function parseSettingsRecord(candidate: Record<string, unknown>): FrameSettings 
       ? (candidate.background as BackgroundMode)
       : "black",
     gridOverlay: Boolean(candidate.gridOverlay),
-    gridOverlayDensity: isDensity(Number(candidate.gridOverlayDensity))
-      ? (Number(candidate.gridOverlayDensity) as Density)
-      : undefined,
+    gridOverlayDensity: parseOptionalDensity(candidate.gridOverlayDensity),
     gridOverlayColor: isValidHex(String(candidate.gridOverlayColor ?? ""))
       ? normalizeHex(String(candidate.gridOverlayColor))
       : undefined,
@@ -212,9 +212,7 @@ function parseSettingsRecord(candidate: Record<string, unknown>): FrameSettings 
       candidate.gridOverlayDifference,
     ),
     gridCrosses: Boolean(candidate.gridCrosses),
-    gridCrossesDensity: isDensity(Number(candidate.gridCrossesDensity))
-      ? (Number(candidate.gridCrossesDensity) as Density)
-      : undefined,
+    gridCrossesDensity: parseOptionalDensity(candidate.gridCrossesDensity),
     gridCrossesColor: isValidHex(String(candidate.gridCrossesColor ?? ""))
       ? normalizeHex(String(candidate.gridCrossesColor))
       : undefined,
@@ -232,9 +230,7 @@ function parseSettingsRecord(candidate: Record<string, unknown>): FrameSettings 
       candidate.gridCrossesDifference,
     ),
     gridBlur: Boolean(candidate.gridBlur),
-    gridBlurDensity: isDensity(Number(candidate.gridBlurDensity))
-      ? (Number(candidate.gridBlurDensity) as Density)
-      : undefined,
+    gridBlurDensity: parseOptionalDensity(candidate.gridBlurDensity),
     gridBlurAmount: clampInt(candidate.gridBlurAmount, 0, 100, 50),
     gridBlurChaos: clampInt(candidate.gridBlurChaos, 0, 100, 50),
     noiseAmount: clampInt(candidate.noiseAmount, 0, 100, 0),

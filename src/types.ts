@@ -1,7 +1,8 @@
 import type { ImageSourceData } from "./import/imageSource";
 
 export type Orientation = "landscape" | "portrait" | "square";
-export type Density = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+/** 7 and 9 omitted — fractional cells (17/18, 13/14) broke square spans. */
+export type Density = 1 | 2 | 3 | 4 | 5 | 6 | 8;
 export type GridOverlayStroke = 1 | 2 | 4;
 /** Blend mode for grid overlay strokes over the mosaic. */
 export type GridBlendMode = "normal" | "difference" | "screen";

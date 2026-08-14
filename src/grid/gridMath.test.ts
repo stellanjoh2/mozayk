@@ -1,3 +1,4 @@
+import { DENSITIES } from "./density";
 import {
   blockPixelRect,
   crossFillRects,
@@ -8,14 +9,13 @@ import {
   inscribedPixelSquare,
   triangleFillPoints,
 } from "./gridMath";
-import type { Density, Orientation } from "../types";
+import type { Orientation } from "../types";
 
 function assert(condition: boolean, message: string): void {
   if (!condition) throw new Error(message);
 }
 
 const ORIENTATIONS: Orientation[] = ["landscape", "portrait", "square"];
-const DENSITIES = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const satisfies readonly Density[];
 const CANVASES: Record<Orientation, [number, number][]> = {
   landscape: [
     [1920, 1080],
@@ -134,7 +134,7 @@ function run(): void {
     }
   }
 
-  // Density 9 often yields 13×14 unit cells — triangles stay isosceles (no stretch).
+  // Non-square snapped rects — triangles stay isosceles (no stretch).
   const skewed = { x: 100, y: 200, width: 13, height: 14 };
   const square = inscribedPixelSquare(skewed);
   assert(square.width === 13 && square.height === 13, "inscribed square uses min side");
