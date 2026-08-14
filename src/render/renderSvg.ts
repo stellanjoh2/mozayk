@@ -71,17 +71,19 @@ function svgBlock(
   }
 
   if (block.shape === "triangle") {
-    const points = triangleFillPoints({ x, y, width: drawW, height: drawH }, 0)
+    const points = triangleFillPoints({ x, y, width: drawW, height: drawH })
       .map(([px, py]) => `${px},${py}`)
       .join(" ");
     return `<polygon points="${points}" fill="${block.color}"/>`;
   }
 
   if (block.shape === "cross") {
-    const { horizontal, vertical } = crossFillRects(
-      { x, y, width: drawW, height: drawH },
-      0,
-    );
+    const { horizontal, vertical } = crossFillRects({
+      x,
+      y,
+      width: drawW,
+      height: drawH,
+    });
     return [
       `<rect x="${horizontal.x}" y="${horizontal.y}" width="${horizontal.width}" height="${horizontal.height}" fill="${block.color}"/>`,
       `<rect x="${vertical.x}" y="${vertical.y}" width="${vertical.width}" height="${vertical.height}" fill="${block.color}"/>`,

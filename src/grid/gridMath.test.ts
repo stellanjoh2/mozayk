@@ -1,5 +1,4 @@
 import {
-  blockFillRect,
   blockPixelRect,
   crossFillRects,
   getGridDimensions,
@@ -7,7 +6,7 @@ import {
   getThumbnailSize,
   gridEdge,
   inscribedPixelSquare,
-  seamOverlapPx,
+  triangleFillPoints,
 } from "./gridMath";
 import type { Density, Orientation } from "../types";
 
@@ -40,16 +39,6 @@ function run(): void {
     for (const density of DENSITIES) {
       for (const [width, height] of CANVASES[orientation]) {
         const grid = getGridDimensions(orientation, density, width, height);
-        const heavyOverlap =
-          grid.cellSize >= 8 ? 2 : grid.cellSize >= 4 ? 1 : 0;
-        assert(
-          seamOverlapPx(grid) === 0,
-          `default drawing has no overlap at ${width}×${height} d=${density}`,
-        );
-        assert(
-          seamOverlapPx(grid, true) === heavyOverlap,
-          `expected heavy overlap at ${width}×${height} d=${density}`,
-        );
 
         let prevX = 0;
         for (let col = 0; col <= grid.columns; col++) {
@@ -66,15 +55,9 @@ function run(): void {
 
         for (let col = 0; col < grid.columns; col++) {
           const left = blockPixelRect(grid, { col, row: 0, width: 1, height: 1 });
-          const leftFill = blockFillRect(grid, { col, row: 0, width: 1, height: 1 });
 
           assert(left.x + left.width <= width, "snapped block exceeds canvas");
-          assert(
-            leftFill.x === left.x && leftFill.width === left.width,
-            "default fill matches snapped geometry",
-          );
-          assert(leftFill.x >= 0 && leftFill.x + leftFill.width <= width, "fill exceeds canvas");
-          assert(leftFill.y >= 0 && leftFill.y + leftFill.height <= height, "fill exceeds canvas");
+          assert(left.x >= 0 && left.y >= 0, "block origin in bounds");
 
           if (col + 1 < grid.columns) {
             const right = blockPixelRect(grid, {
@@ -87,23 +70,6 @@ function run(): void {
               left.x + left.width === right.x,
               `gap/overlap in snapped edges col ${col} at ${width} d=${density}: ${left.x + left.width} vs ${right.x}`,
             );
-
-            if (heavyOverlap > 0) {
-              const leftHeavy = blockFillRect(
-                grid,
-                { col, row: 0, width: 1, height: 1 },
-                true,
-              );
-              const rightHeavy = blockFillRect(
-                grid,
-                { col: col + 1, row: 0, width: 1, height: 1 },
-                true,
-              );
-              assert(
-                leftHeavy.x + leftHeavy.width > rightHeavy.x,
-                `heavy fill rects must overlap col ${col} at ${width} d=${density}`,
-              );
-            }
           }
         }
 
@@ -168,24 +134,42 @@ function run(): void {
     }
   }
 
-  const oddRect = { x: 10, y: 20, width: 18, height: 17 };
-  const square = inscribedPixelSquare(oddRect);
-  assert(square.width === 17 && square.height === 17, "inscribed size is min side");
-  assert(square.x === 10 && square.y === 20, "inscribed square stays on integer pixels");
-  assert(Number.isInteger(square.x) && Number.isInteger(square.y), "square origin is integer");
+  // Density 9 often yields 13×14 unit cells — triangles stay isosceles (no stretch).
+  const skewed = { x: 100, y: 200, width: 13, height: 14 };
+  const square = inscribedPixelSquare(skewed);
+  assert(square.width === 13 && square.height === 13, "inscribed square uses min side");
+  assert(square.x === skewed.x && square.y === skewed.y + 0, "inscribed square is centred with floor");
 
-  const { horizontal, vertical } = crossFillRects(oddRect, 0);
-  assert(horizontal.width === square.width, "cross bar spans inscribed width");
-  assert(vertical.height === square.height, "cross stem spans inscribed height");
+  const tri = triangleFillPoints(skewed);
+  assert(tri[0][0] === square.x && tri[0][1] === square.y, "triangle top-left is square origin");
   assert(
-    horizontal.height === Math.max(1, Math.round(square.width / 3)),
+    tri[1][0] === square.x + square.width && tri[1][1] === square.y,
+    "triangle top-right stays on square",
+  );
+  assert(
+    tri[2][0] === square.x + square.width &&
+      tri[2][1] === square.y + square.height,
+    "triangle is isosceles — not stretched to the tall cell",
+  );
+
+  const oddRect = { x: 10, y: 20, width: 18, height: 17 };
+  const oddSquare = inscribedPixelSquare(oddRect);
+  const { horizontal, vertical } = crossFillRects(oddRect);
+  assert(horizontal.width === oddSquare.width, "cross bar spans inscribed width");
+  assert(vertical.height === oddSquare.height, "cross stem spans inscribed height");
+  assert(
+    horizontal.height === Math.max(1, Math.round(oddSquare.width / 3)),
     "cross arm thickness is ~1/3 of square",
   );
 
-  const thumb = getGridDimensions("landscape", 3, 96, 54);
-  assert(thumb.cellSize === 2, "thumbnail cell is 2px");
-  assert(seamOverlapPx(thumb) === 0, "thumbnails skip overlap");
-  assert(seamOverlapPx(thumb, true) === 0, "thumbnails skip heavy overlap");
+  const tall = { x: 0, y: 0, width: 20, height: 200 };
+  const tallTri = triangleFillPoints(tall);
+  const tallSize = tallTri[1][0] - tallTri[0][0];
+  assert(tallSize === 20, "tall cell triangle uses short side only");
+  assert(
+    tallTri[2][1] - tallTri[0][1] === tallSize,
+    "tall cell triangle is not stretched vertically",
+  );
 
   const display = getThumbnailSize("landscape");
   assert(display[0] === 96 && display[1] === 54, "display thumb is 96×54");

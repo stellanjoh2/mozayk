@@ -1,9 +1,7 @@
 import {
-  blockFillRect,
   blockPixelRect,
   crossFillRects,
   getGridDimensions,
-  seamOverlapPx,
   triangleFillPoints,
 } from "../grid/gridMath";
 import { drawCoverImage } from "../import/imageSource";
@@ -87,12 +85,9 @@ function drawBlock(
   block: MosaicBlock,
   grid: GridDimensions,
   ringThickness: number,
-  heavySeams = false,
 ): void {
-  const { x, y, width: drawW, height: drawH } = blockPixelRect(grid, block);
-  // Only expand under grid blur. A uniform 0.25–1px overlap reads as a jog
-  // wherever a long edge meets a shorter neighbour.
-  const overlap = heavySeams ? seamOverlapPx(grid, true) : 0;
+  const rect = blockPixelRect(grid, block);
+  const { x, y, width: drawW, height: drawH } = rect;
 
   if (block.shape === "ring") {
     const diameter = Math.min(drawW, drawH);
@@ -120,10 +115,7 @@ function drawBlock(
   }
 
   if (block.shape === "triangle") {
-    const points = triangleFillPoints(
-      { x, y, width: drawW, height: drawH },
-      overlap,
-    );
+    const points = triangleFillPoints(rect);
     ctx.fillStyle = block.color;
     ctx.beginPath();
     ctx.moveTo(points[0][0], points[0][1]);
@@ -135,10 +127,7 @@ function drawBlock(
   }
 
   if (block.shape === "cross") {
-    const { horizontal, vertical } = crossFillRects(
-      { x, y, width: drawW, height: drawH },
-      overlap,
-    );
+    const { horizontal, vertical } = crossFillRects(rect);
     ctx.fillStyle = block.color;
     ctx.fillRect(
       horizontal.x,
@@ -150,9 +139,8 @@ function drawBlock(
     return;
   }
 
-  const fill = blockFillRect(grid, block, heavySeams, overlap);
   ctx.fillStyle = block.color;
-  ctx.fillRect(fill.x, fill.y, fill.width, fill.height);
+  ctx.fillRect(x, y, drawW, drawH);
 }
 
 function drawBackground(
@@ -248,12 +236,10 @@ export function renderMosaic(
     drawBackground(ctx, settings, width, height, sourceImage);
   }
 
-  // Always draw on shared integer edges. Expanding fills "for blur" caused
-  // 1–2px overlaps / T-junction jogs and clipped rings & spheres.
   for (const block of blocks) {
     if (!block.color) continue;
     if (omitColors?.has(block.color)) continue;
-    drawBlock(ctx, block, grid, settings.ringThickness, false);
+    drawBlock(ctx, block, grid, settings.ringThickness);
   }
 
   try {

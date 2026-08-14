@@ -76,18 +76,6 @@ export function gridEdge(index: number, count: number, size: number): number {
   return Math.round((index / count) * size);
 }
 
-/**
- * Extra fill expand when deliberately overlapping neighbours.
- * Default mosaic drawing must stay at `blockPixelRect` — any uniform expand
- * creates T-junction offshoots on edges that should be straight.
- */
-export function seamOverlapPx(grid: GridDimensions, heavy = false): number {
-  if (!heavy) return 0;
-  if (grid.cellSize >= 8) return 2;
-  if (grid.cellSize >= 4) return 1;
-  return 0;
-}
-
 /** Pixel-snapped block bounds — shared edges stay identical for adjacent blocks. */
 export function blockPixelRect(
   grid: GridDimensions,
@@ -100,28 +88,7 @@ export function blockPixelRect(
   return { x, y, width: x2 - x, height: y2 - y };
 }
 
-/**
- * Draw bounds expanded by `overlapPx` (or heavy-blur seam overlap).
- * Geometry of circles/triangles should still use `blockPixelRect`.
- */
-export function blockFillRect(
-  grid: GridDimensions,
-  block: Pick<MosaicBlock, "col" | "row" | "width" | "height">,
-  heavy = false,
-  overlapPx?: number,
-): PixelRect {
-  const rect = blockPixelRect(grid, block);
-  const overlap = overlapPx ?? seamOverlapPx(grid, heavy);
-  if (overlap <= 0) return rect;
-
-  const x = Math.max(0, rect.x - overlap);
-  const y = Math.max(0, rect.y - overlap);
-  const x2 = Math.min(grid.width, rect.x + rect.width + overlap);
-  const y2 = Math.min(grid.height, rect.y + rect.height + overlap);
-  return { x, y, width: x2 - x, height: y2 - y };
-}
-
-/** Integer-pixel square inscribed in a rect (avoids half-pixel triangle edges). */
+/** Largest integer square inside a rect, centred with floor. */
 export function inscribedPixelSquare(rect: PixelRect): PixelRect {
   const size = Math.min(rect.width, rect.height);
   return {
@@ -132,48 +99,33 @@ export function inscribedPixelSquare(rect: PixelRect): PixelRect {
   };
 }
 
-/** Upper-right right triangle, expanded so anti-aliased edges cover neighbours. */
+/** Upper-right isosceles right triangle inside the inscribed square. */
 export function triangleFillPoints(
   rect: PixelRect,
-  overlap = 0,
 ): [[number, number], [number, number], [number, number]] {
-  const square = inscribedPixelSquare(rect);
-  const { x: ox, y: oy, width: size } = square;
+  const { x, y, width: size } = inscribedPixelSquare(rect);
   return [
-    [ox - overlap, oy - overlap],
-    [ox + size + overlap, oy - overlap],
-    [ox + size + overlap, oy + size + overlap],
+    [x, y],
+    [x + size, y],
+    [x + size, y + size],
   ];
 }
 
 /**
- * Plus-shaped cross: full-span bars through the inscribed square.
- * Arm thickness is ~1/3 of the square so the silhouette stays readable at
- * small cell sizes. Expanded by `overlap` for seam coverage.
+ * Plus-shaped cross through the inscribed square.
+ * Arm thickness is ~1/3 of the square.
  */
 export function crossFillRects(
   rect: PixelRect,
-  overlap = 0,
 ): { horizontal: PixelRect; vertical: PixelRect } {
-  const square = inscribedPixelSquare(rect);
-  const { x: ox, y: oy, width: size } = square;
+  const { x, y, width: size } = inscribedPixelSquare(rect);
   const arm = Math.max(1, Math.round(size / 3));
-  const mid = ox + Math.floor((size - arm) / 2);
-  const midY = oy + Math.floor((size - arm) / 2);
+  const mid = x + Math.floor((size - arm) / 2);
+  const midY = y + Math.floor((size - arm) / 2);
 
   return {
-    horizontal: {
-      x: ox - overlap,
-      y: midY - overlap,
-      width: size + overlap * 2,
-      height: arm + overlap * 2,
-    },
-    vertical: {
-      x: mid - overlap,
-      y: oy - overlap,
-      width: arm + overlap * 2,
-      height: size + overlap * 2,
-    },
+    horizontal: { x, y: midY, width: size, height: arm },
+    vertical: { x: mid, y, width: arm, height: size },
   };
 }
 
