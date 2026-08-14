@@ -127,7 +127,7 @@ function drawBlock(
   }
 
   if (block.shape === "cross") {
-    const { horizontal, vertical } = crossFillRects(rect);
+    const { horizontal, vertical } = crossFillRects(grid, block);
     ctx.fillStyle = block.color;
     ctx.fillRect(
       horizontal.x,

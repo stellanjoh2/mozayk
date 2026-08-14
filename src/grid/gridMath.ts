@@ -112,20 +112,33 @@ export function triangleFillPoints(
 }
 
 /**
- * Plus-shaped cross through the inscribed square.
- * Arm thickness is ~1/3 of the square.
+ * Plus-shaped cross in the inscribed square of `block`, snapped to grid cells.
+ * Arm thickness is ~1/3 of the square in cells so bar edges share neighbours'
+ * grid lines (pixel thirds drift off the lattice).
  */
 export function crossFillRects(
-  rect: PixelRect,
+  grid: GridDimensions,
+  block: Pick<MosaicBlock, "col" | "row" | "width" | "height">,
 ): { horizontal: PixelRect; vertical: PixelRect } {
-  const { x, y, width: size } = inscribedPixelSquare(rect);
+  const size = Math.min(block.width, block.height);
+  const col0 = block.col + Math.floor((block.width - size) / 2);
+  const row0 = block.row + Math.floor((block.height - size) / 2);
   const arm = Math.max(1, Math.round(size / 3));
-  const mid = x + Math.floor((size - arm) / 2);
-  const midY = y + Math.floor((size - arm) / 2);
+  const midCol = col0 + Math.floor((size - arm) / 2);
+  const midRow = row0 + Math.floor((size - arm) / 2);
+
+  const x = gridEdge(col0, grid.columns, grid.width);
+  const x2 = gridEdge(col0 + size, grid.columns, grid.width);
+  const y = gridEdge(row0, grid.rows, grid.height);
+  const y2 = gridEdge(row0 + size, grid.rows, grid.height);
+  const armX = gridEdge(midCol, grid.columns, grid.width);
+  const armX2 = gridEdge(midCol + arm, grid.columns, grid.width);
+  const armY = gridEdge(midRow, grid.rows, grid.height);
+  const armY2 = gridEdge(midRow + arm, grid.rows, grid.height);
 
   return {
-    horizontal: { x, y: midY, width: size, height: arm },
-    vertical: { x: mid, y, width: arm, height: size },
+    horizontal: { x, y: armY, width: x2 - x, height: armY2 - armY },
+    vertical: { x: armX, y, width: armX2 - armX, height: y2 - y },
   };
 }
 

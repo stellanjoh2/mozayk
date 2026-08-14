@@ -152,14 +152,43 @@ function run(): void {
     "triangle is isosceles — not stretched to the tall cell",
   );
 
-  const oddRect = { x: 10, y: 20, width: 18, height: 17 };
-  const oddSquare = inscribedPixelSquare(oddRect);
-  const { horizontal, vertical } = crossFillRects(oddRect);
-  assert(horizontal.width === oddSquare.width, "cross bar spans inscribed width");
-  assert(vertical.height === oddSquare.height, "cross stem spans inscribed height");
+  // Crosses snap to grid cells — arm edges share neighbour grid lines.
+  const crossGrid = getGridDimensions("landscape", 5, 1920, 1080);
+  const tallCross = { col: 11, row: 4, width: 4, height: 17 };
+  const { horizontal, vertical } = crossFillRects(crossGrid, tallCross);
+  const squareOrigin = blockPixelRect(crossGrid, {
+    col: 11,
+    row: 4 + Math.floor((17 - 4) / 2),
+    width: 4,
+    height: 4,
+  });
+  assert(horizontal.x === squareOrigin.x, "cross bar left is inscribed square");
   assert(
-    horizontal.height === Math.max(1, Math.round(oddSquare.width / 3)),
-    "cross arm thickness is ~1/3 of square",
+    horizontal.x + horizontal.width === squareOrigin.x + squareOrigin.width,
+    "cross bar spans inscribed width",
+  );
+  assert(vertical.y === squareOrigin.y, "cross stem top is inscribed square");
+  assert(
+    vertical.y + vertical.height === squareOrigin.y + squareOrigin.height,
+    "cross stem spans inscribed height",
+  );
+  assert(horizontal.height === crossGrid.cellSize, "4-cell cross arm is 1 cell");
+  assert(vertical.width === crossGrid.cellSize, "4-cell cross stem is 1 cell");
+  assert(
+    Number.isInteger(horizontal.y / crossGrid.cellSize),
+    "cross bar sits on a row edge",
+  );
+  assert(
+    Number.isInteger(vertical.x / crossGrid.cellSize),
+    "cross stem sits on a column edge",
+  );
+
+  const three = crossFillRects(crossGrid, { col: 0, row: 0, width: 3, height: 3 });
+  assert(three.horizontal.height === crossGrid.cellSize, "3-cell cross arm is 1 cell");
+  assert(three.vertical.width === crossGrid.cellSize, "3-cell cross stem is 1 cell");
+  assert(
+    three.vertical.x === blockPixelRect(crossGrid, { col: 1, row: 0, width: 1, height: 1 }).x,
+    "3-cell stem is centred on middle column",
   );
 
   const tall = { x: 0, y: 0, width: 20, height: 200 };
