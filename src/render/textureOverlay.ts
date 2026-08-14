@@ -61,15 +61,27 @@ function context2d(
   return canvas.getContext("2d");
 }
 
+function imageIntrinsicSize(image: HTMLImageElement): {
+  width: number;
+  height: number;
+} {
+  return {
+    width: image.naturalWidth || image.width,
+    height: image.naturalHeight || image.height,
+  };
+}
+
 function drawCoverNoClear(
   ctx: CanvasRenderingContext2D,
   image: HTMLImageElement,
   width: number,
   height: number,
 ): void {
+  const { width: imageWidth, height: imageHeight } = imageIntrinsicSize(image);
+  if (imageWidth <= 0 || imageHeight <= 0) return;
   const { sx, sy, sw, sh } = coverCropRect(
-    image.width,
-    image.height,
+    imageWidth,
+    imageHeight,
     width,
     height,
   );
@@ -109,6 +121,9 @@ export function applyTextureOverlay(
   width: number,
   height: number,
 ): void {
+  const { width: imageWidth, height: imageHeight } = imageIntrinsicSize(image);
+  if (imageWidth <= 0 || imageHeight <= 0) return;
+
   const opacity =
     clampInt(
       settings.textureOverlayOpacity,
