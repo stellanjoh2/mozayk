@@ -18,6 +18,8 @@ const CELL = 0.5;
 const PACK = 1024;
 const GRID = 9;
 const UNIT_KINDS = ["square", "circle", "triangle"] as const;
+/** Relative mix boxes : spheres : triangles — boxes stay dominant (≈50/25/25). */
+const UNIT_KIND_WEIGHTS = { square: 66, circle: 33, triangle: 33 } as const;
 const NS = "http://www.w3.org/2000/svg";
 
 type UnitKind = (typeof UNIT_KINDS)[number];
@@ -179,14 +181,6 @@ function isUnitCell(box: { minX: number; minY: number; maxX: number; maxY: numbe
   return Math.abs(box.maxX - box.minX - GRID) < 0.2 && Math.abs(box.maxY - box.minY - GRID) < 0.2;
 }
 
-function unitKind(el: Element): UnitKind {
-  const tag = el.tagName.toLowerCase();
-  if (tag === "circle" || tag === "ellipse") return "circle";
-  if (tag === "rect") return "square";
-  const full = (GRID / CELL) * (GRID / CELL);
-  return occupancy(el).size < full * 0.7 ? "triangle" : "square";
-}
-
 function near(a: number, b: number): boolean {
   return Math.abs(a - b) < 0.6;
 }
@@ -201,6 +195,13 @@ function pointCorner(x: number, y: number, box: Box): Corner | null {
   if (left && bottom) return "bl";
   if (right && bottom) return "br";
   return null;
+}
+
+function isTriangleUnit(el: Element): boolean {
+  const tag = el.tagName.toLowerCase();
+  if (tag === "circle" || tag === "ellipse" || tag === "rect") return false;
+  const full = (GRID / CELL) * (GRID / CELL);
+  return occupancy(el).size < full * 0.7;
 }
 
 function triangleCorner(el: Element, box: Box): Corner {
@@ -229,9 +230,38 @@ function trianglePoints(box: Box, corner: Corner): string {
   return `${maxX},${y} ${x},${maxY} ${maxX},${maxY}`;
 }
 
-function readUnitShape(el: Element, box: Box): UnitShape {
-  const kind = unitKind(el);
-  return { kind, corner: kind === "triangle" ? triangleCorner(el, box) : "tr" };
+function collectTriangleCorners(slots: { el: Element; box: Box }[]): Corner[] {
+  const corners: Corner[] = [];
+  for (const { el, box } of slots) {
+    if (isTriangleUnit(el)) corners.push(triangleCorner(el, box));
+  }
+  return corners.length > 0 ? corners : ["tr"];
+}
+
+/** Exact bag sized to `count` using 66:33:33 weights (largest remainder). */
+function unitShapeBag(count: number, triangleCorners: Corner[]): UnitShape[] {
+  const weights = UNIT_KINDS.map((kind) => UNIT_KIND_WEIGHTS[kind]);
+  const totalW = weights.reduce((a, b) => a + b, 0);
+  const exact = weights.map((w) => (count * w) / totalW);
+  const floors = exact.map((n) => Math.floor(n));
+  const rem = count - floors.reduce((a, b) => a + b, 0);
+  const byFrac = exact
+    .map((n, i) => ({ i, frac: n - floors[i] }))
+    .sort((a, b) => b.frac - a.frac);
+  for (let k = 0; k < rem; k++) floors[byFrac[k].i]++;
+
+  const corners = shuffle([...triangleCorners]);
+  let cornerIdx = 0;
+  const bag: UnitShape[] = [];
+  UNIT_KINDS.forEach((kind, i) => {
+    for (let n = 0; n < floors[i]; n++) {
+      bag.push({
+        kind,
+        corner: kind === "triangle" ? corners[cornerIdx++ % corners.length] : "tr",
+      });
+    }
+  });
+  return shuffle(bag);
 }
 
 function makeUnitModule(doc: Document, shape: UnitShape, box: Box): Element {
@@ -267,7 +297,7 @@ function morphUnitModules(svg: Element): void {
     if (!isUnitCell(box)) continue;
     slots.push({ el, box });
   }
-  const shapes = shuffle(slots.map(({ el, box }) => readUnitShape(el, box)));
+  const shapes = unitShapeBag(slots.length, collectTriangleCorners(slots));
   slots.forEach((slot, i) => {
     slot.el.replaceWith(makeUnitModule(doc, shapes[i], slot.box));
   });
