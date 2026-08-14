@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import logoSvg from "../assets/mozayk_logo.svg?raw";
 
 /**
@@ -377,11 +377,26 @@ function paintLogoWithBrandTokens(svgMarkup: string): string {
 }
 
 const HOVER_CYCLE_MS = 250;
+const POOL_SIZE = 20;
+
+function buildLogoPool(): string[] {
+  return Array.from({ length: POOL_SIZE }, () => paintLogoWithBrandTokens(logoSvg));
+}
 
 export function BrandLogo({ className }: { className?: string }) {
-  const [html, setHtml] = useState(() => paintLogoWithBrandTokens(logoSvg));
+  const pool = useMemo(buildLogoPool, []);
+  const [index, setIndex] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<number | null>(null);
+
+  const showNext = () => {
+    setIndex((current) => {
+      if (pool.length <= 1) return 0;
+      let next = Math.floor(Math.random() * pool.length);
+      if (next === current) next = (next + 1) % pool.length;
+      return next;
+    });
+  };
 
   const stopCycling = () => {
     if (intervalRef.current == null) return;
@@ -391,14 +406,14 @@ export function BrandLogo({ className }: { className?: string }) {
 
   const startCycling = () => {
     stopCycling();
-    setHtml(paintLogoWithBrandTokens(logoSvg));
+    showNext();
     intervalRef.current = window.setInterval(() => {
       // SVG swaps can drop pointerleave; bail if the wrapper is no longer hovered.
       if (!rootRef.current?.matches(":hover")) {
         stopCycling();
         return;
       }
-      setHtml(paintLogoWithBrandTokens(logoSvg));
+      showNext();
     }, HOVER_CYCLE_MS);
   };
 
@@ -411,7 +426,7 @@ export function BrandLogo({ className }: { className?: string }) {
       onPointerEnter={startCycling}
       onPointerLeave={stopCycling}
       onPointerCancel={stopCycling}
-      dangerouslySetInnerHTML={{ __html: html }}
+      dangerouslySetInnerHTML={{ __html: pool[index] }}
     />
   );
 }
