@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useRef, useState } from "react";
 import logoSvg from "../assets/mozayk_logo.svg?raw";
 
 /**
@@ -12,6 +12,7 @@ const LOGO_FILL_TOKENS = [
   "var(--logo-fill-3)",
   "var(--logo-fill-4)",
 ] as const;
+const WHITE_FILL_INDEX = 3;
 
 const PART_SELECTOR = "rect, circle, polygon, polyline, path, ellipse";
 const CELL = 0.5;
@@ -20,6 +21,8 @@ const GRID = 9;
 const UNIT_KINDS = ["square", "circle", "triangle"] as const;
 /** Relative mix boxes : spheres : triangles — boxes stay dominant (≈50/25/25). */
 const UNIT_KIND_WEIGHTS = { square: 66, circle: 33, triangle: 33 } as const;
+/** White dominant (60%); three chromatics at 10% each — all four always used. */
+const COLOR_WEIGHTS = [10, 10, 10, 60] as const;
 const NS = "http://www.w3.org/2000/svg";
 
 type UnitKind = (typeof UNIT_KINDS)[number];
@@ -34,6 +37,19 @@ function shuffle<T>(items: T[]): T[] {
     [next[i], next[j]] = [next[j], next[i]];
   }
   return next;
+}
+
+/** Largest-remainder counts from relative weights. */
+function weightedCounts(count: number, weights: readonly number[]): number[] {
+  const totalW = weights.reduce((a, b) => a + b, 0);
+  const exact = weights.map((w) => (count * w) / totalW);
+  const floors = exact.map((n) => Math.floor(n));
+  const rem = count - floors.reduce((a, b) => a + b, 0);
+  const byFrac = exact
+    .map((n, i) => ({ i, frac: n - floors[i] }))
+    .sort((a, b) => b.frac - a.frac);
+  for (let k = 0; k < rem; k++) floors[byFrac[k].i]++;
+  return floors;
 }
 
 function attr(el: Element, name: string): number {
@@ -149,30 +165,58 @@ function shareEdge(a: Set<number>, b: Set<number>): boolean {
 function colorGraph(adj: number[][]): number[] {
   const n = adj.length;
   const palette = [...LOGO_FILL_TOKENS.keys()];
+  const quota = weightedCounts(n, COLOR_WEIGHTS);
+  // Guarantee every colour appears at least once when the graph is large enough.
+  if (n >= palette.length) {
+    for (let c = 0; c < palette.length; c++) {
+      if (quota[c] > 0) continue;
+      const donor = quota
+        .map((q, i) => ({ q, i }))
+        .filter(({ i }) => i !== c && quota[i] > 1)
+        .sort((a, b) => b.q - a.q)[0];
+      if (!donor) continue;
+      quota[donor.i]--;
+      quota[c]++;
+    }
+  }
 
-  for (let attempt = 0; attempt < 24; attempt++) {
+  for (let attempt = 0; attempt < 48; attempt++) {
+    const remaining = [...quota];
     const colors = new Array<number>(n).fill(-1);
     const order = shuffle([...Array(n).keys()]);
-    const options = Array.from({ length: n }, () => shuffle(palette));
     const solve = (i: number): boolean => {
       if (i === n) return true;
       const v = order[i];
-      for (const c of options[v]) {
-        if (adj[v].some((u) => colors[u] === c)) continue;
+      const used = new Set(adj[v].map((u) => colors[u]).filter((c) => c >= 0));
+      const inQuota = shuffle(palette.filter((c) => remaining[c] > 0 && !used.has(c)));
+      const options =
+        inQuota.length > 0 ? inQuota : shuffle(palette.filter((c) => !used.has(c)));
+      for (const c of options) {
+        const took = remaining[c] > 0;
+        if (took) remaining[c]--;
         colors[v] = c;
         if (solve(i + 1)) return true;
         colors[v] = -1;
+        if (took) remaining[c]++;
       }
       return false;
     };
     if (solve(0)) return colors;
   }
 
+  const remaining = [...quota];
   const colors = new Array<number>(n).fill(-1);
   for (const v of shuffle([...Array(n).keys()])) {
     const used = new Set(adj[v].map((u) => colors[u]).filter((c) => c >= 0));
     const legal = palette.filter((c) => !used.has(c));
-    colors[v] = legal[Math.floor(Math.random() * legal.length)] ?? palette[0];
+    const preferred = legal.filter((c) => remaining[c] > 0);
+    const pool = preferred.length > 0 ? preferred : legal;
+    const ranked = [...pool].sort(
+      (a, b) => remaining[b] - remaining[a] || Math.random() - 0.5,
+    );
+    const c = ranked[0] ?? WHITE_FILL_INDEX;
+    colors[v] = c;
+    if (remaining[c] > 0) remaining[c]--;
   }
   return colors;
 }
@@ -240,15 +284,10 @@ function collectTriangleCorners(slots: { el: Element; box: Box }[]): Corner[] {
 
 /** Exact bag sized to `count` using 66:33:33 weights (largest remainder). */
 function unitShapeBag(count: number, triangleCorners: Corner[]): UnitShape[] {
-  const weights = UNIT_KINDS.map((kind) => UNIT_KIND_WEIGHTS[kind]);
-  const totalW = weights.reduce((a, b) => a + b, 0);
-  const exact = weights.map((w) => (count * w) / totalW);
-  const floors = exact.map((n) => Math.floor(n));
-  const rem = count - floors.reduce((a, b) => a + b, 0);
-  const byFrac = exact
-    .map((n, i) => ({ i, frac: n - floors[i] }))
-    .sort((a, b) => b.frac - a.frac);
-  for (let k = 0; k < rem; k++) floors[byFrac[k].i]++;
+  const floors = weightedCounts(
+    count,
+    UNIT_KINDS.map((kind) => UNIT_KIND_WEIGHTS[kind]),
+  );
 
   const corners = shuffle([...triangleCorners]);
   let cornerIdx = 0;
@@ -337,7 +376,34 @@ function paintLogoWithBrandTokens(svgMarkup: string): string {
   return new XMLSerializer().serializeToString(svg);
 }
 
+const HOVER_CYCLE_MS = 250;
+
 export function BrandLogo({ className }: { className?: string }) {
-  const html = useMemo(() => paintLogoWithBrandTokens(logoSvg), []);
-  return <div className={className} dangerouslySetInnerHTML={{ __html: html }} />;
+  const [html, setHtml] = useState(() => paintLogoWithBrandTokens(logoSvg));
+  const intervalRef = useRef<number | null>(null);
+
+  const stopCycling = () => {
+    if (intervalRef.current == null) return;
+    window.clearInterval(intervalRef.current);
+    intervalRef.current = null;
+  };
+
+  const startCycling = () => {
+    stopCycling();
+    setHtml(paintLogoWithBrandTokens(logoSvg));
+    intervalRef.current = window.setInterval(() => {
+      setHtml(paintLogoWithBrandTokens(logoSvg));
+    }, HOVER_CYCLE_MS);
+  };
+
+  useEffect(() => stopCycling, []);
+
+  return (
+    <div
+      className={className}
+      onPointerEnter={startCycling}
+      onPointerLeave={stopCycling}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  );
 }
