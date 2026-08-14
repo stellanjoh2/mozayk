@@ -383,7 +383,13 @@ function buildLogoPool(): string[] {
   return Array.from({ length: POOL_SIZE }, () => paintLogoWithBrandTokens(logoSvg));
 }
 
-export function BrandLogo({ className }: { className?: string }) {
+export function BrandLogo({
+  className,
+  onClick,
+}: {
+  className?: string;
+  onClick?: () => void;
+}) {
   const pool = useMemo(buildLogoPool, []);
   const [index, setIndex] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -423,6 +429,19 @@ export function BrandLogo({ className }: { className?: string }) {
     <div
       ref={rootRef}
       className={className}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      aria-label={onClick ? "Reset canvas" : undefined}
+      onClick={onClick}
+      onKeyDown={
+        onClick
+          ? (event) => {
+              if (event.key !== "Enter" && event.key !== " ") return;
+              event.preventDefault();
+              onClick();
+            }
+          : undefined
+      }
       onPointerEnter={startCycling}
       onPointerLeave={stopCycling}
       onPointerCancel={stopCycling}

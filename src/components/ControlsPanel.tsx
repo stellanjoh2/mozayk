@@ -121,7 +121,7 @@ export function ControlsPanel({
   return (
     <aside className="controls-panel">
       <header className="controls-panel__head">
-        <BrandLogo className="controls-panel__logo" />
+        <BrandLogo className="controls-panel__logo" onClick={onResetCanvas} />
       </header>
 
       <section className="panel-section">

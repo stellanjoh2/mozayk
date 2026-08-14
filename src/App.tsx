@@ -3,6 +3,7 @@ import { DEFAULT_FPS, type ExportPreset } from "./config";
 import { CanvasView, Timeline } from "./components/CanvasView";
 import { ControlsPanel, MAX_FRAMES } from "./components/ControlsPanel";
 import { ImportErrorDialog } from "./components/ImportErrorDialog";
+import { ResetCanvasDialog } from "./components/ResetCanvasDialog";
 import { exportAllFrames, exportCurrentFrame, exportCurrentFrameTransparent } from "./export/exportPng";
 import { exportCurrentFrameSvg } from "./export/exportSvg";
 import {
@@ -105,6 +106,7 @@ export default function App() {
   const [importErrorMessage, setImportErrorMessage] = useState<string | null>(
     null,
   );
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [viewOriginal, setViewOriginal] = useState(false);
   const [inspecting, setInspecting] = useState(false);
   const inspectingRef = useRef(inspecting);
@@ -702,6 +704,14 @@ export default function App() {
           onDismiss={() => setImportErrorMessage(null)}
         />
       ) : null}
+      <ResetCanvasDialog
+        open={resetDialogOpen}
+        onCancel={() => setResetDialogOpen(false)}
+        onConfirm={() => {
+          handleResetCanvas();
+          setResetDialogOpen(false);
+        }}
+      />
       {!isFullscreen ? (
       <ControlsPanel
         frame={activeFrame}
@@ -807,7 +817,7 @@ export default function App() {
         onTextureOverlayUpload={(file) => void handleTextureOverlayUpload(file)}
         onTextureOverlayClear={handleTextureOverlayClear}
         uploadingTextureOverlay={uploadingTextureOverlay}
-        onResetCanvas={handleResetCanvas}
+        onResetCanvas={() => setResetDialogOpen(true)}
       />
       ) : null}
 

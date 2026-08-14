@@ -1,0 +1,86 @@
+import { useEffect, useId, useRef, useState } from "react";
+
+type ResetCanvasDialogProps = {
+  open: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+};
+
+export function ResetCanvasDialog({ open, onConfirm, onCancel }: ResetCanvasDialogProps) {
+  const titleId = useId();
+  const descId = useId();
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  const [mounted, setMounted] = useState(open);
+  const [entered, setEntered] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setMounted(true);
+      const id = window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => setEntered(true));
+      });
+      return () => window.cancelAnimationFrame(id);
+    }
+    setEntered(false);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || !mounted) return;
+    cancelRef.current?.focus();
+  }, [open, mounted]);
+
+  useEffect(() => {
+    if (!mounted) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onCancel();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [mounted, onCancel]);
+
+  if (!mounted) return null;
+
+  return (
+    <div
+      className={["reset-canvas-backdrop", entered ? "is-open" : ""].filter(Boolean).join(" ")}
+      role="presentation"
+      onClick={onCancel}
+      onTransitionEnd={(event) => {
+        if (event.target !== event.currentTarget) return;
+        if (!open) setMounted(false);
+      }}
+    >
+      <div
+        className="reset-canvas-dialog"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={descId}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <h2 id={titleId} className="reset-canvas-dialog__title">
+          Reset canvas
+        </h2>
+        <p id={descId} className="reset-canvas-dialog__message">
+          Clear the current mosaic and restore the default canvas? This can be undone.
+        </p>
+        <div className="reset-canvas-dialog__actions">
+          <button
+            ref={cancelRef}
+            type="button"
+            className="panel-btn panel-btn--ghost"
+            onClick={onCancel}
+          >
+            Cancel
+          </button>
+          <button type="button" className="panel-btn" onClick={onConfirm}>
+            Reset
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
