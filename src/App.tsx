@@ -34,7 +34,6 @@ import {
 } from "./state/frameUtils";
 import {
   copySettings,
-  hasStoredSettings,
   readSettingsClipboard,
 } from "./state/settingsClipboard";
 import {
@@ -101,7 +100,6 @@ export default function App() {
   const [playing, setPlaying] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [exportPreset, setExportPreset] = useState<ExportPreset>("1080p");
-  const [canPasteSettings, setCanPasteSettings] = useState(hasStoredSettings);
   const [importingImage, setImportingImage] = useState(false);
   const [uploadingTextureOverlay, setUploadingTextureOverlay] = useState(false);
   const [importErrorMessage, setImportErrorMessage] = useState<string | null>(
@@ -442,10 +440,13 @@ export default function App() {
   }, [toast]);
 
   const handleCopySettings = useCallback(async () => {
-    await copySettings(activeFrame.settings);
-    setCanPasteSettings(true);
+    await copySettings(
+      activeFrame.settings,
+      activeFrame.blocks,
+      orientationRef.current,
+    );
     setToast("Settings copied");
-  }, [activeFrame.settings]);
+  }, [activeFrame.blocks, activeFrame.settings]);
 
   const handlePasteSettings = useCallback(async () => {
     const pasted = await readSettingsClipboard();
@@ -711,7 +712,6 @@ export default function App() {
         onRandomizeAll={randomizeAll}
         onCopySettings={() => void handleCopySettings()}
         onPasteSettings={() => void handlePasteSettings()}
-        canPasteSettings={canPasteSettings}
         onRandomizeCurrentColors={() => {
           pushUndoCheckpoint();
           updateActiveFrame((frame) => randomizeFrameCurrentColors(frame));

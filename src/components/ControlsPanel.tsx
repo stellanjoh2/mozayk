@@ -43,7 +43,6 @@ type ControlsPanelProps = {
   onRandomizeAll: () => void;
   onCopySettings: () => void;
   onPasteSettings: () => void;
-  canPasteSettings: boolean;
   onRandomizeCurrentColors: () => void;
   onRandomizeNewColors: () => void;
   onAddColor: () => void;
@@ -76,7 +75,6 @@ export function ControlsPanel({
   onRandomizeAll,
   onCopySettings,
   onPasteSettings,
-  canPasteSettings,
   onRandomizeCurrentColors,
   onRandomizeNewColors,
   onAddColor,
@@ -941,7 +939,6 @@ export function ControlsPanel({
           <button
             type="button"
             className="panel-btn panel-btn--ghost"
-            disabled={!canPasteSettings}
             onClick={onPasteSettings}
           >
             Paste Settings
