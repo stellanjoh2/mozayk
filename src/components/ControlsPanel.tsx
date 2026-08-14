@@ -1,6 +1,5 @@
 import { useRef } from "react";
 import {
-  DEFAULT_FPS,
   EXPORT_PRESETS,
   GIF_EXPORT_PRESETS,
   GIF_FRAME_DELAY_PRESETS,
@@ -945,9 +944,7 @@ export function ControlsPanel({
           <h3 className="export-group__title">PNG</h3>
           <label className="control-row">
             <span className="control-row__label">
-              <HintLabel
-                hint={`Preview matches display · playback ${DEFAULT_FPS} fps`}
-              >
+              <HintLabel hint="Preview matches display">
                 Resolution
               </HintLabel>
             </span>
@@ -1005,7 +1002,7 @@ export function ControlsPanel({
           </label>
           <label className="control-row">
             <span className="control-row__label">
-              <HintLabel hint="How long each frame holds · GIPHY prefers 15–24 fps">
+              <HintLabel hint="How long each frame holds in the GIF and viewport · GIPHY prefers 15–24 fps">
                 Frame duration
               </HintLabel>
             </span>

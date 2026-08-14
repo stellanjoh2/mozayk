@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  DEFAULT_FPS,
   GIF_FRAME_DELAY_CS_DEFAULT,
   clampGifFrameDelayCs,
+  gifDelayMs,
   type ExportPreset,
   type GifExportPreset,
 } from "./config";
@@ -592,11 +592,14 @@ export default function App() {
 
   useEffect(() => {
     if (!playing) return;
+    const delayMs = gifDelayMs(
+      clampGifFrameDelayCs(gifFrameDelayCs, frames.length),
+    );
     const timer = window.setInterval(() => {
       setActiveIndex((index) => (index + 1) % frames.length);
-    }, 1000 / DEFAULT_FPS);
+    }, delayMs);
     return () => window.clearInterval(timer);
-  }, [playing, frames.length]);
+  }, [playing, frames.length, gifFrameDelayCs]);
 
   const togglePlay = useCallback(() => {
     setPlaying((value) => !value);

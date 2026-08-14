@@ -2,7 +2,6 @@
 export const MAX_FRAMES = 30;
 export const MAX_COLORS = 8;
 export const MAX_UNDO = 10;
-export const DEFAULT_FPS = 12;
 
 import type { Orientation } from "./types";
 

@@ -3,6 +3,7 @@ import {
   GIPHY_FILE_SIZE_MAX,
   GIPHY_FILE_SIZE_RECOMMENDED,
   getGifExportSize,
+  getPreviewSize,
   type GifExportPreset,
 } from "../config";
 import { renderMosaic } from "../render/renderFrame";
@@ -34,6 +35,22 @@ export function gifExportToast(bytes: number): string {
   return `Exported ${size} GIF`;
 }
 
+function downscaleFrame(
+  source: HTMLCanvasElement,
+  dest: HTMLCanvasElement,
+  width: number,
+  height: number,
+): ImageData {
+  dest.width = width;
+  dest.height = height;
+  const ctx = dest.getContext("2d");
+  if (!ctx) throw new Error("GIF export failed");
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(source, 0, 0, width, height);
+  return ctx.getImageData(0, 0, width, height);
+}
+
 export async function exportGif(
   frames: Frame[],
   orientation: Orientation,
@@ -41,7 +58,9 @@ export async function exportGif(
   delayCs: number,
 ): Promise<number> {
   const [width, height] = getGifExportSize(orientation, preset);
-  const canvas = document.createElement("canvas");
+  const [renderWidth, renderHeight] = getPreviewSize(orientation);
+  const source = document.createElement("canvas");
+  const dest = document.createElement("canvas");
   const images: ImageData[] = [];
 
   for (const frame of frames) {
@@ -49,18 +68,16 @@ export async function exportGif(
       loadSourceImageForFrame(frame),
       loadTextureOverlayForFrame(frame),
     ]);
-    renderMosaic(canvas, {
+    renderMosaic(source, {
       orientation,
       settings: frame.settings,
       blocks: frame.blocks,
-      width,
-      height,
+      width: renderWidth,
+      height: renderHeight,
       sourceImage,
       textureOverlayImage,
     });
-    const ctx = canvas.getContext("2d");
-    if (!ctx) throw new Error("GIF export failed");
-    images.push(ctx.getImageData(0, 0, width, height));
+    images.push(downscaleFrame(source, dest, width, height));
   }
 
   if (images.length === 0) throw new Error("GIF export failed");
