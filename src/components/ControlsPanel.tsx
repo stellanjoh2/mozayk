@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import {
   EXPORT_PRESETS,
   GIF_EXPORT_PRESETS,
@@ -55,7 +55,13 @@ import { BrandLogo } from "./BrandLogo";
 import { ColorSwatch } from "./ColorSwatch";
 import { HeadlineToggle, SliderRow, ToggleRow } from "./ControlRow";
 import { HintLabel } from "./HintLabel";
-import { playUiSound } from "../ui/sounds";
+import {
+  getUiSoundsEnabled,
+  getUiSoundsVolume,
+  playUiSound,
+  setUiSoundsEnabled,
+  setUiSoundsVolume,
+} from "../ui/sounds";
 
 type ControlsPanelProps = {
   frame: Frame;
@@ -135,12 +141,15 @@ export function ControlsPanel({
   const { settings } = frame;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textureInputRef = useRef<HTMLInputElement>(null);
+  const [soundsOn, setSoundsOn] = useState(getUiSoundsEnabled);
+  const [soundVolume, setSoundVolume] = useState(getUiSoundsVolume);
   const shapes = settings.shapes ?? {
     sphere: false,
     ring: false,
     triangle: false,
     cross: false,
   };
+  const anyShapeActive = shapes.sphere || shapes.ring || shapes.triangle || shapes.cross;
   const toggleShape = (key: keyof typeof shapes) => {
     const next = !shapes[key];
     playUiSound(next ? "ok" : "close");
@@ -153,6 +162,42 @@ export function ControlsPanel({
   };
   const widthMax = maxWidthSliderMax(settings.density, orientation);
   const heightMax = maxHeightSliderMax(settings.density, orientation);
+  const pendingAddColorRef = useRef(false);
+  const [addingColorIndex, setAddingColorIndex] = useState<number | null>(null);
+  const [removingColorIndex, setRemovingColorIndex] = useState<number | null>(
+    null,
+  );
+
+  useLayoutEffect(() => {
+    if (!pendingAddColorRef.current) return;
+    pendingAddColorRef.current = false;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    setAddingColorIndex(settings.colors.length - 1);
+    const timer = window.setTimeout(() => setAddingColorIndex(null), 250);
+    return () => window.clearTimeout(timer);
+  }, [settings.colors.length]);
+
+  const handleAddColor = () => {
+    if (settings.colors.length >= MAX_COLORS || removingColorIndex !== null) {
+      return;
+    }
+    pendingAddColorRef.current = true;
+    onAddColor();
+  };
+
+  const handleRemoveColor = (index: number) => {
+    if (settings.colors.length <= 1 || removingColorIndex !== null) return;
+    playUiSound("close");
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      onRemoveColor(index);
+      return;
+    }
+    setRemovingColorIndex(index);
+    window.setTimeout(() => {
+      onRemoveColor(index);
+      setRemovingColorIndex(null);
+    }, 250);
+  };
 
   return (
     <aside className="controls-panel">
@@ -347,6 +392,7 @@ export function ControlsPanel({
           label="Shape Mix"
           hint="0 = blocks only · 100 = mix all enabled"
           value={settings.shapeMix}
+          disabled={!anyShapeActive}
           onChange={(shapeMix) => onSettingsChange({ shapeMix })}
         />
         <SliderRow
@@ -419,17 +465,18 @@ export function ControlsPanel({
           <button
             type="button"
             className="panel-btn"
-            onClick={() => {
-              playUiSound("ok");
-              onAddColor();
-            }}
+            data-ui-sound="ok"
+            onClick={handleAddColor}
           >
             Add Colour
           </button>
         ) : null}
         <div className="color-list">
           {settings.colors.map((color, index) => (
-            <div key={`color-${index}`} className="color-row">
+            <div
+              key={`color-${index}`}
+              className={`color-row${index === addingColorIndex ? " is-adding" : ""}${index === removingColorIndex ? " is-removing" : ""}`}
+            >
               <ColorSwatch
                 color={color}
                 locked={settings.colorsLocked?.[index] ?? false}
@@ -437,10 +484,7 @@ export function ControlsPanel({
                 onToggleLock={() => onToggleColorLock(index)}
                 onRemove={
                   settings.colors.length > 1
-                    ? () => {
-                        playUiSound("close");
-                        onRemoveColor(index);
-                      }
+                    ? () => handleRemoveColor(index)
                     : undefined
                 }
               />
@@ -1054,6 +1098,31 @@ export function ControlsPanel({
             Paste Settings
           </button>
         </div>
+      </section>
+
+      <section className={`panel-section${soundsOn ? "" : " is-off"}`}>
+        <h2>Settings</h2>
+        <ToggleRow
+          label="UI Sounds"
+          checked={soundsOn}
+          onChange={(next) => {
+            setUiSoundsEnabled(next);
+            setSoundsOn(next);
+            playUiSound(next ? "ok" : "close");
+          }}
+        />
+        <SliderRow
+          label="UI Sounds Volume"
+          value={soundVolume}
+          min={0}
+          max={100}
+          suffix="%"
+          disabled={!soundsOn}
+          onChange={(volume) => {
+            setUiSoundsVolume(volume);
+            setSoundVolume(volume);
+          }}
+        />
       </section>
 
       <footer className="panel-credit">

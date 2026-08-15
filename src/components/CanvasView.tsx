@@ -794,7 +794,10 @@ export function Timeline({
         <button
           type="button"
           className={`timeline__btn${playing ? " is-active" : ""}`}
-          onClick={onTogglePlay}
+          onClick={() => {
+            playUiSound("push");
+            onTogglePlay();
+          }}
           aria-label={playing ? "Stop" : "Play"}
           aria-pressed={playing}
           title={playing ? "Stop" : "Play"}
