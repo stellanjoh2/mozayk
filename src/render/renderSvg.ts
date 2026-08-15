@@ -14,7 +14,7 @@ import {
   type GridOverlayStyle,
 } from "./gridOverlay";
 import type { RenderOptions } from "./renderFrame";
-import { ringInnerRadius } from "./ringGeometry";
+import { largestRingRadius, ringInnerRadius } from "./ringGeometry";
 
 function svgRing(
   cx: number,
@@ -23,10 +23,11 @@ function svgRing(
   ringThickness: number,
   cellSize: number,
   color: string,
+  fillRadius: number,
 ): string {
   if (outerR <= 0) return "";
 
-  const innerR = ringInnerRadius(outerR, ringThickness, cellSize);
+  const innerR = ringInnerRadius(outerR, ringThickness, cellSize, fillRadius);
 
   if (innerR <= 0) {
     return `<circle cx="${cx}" cy="${cy}" r="${outerR}" fill="${color}"/>`;
@@ -48,6 +49,7 @@ function svgBlock(
   block: MosaicBlock,
   grid: GridDimensions,
   ringThickness: number,
+  fillRadius: number,
 ): string {
   const { x, y, width: drawW, height: drawH } = blockPixelRect(grid, block);
 
@@ -60,6 +62,7 @@ function svgBlock(
       ringThickness,
       grid.cellSize,
       block.color,
+      fillRadius,
     );
   }
 
@@ -159,9 +162,10 @@ export function renderMosaicToSvg(options: SvgRenderOptions): string {
   } = options;
   const grid = getGridDimensions(orientation, settings.density, width, height);
 
+  const fillRadius = largestRingRadius(blocks, grid);
   const shapes = blocks
     .filter((block) => block.color && !omitColors?.has(block.color))
-    .map((block) => svgBlock(block, grid, settings.ringThickness))
+    .map((block) => svgBlock(block, grid, settings.ringThickness, fillRadius))
     .join("\n  ");
 
   const overlay =

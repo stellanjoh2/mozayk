@@ -22,7 +22,7 @@ import {
   resolveGridOverlayStyle,
   type GridOverlayStyle,
 } from "./gridOverlay";
-import { ringInnerRadius } from "./ringGeometry";
+import { largestRingRadius, ringInnerRadius } from "./ringGeometry";
 import { applyTextureOverlay } from "./textureOverlay";
 
 export type RenderOptions = {
@@ -64,10 +64,11 @@ function drawRing(
   ringThickness: number,
   cellSize: number,
   color: string,
+  fillRadius: number,
 ): void {
   if (outerR <= 0) return;
 
-  const innerR = ringInnerRadius(outerR, ringThickness, cellSize);
+  const innerR = ringInnerRadius(outerR, ringThickness, cellSize, fillRadius);
 
   ctx.fillStyle = color;
   ctx.beginPath();
@@ -85,6 +86,7 @@ function drawBlock(
   block: MosaicBlock,
   grid: GridDimensions,
   ringThickness: number,
+  fillRadius: number,
 ): void {
   const rect = blockPixelRect(grid, block);
   const { x, y, width: drawW, height: drawH } = rect;
@@ -99,6 +101,7 @@ function drawBlock(
       ringThickness,
       grid.cellSize,
       block.color,
+      fillRadius,
     );
     return;
   }
@@ -236,10 +239,11 @@ export function renderMosaic(
     drawBackground(ctx, settings, width, height, sourceImage);
   }
 
+  const fillRadius = largestRingRadius(blocks, grid);
   for (const block of blocks) {
     if (!block.color) continue;
     if (omitColors?.has(block.color)) continue;
-    drawBlock(ctx, block, grid, settings.ringThickness);
+    drawBlock(ctx, block, grid, settings.ringThickness, fillRadius);
   }
 
   try {
