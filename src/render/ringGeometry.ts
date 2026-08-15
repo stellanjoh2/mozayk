@@ -8,9 +8,10 @@ export function ringInnerRadius(
   ringThickness: number,
   cellSize: number,
 ): number {
-  if (outerR <= 0 || ringThickness <= 0 || cellSize <= 0) return 0;
+  if (outerR <= 0 || cellSize <= 0) return 0;
+  if (ringThickness >= 100) return 0;
 
-  const holeRatio = Math.min(0.95, Math.max(0.05, ringThickness / 100));
+  const holeRatio = Math.min(0.95, Math.max(0.05, (100 - ringThickness) / 100));
   // Match the previous 1×1-cell look; larger rings keep this same absolute wall.
   const stroke = Math.max(2, (cellSize / 2) * (1 - holeRatio));
   const innerR = outerR - stroke;

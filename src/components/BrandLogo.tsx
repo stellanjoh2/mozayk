@@ -559,7 +559,7 @@ export function BrandLogo({
 
   const startCycling = () => {
     stopCycling();
-    showNext();
+    // Hold the current mark so CSS can light white tiles before the pool cycles.
     intervalRef.current = window.setInterval(() => {
       // SVG swaps can drop pointerleave; bail if the wrapper is no longer hovered.
       if (!rootRef.current?.matches(":hover")) {

@@ -55,6 +55,7 @@ import { BrandLogo } from "./BrandLogo";
 import { ColorSwatch } from "./ColorSwatch";
 import { HeadlineToggle, SliderRow, ToggleRow } from "./ControlRow";
 import { HintLabel } from "./HintLabel";
+import { playUiSound } from "../ui/sounds";
 
 type ControlsPanelProps = {
   frame: Frame;
@@ -140,6 +141,16 @@ export function ControlsPanel({
     triangle: false,
     cross: false,
   };
+  const toggleShape = (key: keyof typeof shapes) => {
+    const next = !shapes[key];
+    playUiSound(next ? "ok" : "close");
+    onSettingsChange({ shapes: { ...shapes, [key]: next } });
+  };
+  const selectOrientation = (next: Orientation) => {
+    if (next === orientation) return;
+    playUiSound("ok");
+    onOrientationChange(next);
+  };
   const widthMax = maxWidthSliderMax(settings.density, orientation);
   const heightMax = maxHeightSliderMax(settings.density, orientation);
 
@@ -155,14 +166,14 @@ export function ControlsPanel({
           <button
             type="button"
             className={orientation === "landscape" ? "is-active" : ""}
-            onClick={() => onOrientationChange("landscape")}
+            onClick={() => selectOrientation("landscape")}
           >
             16:9
           </button>
           <button
             type="button"
             className={orientation === "square" ? "is-active" : ""}
-            onClick={() => onOrientationChange("square")}
+            onClick={() => selectOrientation("square")}
           >
             1:1
           </button>
@@ -170,7 +181,7 @@ export function ControlsPanel({
             <button
               type="button"
               className={orientation === "portrait" ? "is-active" : ""}
-              onClick={() => onOrientationChange("portrait")}
+              onClick={() => selectOrientation("portrait")}
             >
               9:16
             </button>
@@ -253,9 +264,6 @@ export function ControlsPanel({
             onChange={(showSourceImage) => onSettingsChange({ showSourceImage })}
           />
         ) : null}
-        <p className="panel-hint">
-          Randomize Layout re-interprets the photo with new shapes while keeping its colours
-        </p>
       </section>
 
       <section className="panel-section">
@@ -285,11 +293,7 @@ export function ControlsPanel({
             aria-label="Spheres"
             aria-pressed={shapes.sphere}
             className={shapes.sphere ? "is-active" : ""}
-            onClick={() =>
-              onSettingsChange({
-                shapes: { ...shapes, sphere: !shapes.sphere },
-              })
-            }
+            onClick={() => toggleShape("sphere")}
           >
             <svg className="shape-icon" viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="12" cy="12" r="11" fill="currentColor" />
@@ -300,11 +304,7 @@ export function ControlsPanel({
             aria-label="Rings"
             aria-pressed={shapes.ring}
             className={shapes.ring ? "is-active" : ""}
-            onClick={() =>
-              onSettingsChange({
-                shapes: { ...shapes, ring: !shapes.ring },
-              })
-            }
+            onClick={() => toggleShape("ring")}
           >
             <svg className="shape-icon" viewBox="0 0 24 24" aria-hidden="true">
               <circle
@@ -322,11 +322,7 @@ export function ControlsPanel({
             aria-label="Triangles"
             aria-pressed={Boolean(shapes.triangle)}
             className={shapes.triangle ? "is-active" : ""}
-            onClick={() =>
-              onSettingsChange({
-                shapes: { ...shapes, triangle: !shapes.triangle },
-              })
-            }
+            onClick={() => toggleShape("triangle")}
           >
             <svg className="shape-icon" viewBox="0 0 24 24" aria-hidden="true">
               <polygon points="2,2 22,2 22,22" fill="currentColor" />
@@ -337,11 +333,7 @@ export function ControlsPanel({
             aria-label="Crosses"
             aria-pressed={Boolean(shapes.cross)}
             className={shapes.cross ? "is-active" : ""}
-            onClick={() =>
-              onSettingsChange({
-                shapes: { ...shapes, cross: !shapes.cross },
-              })
-            }
+            onClick={() => toggleShape("cross")}
           >
             <svg className="shape-icon" viewBox="0 0 24 24" aria-hidden="true">
               <path
@@ -359,7 +351,7 @@ export function ControlsPanel({
         />
         <SliderRow
           label="Ring Thickness"
-          hint="0 = solid · 100 = thin · same on every ring"
+          hint="0 = thin · 100 = solid · same on every ring"
           value={settings.ringThickness ?? 45}
           disabled={!shapes.ring}
           onChange={(ringThickness) => onSettingsChange({ ringThickness })}
@@ -424,7 +416,14 @@ export function ControlsPanel({
       <section className="panel-section">
         <h2>Colour</h2>
         {settings.colors.length < MAX_COLORS ? (
-          <button type="button" className="panel-btn" onClick={onAddColor}>
+          <button
+            type="button"
+            className="panel-btn"
+            onClick={() => {
+              playUiSound("ok");
+              onAddColor();
+            }}
+          >
             Add Colour
           </button>
         ) : null}
@@ -438,7 +437,10 @@ export function ControlsPanel({
                 onToggleLock={() => onToggleColorLock(index)}
                 onRemove={
                   settings.colors.length > 1
-                    ? () => onRemoveColor(index)
+                    ? () => {
+                        playUiSound("close");
+                        onRemoveColor(index);
+                      }
                     : undefined
                 }
               />
@@ -479,227 +481,217 @@ export function ControlsPanel({
 
       <section
         className={
-          settings.gridOverlay || settings.gridCrosses
-            ? "panel-section"
-            : "panel-section is-off"
+          settings.gridOverlay ? "panel-section" : "panel-section is-off"
         }
       >
-        <h2>Grid Overlay</h2>
-        <div
-          className={
-            settings.gridOverlay ? "export-group" : "export-group is-off"
-          }
-        >
-          <HeadlineToggle
-            level={3}
-            title="Lines"
-            hint="Grid drawn over the mosaic"
-            checked={Boolean(settings.gridOverlay)}
-            onChange={(gridOverlay) => onSettingsChange({ gridOverlay }, false)}
-          />
-          <label className="control-row">
-            <span className="control-row__label">Grid Density</span>
-            <select
-              value={settings.gridOverlayDensity ?? 1}
-              onChange={(e) =>
-                onSettingsChange(
-                  {
-                    gridOverlayDensity: Number(e.target.value) as Density,
-                  },
-                  false,
-                )
-              }
-            >
-              {DENSITY_INFO.map((info) => (
-                <option key={info.level} value={info.level}>
-                  {info.level}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="control-row">
-            <span className="control-row__label">Colour</span>
-            <ColorSwatch
-              color={settings.gridOverlayColor ?? "#ffffff"}
-              onChange={(gridOverlayColor) =>
-                onSettingsChange({ gridOverlayColor }, false)
-              }
-            />
-          </div>
-          <SliderRow
-            label="Stroke"
-            hint="Line thickness"
-            value={GRID_OVERLAY_STROKES.indexOf(
-              resolveGridOverlayStroke(settings.gridOverlayStroke),
-            )}
-            min={0}
-            max={GRID_OVERLAY_STROKES.length - 1}
-            step={1}
-            formatValue={(i) => `${GRID_OVERLAY_STROKES[i]}px`}
-            onChange={(i) =>
+        <HeadlineToggle
+          title="Grid Overlay"
+          hint="Grid drawn over the mosaic"
+          checked={Boolean(settings.gridOverlay)}
+          onChange={(gridOverlay) => onSettingsChange({ gridOverlay }, false)}
+        />
+        <label className="control-row">
+          <span className="control-row__label">Grid Density</span>
+          <select
+            value={settings.gridOverlayDensity ?? 1}
+            onChange={(e) =>
               onSettingsChange(
-                { gridOverlayStroke: GRID_OVERLAY_STROKES[i] },
+                {
+                  gridOverlayDensity: Number(e.target.value) as Density,
+                },
                 false,
               )
             }
-          />
-          <SliderRow
-            label="Opacity"
-            value={settings.gridOverlayOpacity ?? 100}
-            min={0}
-            max={100}
-            onChange={(gridOverlayOpacity) =>
-              onSettingsChange({ gridOverlayOpacity }, false)
+          >
+            {DENSITY_INFO.map((info) => (
+              <option key={info.level} value={info.level}>
+                {info.level}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="control-row">
+          <span className="control-row__label">Colour</span>
+          <ColorSwatch
+            color={settings.gridOverlayColor ?? "#ffffff"}
+            onChange={(gridOverlayColor) =>
+              onSettingsChange({ gridOverlayColor }, false)
             }
           />
-          <SliderRow
-            label="Lines Randomness"
-            hint="Break the square grid into irregular paths"
-            value={settings.gridOverlayChaos ?? 0}
-            min={0}
-            max={100}
-            onChange={(gridOverlayChaos) =>
-              onSettingsChange({ gridOverlayChaos }, false)
-            }
-          />
-          <label className="control-row">
-            <span className="control-row__label">
-              <HintLabel hint="How grid strokes mix with colours underneath">
-                Blend
-              </HintLabel>
-            </span>
-            <select
-              value={settings.gridOverlayBlend ?? "normal"}
-              onChange={(e) =>
-                onSettingsChange(
-                  {
-                    gridOverlayBlend: e.target.value as GridBlendMode,
-                  },
-                  false,
-                )
-              }
-            >
-              {GRID_BLEND_MODES.map((mode) => (
-                <option key={mode} value={mode}>
-                  {GRID_BLEND_LABELS[mode]}
-                </option>
-              ))}
-            </select>
-          </label>
         </div>
-        <div
-          className={
-            settings.gridCrosses ? "export-group" : "export-group is-off"
+        <SliderRow
+          label="Stroke"
+          hint="Line thickness"
+          value={GRID_OVERLAY_STROKES.indexOf(
+            resolveGridOverlayStroke(settings.gridOverlayStroke),
+          )}
+          min={0}
+          max={GRID_OVERLAY_STROKES.length - 1}
+          step={1}
+          formatValue={(i) => `${GRID_OVERLAY_STROKES[i]}px`}
+          onChange={(i) =>
+            onSettingsChange(
+              { gridOverlayStroke: GRID_OVERLAY_STROKES[i] },
+              false,
+            )
           }
-        >
-          <HeadlineToggle
-            level={3}
-            title="Crosses"
-            hint="Pluses on grid intersections"
-            checked={Boolean(settings.gridCrosses)}
-            onChange={(gridCrosses) => onSettingsChange({ gridCrosses }, false)}
-          />
-          <label className="control-row">
-            <span className="control-row__label">Grid Density</span>
-            <select
-              value={settings.gridCrossesDensity ?? 1}
-              onChange={(e) =>
-                onSettingsChange(
-                  {
-                    gridCrossesDensity: Number(e.target.value) as Density,
-                  },
-                  false,
-                )
-              }
-            >
-              {DENSITY_INFO.map((info) => (
-                <option key={info.level} value={info.level}>
-                  {info.level}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="control-row">
-            <span className="control-row__label">Colour</span>
-            <ColorSwatch
-              color={settings.gridCrossesColor ?? "#ffffff"}
-              onChange={(gridCrossesColor) =>
-                onSettingsChange({ gridCrossesColor }, false)
-              }
-            />
-          </div>
-          <SliderRow
-            label="Stroke"
-            hint="Line thickness"
-            value={GRID_OVERLAY_STROKES.indexOf(
-              resolveGridOverlayStroke(settings.gridCrossesStroke),
-            )}
-            min={0}
-            max={GRID_OVERLAY_STROKES.length - 1}
-            step={1}
-            formatValue={(i) => `${GRID_OVERLAY_STROKES[i]}px`}
-            onChange={(i) =>
+        />
+        <SliderRow
+          label="Opacity"
+          value={settings.gridOverlayOpacity ?? 100}
+          min={0}
+          max={100}
+          onChange={(gridOverlayOpacity) =>
+            onSettingsChange({ gridOverlayOpacity }, false)
+          }
+        />
+        <SliderRow
+          label="Lines Randomness"
+          hint="Break the square grid into irregular paths"
+          value={settings.gridOverlayChaos ?? 0}
+          min={0}
+          max={100}
+          onChange={(gridOverlayChaos) =>
+            onSettingsChange({ gridOverlayChaos }, false)
+          }
+        />
+        <label className="control-row">
+          <span className="control-row__label">
+            <HintLabel hint="How grid strokes mix with colours underneath">
+              Blend
+            </HintLabel>
+          </span>
+          <select
+            value={settings.gridOverlayBlend ?? "normal"}
+            onChange={(e) =>
               onSettingsChange(
-                { gridCrossesStroke: GRID_OVERLAY_STROKES[i] },
+                {
+                  gridOverlayBlend: e.target.value as GridBlendMode,
+                },
                 false,
               )
             }
-          />
-          <SliderRow
-            label="Size"
-            hint="How far the arms extend"
-            value={settings.gridCrossesSize ?? GRID_CROSS_SIZE_DEFAULT}
-            min={GRID_CROSS_SIZE_MIN}
-            max={GRID_CROSS_SIZE_MAX}
-            formatValue={(v) => `${v}px`}
-            onChange={(gridCrossesSize) =>
-              onSettingsChange({ gridCrossesSize }, false)
+          >
+            {GRID_BLEND_MODES.map((mode) => (
+              <option key={mode} value={mode}>
+                {GRID_BLEND_LABELS[mode]}
+              </option>
+            ))}
+          </select>
+        </label>
+      </section>
+
+      <section
+        className={
+          settings.gridCrosses ? "panel-section" : "panel-section is-off"
+        }
+      >
+        <HeadlineToggle
+          title="Crosses"
+          hint="Pluses on grid intersections"
+          checked={Boolean(settings.gridCrosses)}
+          onChange={(gridCrosses) => onSettingsChange({ gridCrosses }, false)}
+        />
+        <label className="control-row">
+          <span className="control-row__label">Grid Density</span>
+          <select
+            value={settings.gridCrossesDensity ?? 1}
+            onChange={(e) =>
+              onSettingsChange(
+                {
+                  gridCrossesDensity: Number(e.target.value) as Density,
+                },
+                false,
+              )
+            }
+          >
+            {DENSITY_INFO.map((info) => (
+              <option key={info.level} value={info.level}>
+                {info.level}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="control-row">
+          <span className="control-row__label">Colour</span>
+          <ColorSwatch
+            color={settings.gridCrossesColor ?? "#ffffff"}
+            onChange={(gridCrossesColor) =>
+              onSettingsChange({ gridCrossesColor }, false)
             }
           />
-          <SliderRow
-            label="Opacity"
-            value={settings.gridCrossesOpacity ?? 100}
-            min={0}
-            max={100}
-            onChange={(gridCrossesOpacity) =>
-              onSettingsChange({ gridCrossesOpacity }, false)
-            }
-          />
-          <SliderRow
-            label="Crosses Randomness"
-            hint="Omit crosses at random"
-            value={settings.gridCrossesChaos ?? 0}
-            min={0}
-            max={100}
-            onChange={(gridCrossesChaos) =>
-              onSettingsChange({ gridCrossesChaos }, false)
-            }
-          />
-          <label className="control-row">
-            <span className="control-row__label">
-              <HintLabel hint="How crosses mix with colours underneath">
-                Blend
-              </HintLabel>
-            </span>
-            <select
-              value={settings.gridCrossesBlend ?? "normal"}
-              onChange={(e) =>
-                onSettingsChange(
-                  {
-                    gridCrossesBlend: e.target.value as GridBlendMode,
-                  },
-                  false,
-                )
-              }
-            >
-              {GRID_BLEND_MODES.map((mode) => (
-                <option key={mode} value={mode}>
-                  {GRID_BLEND_LABELS[mode]}
-                </option>
-              ))}
-            </select>
-          </label>
         </div>
+        <SliderRow
+          label="Stroke"
+          hint="Line thickness"
+          value={GRID_OVERLAY_STROKES.indexOf(
+            resolveGridOverlayStroke(settings.gridCrossesStroke),
+          )}
+          min={0}
+          max={GRID_OVERLAY_STROKES.length - 1}
+          step={1}
+          formatValue={(i) => `${GRID_OVERLAY_STROKES[i]}px`}
+          onChange={(i) =>
+            onSettingsChange(
+              { gridCrossesStroke: GRID_OVERLAY_STROKES[i] },
+              false,
+            )
+          }
+        />
+        <SliderRow
+          label="Size"
+          hint="How far the arms extend"
+          value={settings.gridCrossesSize ?? GRID_CROSS_SIZE_DEFAULT}
+          min={GRID_CROSS_SIZE_MIN}
+          max={GRID_CROSS_SIZE_MAX}
+          formatValue={(v) => `${v}px`}
+          onChange={(gridCrossesSize) =>
+            onSettingsChange({ gridCrossesSize }, false)
+          }
+        />
+        <SliderRow
+          label="Opacity"
+          value={settings.gridCrossesOpacity ?? 100}
+          min={0}
+          max={100}
+          onChange={(gridCrossesOpacity) =>
+            onSettingsChange({ gridCrossesOpacity }, false)
+          }
+        />
+        <SliderRow
+          label="Crosses Randomness"
+          hint="Omit crosses at random"
+          value={settings.gridCrossesChaos ?? 0}
+          min={0}
+          max={100}
+          onChange={(gridCrossesChaos) =>
+            onSettingsChange({ gridCrossesChaos }, false)
+          }
+        />
+        <label className="control-row">
+          <span className="control-row__label">
+            <HintLabel hint="How crosses mix with colours underneath">
+              Blend
+            </HintLabel>
+          </span>
+          <select
+            value={settings.gridCrossesBlend ?? "normal"}
+            onChange={(e) =>
+              onSettingsChange(
+                {
+                  gridCrossesBlend: e.target.value as GridBlendMode,
+                },
+                false,
+              )
+            }
+          >
+            {GRID_BLEND_MODES.map((mode) => (
+              <option key={mode} value={mode}>
+                {GRID_BLEND_LABELS[mode]}
+              </option>
+            ))}
+          </select>
+        </label>
       </section>
 
       <section
@@ -844,12 +836,7 @@ export function ControlsPanel({
               />
             </div>
           </>
-        ) : (
-          <p className="panel-hint">
-            Local dirt / paper / grain image · blends over the finished mosaic ·
-            PNG only
-          </p>
-        )}
+        ) : null}
       </section>
 
       <section className="panel-section">

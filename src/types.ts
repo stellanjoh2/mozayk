@@ -40,7 +40,7 @@ export type FrameSettings = {
   density: Density;
   shapeMix: number;
   shapes: ShapePalette;
-  /** 0 = solid disc · 100 = thin ring. Absolute wall width, shared by all rings. */
+  /** 0 = thin ring · 100 = solid disc. Absolute wall width, shared by all rings. */
   ringThickness: number;
   /** Internal — derived from density; not user-facing. */
   minCellSize: number;

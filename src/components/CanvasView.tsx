@@ -6,6 +6,11 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { createPortal } from "react-dom";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
+import { Flip } from "gsap/Flip";
+
+gsap.registerPlugin(useGSAP, Flip);
 import { getThumbnailRenderSize, getThumbnailSize } from "../grid/gridMath";
 import {
   drawCoverImage,
@@ -15,6 +20,7 @@ import {
 import { renderMosaic } from "../render/renderFrame";
 import { getPreviewSize, getPreviewSizeForDisplay } from "../config";
 import type { Frame, Orientation } from "../types";
+import { playUiSound } from "../ui/sounds";
 
 const STAGE_PADDING = 24;
 
@@ -510,19 +516,32 @@ export function Timeline({
   const pendingDragRef = useRef<PendingDrag | null>(null);
   const insertIndexRef = useRef<number | null>(null);
   const draggedRef = useRef(false);
+  const pendingFlipRef = useRef<ReturnType<typeof Flip.getState> | null>(null);
+  const pendingAddRef = useRef(false);
+  const addingRef = useRef(false);
+  const removeTlRef = useRef<gsap.core.Timeline | null>(null);
   const [trackPointer, setTrackPointer] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [insertIndex, setInsertIndex] = useState<number | null>(null);
   const [pointer, setPointer] = useState<{ x: number; y: number } | null>(null);
   const [ghostOffset, setGhostOffset] = useState({ x: 0, y: 0 });
+  const [removing, setRemoving] = useState(false);
   const [thumbW, thumbH] = getThumbnailSize(orientation);
 
+  useGSAP(() => {
+    return () => {
+      removeTlRef.current?.kill();
+      pendingFlipRef.current = null;
+    };
+  }, { scope: stripRef });
+
   useEffect(() => {
+    if (removing || addingRef.current) return;
     const strip = stripRef.current;
     if (!strip) return;
     const active = strip.querySelector(".timeline-thumb.is-active");
     active?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
-  }, [activeIndex, frames.length]);
+  }, [activeIndex, frames.length, removing]);
 
   useLayoutEffect(() => {
     if (!trackPointer) return;
@@ -606,10 +625,148 @@ export function Timeline({
     };
   }, [onReorder, trackPointer]);
 
+  useLayoutEffect(() => {
+    const state = pendingFlipRef.current;
+    const isAdd = pendingAddRef.current;
+    pendingFlipRef.current = null;
+    pendingAddRef.current = false;
+
+    const newThumb = isAdd
+      ? (stripRef.current?.querySelector(
+          ".timeline-thumb.is-active",
+        ) as HTMLElement | null)
+      : null;
+
+    let flashTimer = 0;
+    const flashNew = () => {
+      if (!newThumb) return;
+      gsap.set(newThumb, { autoAlpha: 1, clearProps: "opacity,visibility" });
+      newThumb.classList.add("is-adding");
+      newThumb.scrollIntoView({
+        behavior: "smooth",
+        inline: "nearest",
+        block: "nearest",
+      });
+      flashTimer = window.setTimeout(() => {
+        newThumb.classList.remove("is-adding");
+        addingRef.current = false;
+      }, 250);
+    };
+
+    if (newThumb) {
+      addingRef.current = true;
+      gsap.set(newThumb, { autoAlpha: 0 });
+    }
+
+    if (!state) {
+      flashNew();
+      return () => {
+        window.clearTimeout(flashTimer);
+        if (newThumb) {
+          gsap.set(newThumb, { autoAlpha: 1, clearProps: "opacity,visibility" });
+          newThumb.classList.remove("is-adding");
+        }
+        addingRef.current = false;
+      };
+    }
+
+    const tween = Flip.from(state, {
+      duration: 0.35,
+      ease: "power2.inOut",
+      absolute: true,
+      scale: false,
+      simple: true,
+      onEnter: (elements) => {
+        const thumbs = gsap.utils
+          .toArray<Element>(elements)
+          .flatMap((el) => [...el.querySelectorAll(".timeline-thumb")]);
+        if (thumbs.length) gsap.set(thumbs, { autoAlpha: 0 });
+      },
+      onComplete: () => {
+        setRemoving(false);
+        flashNew();
+      },
+    });
+    return () => {
+      tween.kill();
+      window.clearTimeout(flashTimer);
+      setRemoving(false);
+      if (newThumb) {
+        gsap.set(newThumb, { autoAlpha: 1, clearProps: "opacity,visibility" });
+        newThumb.classList.remove("is-adding");
+      }
+      addingRef.current = false;
+    };
+  }, [frames]);
+
+  const captureStripThen = (action: () => void) => {
+    const strip = stripRef.current;
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    playUiSound("ok");
+    addingRef.current = true;
+    pendingAddRef.current = true;
+    if (strip && !reduceMotion) {
+      pendingFlipRef.current = Flip.getState(
+        strip.querySelectorAll(".timeline-strip-item"),
+      );
+    }
+    action();
+  };
+
+  const handleAddClick = () => {
+    if (removing || !canAddFrame || dragIndex !== null) return;
+    captureStripThen(onAdd);
+  };
+
+  const handleDuplicateClick = () => {
+    if (removing || !canAddFrame || dragIndex !== null) return;
+    captureStripThen(onDuplicateCurrent);
+  };
+
+  const handleRemoveClick = () => {
+    if (removing || frames.length <= 1 || dragIndex !== null) return;
+
+    playUiSound("delete");
+
+    const strip = stripRef.current;
+    const item = strip?.querySelector(
+      `[data-frame-index="${activeIndex}"]`,
+    ) as HTMLElement | null;
+    const thumb = item?.querySelector(".timeline-thumb") as HTMLElement | null;
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+
+    if (!strip || !item || !thumb || reduceMotion) {
+      onRemove();
+      return;
+    }
+
+    setRemoving(true);
+    thumb.classList.add("is-removing");
+
+    removeTlRef.current = gsap.timeline({
+      onComplete: () => {
+        pendingFlipRef.current = Flip.getState(
+          strip.querySelectorAll(".timeline-strip-item"),
+        );
+        onRemove();
+      },
+    });
+    removeTlRef.current.to(thumb, {
+      scale: 0,
+      duration: 0.25,
+      ease: "power2.in",
+    });
+  };
+
   const handleThumbPointerDown = (
     index: number,
     event: ReactPointerEvent<HTMLButtonElement>,
   ) => {
+    if (removing) return;
     const rect = event.currentTarget.getBoundingClientRect();
     pendingDragRef.current = {
       index,
@@ -634,23 +791,85 @@ export function Timeline({
   return (
     <footer className="timeline">
       <div className="timeline__controls">
-        <button type="button" onClick={onTogglePlay}>
-          {playing ? "Stop" : "Play"}
+        <button
+          type="button"
+          className={`timeline__btn${playing ? " is-active" : ""}`}
+          onClick={onTogglePlay}
+          aria-label={playing ? "Stop" : "Play"}
+          aria-pressed={playing}
+          title={playing ? "Stop" : "Play"}
+        >
+          {playing ? (
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="5" y="5" width="14" height="14" fill="currentColor" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <polygon points="6,5 19,12 6,19" fill="currentColor" />
+            </svg>
+          )}
         </button>
-        <button type="button" onClick={onRemove} disabled={frames.length <= 1}>
-          − Frame
+        <button
+          type="button"
+          className="timeline__btn"
+          onClick={handleRemoveClick}
+          disabled={frames.length <= 1 || removing}
+          aria-label="Remove frame"
+          title="Remove frame"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="5" y="10" width="14" height="4" fill="currentColor" />
+          </svg>
         </button>
-        <button type="button" onClick={onDuplicateCurrent} disabled={!canAddFrame}>
-          Duplicate Current
+        <button
+          type="button"
+          className="timeline__btn"
+          onClick={handleDuplicateClick}
+          disabled={!canAddFrame || removing}
+          aria-label="Duplicate current"
+          title="Duplicate current"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect
+              x="9"
+              y="4"
+              width="11"
+              height="11"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+            />
+            <rect
+              x="4"
+              y="9"
+              width="11"
+              height="11"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+            />
+          </svg>
         </button>
-        <button type="button" onClick={onAdd} disabled={!canAddFrame}>
-          + Frame
+        <button
+          type="button"
+          className="timeline__btn"
+          onClick={handleAddClick}
+          disabled={!canAddFrame || removing}
+          aria-label="Add frame"
+          title="Add frame"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              fill="currentColor"
+              d="M10 4h4v6h6v4h-6v6h-4v-6H4v-4h6V4z"
+            />
+          </svg>
         </button>
       </div>
       <div ref={stripRef} className="timeline__scroll">
         <div
           className={`timeline__strip${dragIndex !== null ? " is-dragging" : ""}`}
-          style={{ minHeight: thumbH }}
+          style={{ height: thumbH }}
         >
           {visualItems.map((item, visualIndex) => {
             if (item.kind === "insert") {
@@ -677,10 +896,11 @@ export function Timeline({
                 className="timeline-strip-item"
                 data-timeline-slot
                 data-frame-index={index}
+                style={{ width: thumbW, height: thumbH }}
               >
                 <div
                   className="timeline-thumb-cell"
-                  style={{ width: thumbW }}
+                  style={{ width: thumbW, height: thumbH }}
                 >
                   <FrameThumbnail
                     frame={frame}

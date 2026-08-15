@@ -35,7 +35,7 @@ function createId(): string {
 }
 
 export function createDefaultShapePalette(): FrameSettings["shapes"] {
-  return { sphere: true, ring: true, triangle: true, cross: true };
+  return { sphere: false, ring: false, triangle: false, cross: false };
 }
 
 export function equalColorAmounts(count: number): number[] {
@@ -85,10 +85,10 @@ export function createDefaultSettings(): FrameSettings {
     randomHeight: true,
     maxWidth: Math.max(1, Math.round(widthMax / 2)),
     randomWidth: true,
-    fillAmount: 50,
+    fillAmount: 1,
     weight: 50,
     scaleBlend: 3,
-    colors: ["#ffffff"],
+    colors: ["#1e1e1e"],
     colorAmounts: [100],
     background: "black",
   };

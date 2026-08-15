@@ -10,9 +10,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@fontsource-variable/geist-mono": "^5.3.0",
+    "@fontsource-variable/suse-mono": "^5.3.0",
+    "@gsap/react": "^2.1.2",
     "fflate": "^0.8.3",
     "gifski-wasm": "^2.2.0",
+    "gsap": "^3.15.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },

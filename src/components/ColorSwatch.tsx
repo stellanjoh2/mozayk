@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { ColorPicker } from "./ColorPicker";
-import { normalizeHex } from "../colorMath";
+import { hexToRgb, normalizeHex } from "../colorMath";
 
 type ColorSwatchProps = {
   color: string;
@@ -9,6 +9,12 @@ type ColorSwatchProps = {
   onToggleLock?: () => void;
   onRemove?: () => void;
 };
+
+function hexOnColor(hex: string): string {
+  const { r, g, b } = hexToRgb(hex);
+  const luma = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luma > 0.55 ? "#111111" : "#ffffff";
+}
 
 export function ColorSwatch({
   color,
@@ -21,6 +27,7 @@ export function ColorSwatch({
   const [open, setOpen] = useState(false);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
+  const hex = normalizeHex(color);
 
   return (
     <div className="color-swatch-wrap">
@@ -28,10 +35,12 @@ export function ColorSwatch({
         ref={anchorRef}
         type="button"
         className="color-swatch"
-        style={{ background: color }}
-        aria-label={`Color ${color}`}
+        style={{ background: hex, color: hexOnColor(hex) }}
+        aria-label={`Color ${hex}`}
         onClick={() => setOpen(true)}
-      />
+      >
+        {hex.toUpperCase()}
+      </button>
       {onToggleLock || onRemove ? (
         <div className="color-swatch__actions">
           {onToggleLock ? (
