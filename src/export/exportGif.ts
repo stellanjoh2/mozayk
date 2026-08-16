@@ -52,14 +52,29 @@ function downscaleFrame(
   return ctx.getImageData(0, 0, width, height);
 }
 
+function gifSourceSize(
+  orientation: Orientation,
+  workingSize?: readonly [number, number],
+): [number, number] {
+  const fallback = getPreviewSize(orientation);
+  if (!workingSize) return fallback;
+  const [width, height] = workingSize;
+  if (!(width > 0 && height > 0)) return fallback;
+  const [refW, refH] = fallback;
+  if (Math.abs(width / height - refW / refH) > 0.001) return fallback;
+  return [width, height];
+}
+
 export async function exportGif(
   frames: Frame[],
   orientation: Orientation,
   preset: GifExportPreset,
   delayCs: number,
+  /** Backing size of the live preview — GIF is a 1:1 downscale of this canvas. */
+  workingSize?: readonly [number, number],
 ): Promise<number> {
   const [width, height] = getGifExportSize(orientation, preset);
-  const [renderWidth, renderHeight] = getPreviewSize(orientation);
+  const [renderWidth, renderHeight] = gifSourceSize(orientation, workingSize);
   const source = document.createElement("canvas");
   const dest = document.createElement("canvas");
   const images: ImageData[] = [];

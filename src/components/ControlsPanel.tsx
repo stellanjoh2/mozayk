@@ -1,4 +1,6 @@
 import { useLayoutEffect, useRef, useState } from "react";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
 import {
   EXPORT_PRESETS,
   GIF_EXPORT_PRESETS,
@@ -55,6 +57,7 @@ import type {
   TextureOverlayBlendMode,
 } from "../types";
 import { SUPPORTED_IMAGE_ACCEPT } from "../import/supportedImageTypes";
+import { SUPPORTED_VIDEO_ACCEPT } from "../import/supportedVideoTypes";
 import { BrandLogo } from "./BrandLogo";
 import { ColorSwatch } from "./ColorSwatch";
 import { HeadlineToggle, SliderRow, ToggleRow } from "./ControlRow";
@@ -71,6 +74,8 @@ import {
   setUiSoundsVolume,
 } from "../ui/sounds";
 
+gsap.registerPlugin(useGSAP);
+
 type ControlsPanelProps = {
   frame: Frame;
   orientation: Orientation;
@@ -81,6 +86,7 @@ type ControlsPanelProps = {
   onSettingsChange: (patch: Partial<FrameSettings>, immediateLayout?: boolean) => void;
   onRandomizeLayout: () => void;
   onRandomizeAll: () => void;
+  onApplyLookToAllFrames: () => void;
   onCopySettings: () => void;
   onPasteSettings: () => void;
   onRandomizeCurrentColors: () => void;
@@ -103,6 +109,8 @@ type ControlsPanelProps = {
   onExportSvgFrame: () => void;
   onImportImage: (file: File) => void;
   importingImage?: boolean;
+  importingLabel?: string;
+  onImportVideo: (file: File) => void;
   onBackgroundImageUpload: (file: File) => void;
   onBackgroundImageClear: () => void;
   uploadingBackgroundImage?: boolean;
@@ -111,6 +119,8 @@ type ControlsPanelProps = {
   uploadingTextureOverlay?: boolean;
   onResetCanvas: () => void;
 };
+
+type PanelTab = "canvas" | "export";
 
 export function ControlsPanel({
   frame,
@@ -122,6 +132,7 @@ export function ControlsPanel({
   onSettingsChange,
   onRandomizeLayout,
   onRandomizeAll,
+  onApplyLookToAllFrames,
   onCopySettings,
   onPasteSettings,
   onRandomizeCurrentColors,
@@ -144,6 +155,8 @@ export function ControlsPanel({
   onExportSvgFrame,
   onImportImage,
   importingImage = false,
+  importingLabel,
+  onImportVideo,
   onBackgroundImageUpload,
   onBackgroundImageClear,
   uploadingBackgroundImage = false,
@@ -153,9 +166,14 @@ export function ControlsPanel({
   onResetCanvas,
 }: ControlsPanelProps) {
   const { settings } = frame;
+  const panelRef = useRef<HTMLElement>(null);
+  const tabsRef = useRef<HTMLDivElement>(null);
+  const tabLineRef = useRef<HTMLSpanElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
   const backgroundInputRef = useRef<HTMLInputElement>(null);
   const textureInputRef = useRef<HTMLInputElement>(null);
+  const [panelTab, setPanelTab] = useState<PanelTab>("canvas");
   const [soundsOn, setSoundsOn] = useState(getUiSoundsEnabled);
   const [soundVolume, setSoundVolume] = useState(getUiSoundsVolume);
   const [normalHover, setNormalHover] = useState(getNormalHoverEffects);
@@ -176,6 +194,29 @@ export function ControlsPanel({
     playUiSound("ok");
     onOrientationChange(next);
   };
+  const selectPanelTab = (tab: PanelTab) => {
+    if (tab === panelTab) return;
+    playUiSound("ok");
+    setPanelTab(tab);
+    panelRef.current?.scrollTo({ top: 0 });
+  };
+
+  useGSAP(
+    () => {
+      const line = tabLineRef.current;
+      if (!line) return;
+      const reduce = window.matchMedia(
+        "(prefers-reduced-motion: reduce)",
+      ).matches;
+      gsap.to(line, {
+        xPercent: panelTab === "export" ? 100 : 0,
+        duration: reduce ? 0 : 0.5,
+        ease: "power4.inOut",
+        overwrite: true,
+      });
+    },
+    { scope: tabsRef, dependencies: [panelTab] },
+  );
   const widthMax = maxWidthSliderMax(settings.density, orientation);
   const heightMax = maxHeightSliderMax(settings.density, orientation);
   const pendingAddColorRef = useRef(false);
@@ -216,7 +257,7 @@ export function ControlsPanel({
   };
 
   return (
-    <aside className="controls-panel">
+    <aside ref={panelRef} className="controls-panel">
       <header className="controls-panel__head">
         <BrandLogo
           className="controls-panel__logo"
@@ -227,8 +268,44 @@ export function ControlsPanel({
         />
       </header>
 
+      <div
+        ref={tabsRef}
+        className="controls-panel__tabs"
+        role="tablist"
+        aria-label="Panel"
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={panelTab === "canvas"}
+          className={
+            panelTab === "canvas"
+              ? "controls-panel__tab is-active"
+              : "controls-panel__tab"
+          }
+          onClick={() => selectPanelTab("canvas")}
+        >
+          Canvas
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={panelTab === "export"}
+          className={
+            panelTab === "export"
+              ? "controls-panel__tab is-active"
+              : "controls-panel__tab"
+          }
+          onClick={() => selectPanelTab("export")}
+        >
+          Export
+        </button>
+        <span ref={tabLineRef} className="controls-panel__tab-line" aria-hidden />
+      </div>
+
+      {panelTab === "canvas" ? (
+      <>
       <section className="panel-section">
-        <h2>Canvas</h2>
         <div className="button-row button-row--3">
           <button
             type="button"
@@ -315,14 +392,34 @@ export function ControlsPanel({
             if (file) onImportImage(file);
           }}
         />
-        <button
-          type="button"
-          className="panel-btn"
-          disabled={importingImage}
-          onClick={() => fileInputRef.current?.click()}
-        >
-          {importingImage ? "Importing…" : "Upload Image"}
-        </button>
+        <input
+          ref={videoInputRef}
+          type="file"
+          accept={SUPPORTED_VIDEO_ACCEPT}
+          className="import-file-input"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            if (file) onImportVideo(file);
+          }}
+        />
+        <div className="button-row">
+          <button
+            type="button"
+            disabled={importingImage}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            {importingImage && !importingLabel ? "Importing…" : "Upload Image"}
+          </button>
+          <button
+            type="button"
+            disabled={importingImage}
+            title="MP4 or MOV, up to 5 seconds"
+            onClick={() => videoInputRef.current?.click()}
+          >
+            {importingLabel ?? "Upload Video"}
+          </button>
+        </div>
         {frame.imageSource ? (
           <ToggleRow
             label="Show Source Image"
@@ -350,6 +447,15 @@ export function ControlsPanel({
           onClick={onRandomizeAll}
         >
           Randomize All
+        </button>
+        <button
+          type="button"
+          className="panel-btn panel-btn--ghost has-hint"
+          data-hint="Copies this style · keeps each frame's picture"
+          disabled={frameCount <= 1}
+          onClick={onApplyLookToAllFrames}
+        >
+          Apply Look to All Frames
         </button>
         <p className="control-row__label control-row__label--solo">
           <HintLabel hint="Blocks always on · toggle extras to mix in">Additional Shapes</HintLabel>
@@ -803,6 +909,73 @@ export function ControlsPanel({
       </section>
 
       <section
+        className={
+          settings.dataFields ? "panel-section" : "panel-section is-off"
+        }
+      >
+        <HeadlineToggle
+          title="Data Fields"
+          hint="Sparse monospace coordinates in cell corners · PNG only"
+          checked={Boolean(settings.dataFields)}
+          onChange={(dataFields) => onSettingsChange({ dataFields }, false)}
+        />
+        <SliderRow
+          label="Spawn rate"
+          hint="1 ≈ a few labels · 5 fills the sparse strips"
+          value={settings.dataFieldsSpawnRate ?? DATA_FIELDS_SPAWN_DEFAULT}
+          min={DATA_FIELDS_SPAWN_MIN}
+          max={DATA_FIELDS_SPAWN_MAX}
+          onChange={(dataFieldsSpawnRate) =>
+            onSettingsChange({ dataFieldsSpawnRate }, false)
+          }
+        />
+        <SliderRow
+          label="Size"
+          hint="Bitmap glyph scale · 1 ≈ 8pt"
+          value={settings.dataFieldsSize ?? DATA_FIELDS_SIZE_DEFAULT}
+          min={DATA_FIELDS_SIZE_MIN}
+          max={DATA_FIELDS_SIZE_MAX}
+          formatValue={(v) => `${v}×`}
+          onChange={(dataFieldsSize) =>
+            onSettingsChange({ dataFieldsSize }, false)
+          }
+        />
+        <div className="control-row">
+          <span className="control-row__label">Colour</span>
+          <ColorSwatch
+            color={settings.dataFieldsColor ?? DATA_FIELDS_COLOR_DEFAULT}
+            onChange={(dataFieldsColor) =>
+              onSettingsChange({ dataFieldsColor }, false)
+            }
+          />
+        </div>
+        <label className="control-row">
+          <span className="control-row__label">
+            <HintLabel hint="How labels mix with colours underneath">
+              Blend
+            </HintLabel>
+          </span>
+          <select
+            value={settings.dataFieldsBlend ?? "normal"}
+            onChange={(e) =>
+              onSettingsChange(
+                {
+                  dataFieldsBlend: e.target.value as GridBlendMode,
+                },
+                false,
+              )
+            }
+          >
+            {GRID_BLEND_MODES.map((mode) => (
+              <option key={mode} value={mode}>
+                {GRID_BLEND_LABELS[mode]}
+              </option>
+            ))}
+          </select>
+        </label>
+      </section>
+
+      <section
         className={settings.gridBlur ? "panel-section" : "panel-section is-off"}
       >
         <HeadlineToggle
@@ -1053,162 +1226,6 @@ export function ControlsPanel({
             />
           </>
         ) : null}
-        <ToggleRow
-          label="Data fields"
-          hint="Sparse monospace coordinates in cell corners · PNG only"
-          checked={Boolean(settings.dataFields)}
-          onChange={(dataFields) => onSettingsChange({ dataFields }, false)}
-        />
-        {settings.dataFields ? (
-          <>
-            <SliderRow
-              label="Spawn rate"
-              hint="How often labels appear · sparse vertical strips · at most ~1/16 of cells"
-              value={settings.dataFieldsSpawnRate ?? DATA_FIELDS_SPAWN_DEFAULT}
-              min={DATA_FIELDS_SPAWN_MIN}
-              max={DATA_FIELDS_SPAWN_MAX}
-              onChange={(dataFieldsSpawnRate) =>
-                onSettingsChange({ dataFieldsSpawnRate }, false)
-              }
-            />
-            <SliderRow
-              label="Size"
-              hint="Bitmap glyph scale · 1 ≈ 8pt"
-              value={settings.dataFieldsSize ?? DATA_FIELDS_SIZE_DEFAULT}
-              min={DATA_FIELDS_SIZE_MIN}
-              max={DATA_FIELDS_SIZE_MAX}
-              formatValue={(v) => `${v}×`}
-              onChange={(dataFieldsSize) =>
-                onSettingsChange({ dataFieldsSize }, false)
-              }
-            />
-            <div className="control-row">
-              <span className="control-row__label">Colour</span>
-              <ColorSwatch
-                color={settings.dataFieldsColor ?? DATA_FIELDS_COLOR_DEFAULT}
-                onChange={(dataFieldsColor) =>
-                  onSettingsChange({ dataFieldsColor }, false)
-                }
-              />
-            </div>
-          </>
-        ) : null}
-      </section>
-
-      <section className="panel-section">
-        <h2>Export</h2>
-
-        <div className="export-group">
-          <h3 className="export-group__title">PNG</h3>
-          <label className="control-row">
-            <span className="control-row__label">
-              <HintLabel hint="Preview matches display">
-                Resolution
-              </HintLabel>
-            </span>
-            <select
-              value={exportPreset}
-              onChange={(e) => onExportPresetChange(e.target.value as ExportPreset)}
-            >
-              {Object.entries(EXPORT_PRESETS).map(([key, preset]) => (
-                <option key={key} value={key}>
-                  {preset.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button type="button" className="panel-btn" onClick={onExportPngFrame}>
-            Export PNG Frame
-          </button>
-          <button
-            type="button"
-            className="panel-btn panel-btn--ghost has-hint"
-            data-hint="Transparent background · paused colours become holes"
-            onClick={onExportPngTransparent}
-          >
-            Export Transparent PNG
-          </button>
-          <button
-            type="button"
-            className="panel-btn panel-btn--ghost"
-            onClick={onExportPngSequence}
-          >
-            Export PNG Sequence (ZIP)
-          </button>
-        </div>
-
-        <div className="export-group">
-          <h3 className="export-group__title">GIF</h3>
-          <label className="control-row">
-            <span className="control-row__label">
-              <HintLabel hint="Recommended 480p · max 720p">
-                Resolution
-              </HintLabel>
-            </span>
-            <select
-              value={gifPreset}
-              onChange={(e) =>
-                onGifPresetChange(e.target.value as GifExportPreset)
-              }
-            >
-              {Object.entries(GIF_EXPORT_PRESETS).map(([key, preset]) => (
-                <option key={key} value={key}>
-                  {preset.label} — {preset.note}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="control-row">
-            <span className="control-row__label">
-              <HintLabel hint="How long each frame holds in the GIF and viewport · 15–24 fps recommended">
-                Frame duration
-              </HintLabel>
-            </span>
-            <select
-              value={clampGifFrameDelayCs(gifFrameDelayCs, frameCount)}
-              onChange={(e) => onGifFrameDelayChange(Number(e.target.value))}
-            >
-              {GIF_FRAME_DELAY_PRESETS.map((preset) => (
-                <option
-                  key={preset.cs}
-                  value={preset.cs}
-                  disabled={
-                    gifDurationSeconds(frameCount, preset.cs) >
-                    GIPHY_DURATION_MAX_S
-                  }
-                >
-                  {preset.label} — {preset.note}
-                </option>
-              ))}
-            </select>
-          </label>
-          <GifExportMeta frameCount={frameCount} delayCs={gifFrameDelayCs} />
-          <button type="button" className="panel-btn" onClick={onExportGif}>
-            Export GIF
-          </button>
-        </div>
-
-        <div className="export-group">
-          <h3 className="export-group__title">SVG</h3>
-          <button
-            type="button"
-            className="panel-btn has-hint"
-            data-hint="Paused colours export as transparent holes"
-            onClick={onExportSvgFrame}
-          >
-            Export SVG Frame
-          </button>
-        </div>
-
-        <div className="export-group">
-          <button
-            type="button"
-            className="panel-btn panel-btn--ghost"
-            onClick={onResetCanvas}
-          >
-            Reset Canvas
-          </button>
-        </div>
       </section>
 
       <section className="panel-section">
@@ -1260,6 +1277,122 @@ export function ControlsPanel({
           }}
         />
       </section>
+      </>
+      ) : (
+      <>
+      <section className="panel-section">
+        <h2>PNG</h2>
+        <label className="control-row">
+          <span className="control-row__label">
+            <HintLabel hint="Preview matches display">
+              Resolution
+            </HintLabel>
+          </span>
+          <select
+            value={exportPreset}
+            onChange={(e) => onExportPresetChange(e.target.value as ExportPreset)}
+          >
+            {Object.entries(EXPORT_PRESETS).map(([key, preset]) => (
+              <option key={key} value={key}>
+                {preset.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button type="button" className="panel-btn" onClick={onExportPngFrame}>
+          Export PNG Frame
+        </button>
+        <button
+          type="button"
+          className="panel-btn panel-btn--ghost has-hint"
+          data-hint="Transparent background · paused colours become holes"
+          onClick={onExportPngTransparent}
+        >
+          Export Transparent PNG
+        </button>
+        <button
+          type="button"
+          className="panel-btn panel-btn--ghost"
+          onClick={onExportPngSequence}
+        >
+          Export PNG Sequence (ZIP)
+        </button>
+      </section>
+
+      <section className="panel-section">
+        <h2>GIF</h2>
+        <label className="control-row">
+          <span className="control-row__label">
+            <HintLabel hint="Recommended 480p · max 720p">
+              Resolution
+            </HintLabel>
+          </span>
+          <select
+            value={gifPreset}
+            onChange={(e) =>
+              onGifPresetChange(e.target.value as GifExportPreset)
+            }
+          >
+            {Object.entries(GIF_EXPORT_PRESETS).map(([key, preset]) => (
+              <option key={key} value={key}>
+                {preset.label} — {preset.note}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="control-row">
+          <span className="control-row__label">
+            <HintLabel hint="How long each frame holds in the GIF and viewport · 15–24 fps recommended">
+              Frame duration
+            </HintLabel>
+          </span>
+          <select
+            value={clampGifFrameDelayCs(gifFrameDelayCs, frameCount)}
+            onChange={(e) => onGifFrameDelayChange(Number(e.target.value))}
+          >
+            {GIF_FRAME_DELAY_PRESETS.map((preset) => (
+              <option
+                key={preset.cs}
+                value={preset.cs}
+                disabled={
+                  gifDurationSeconds(frameCount, preset.cs) >
+                  GIPHY_DURATION_MAX_S
+                }
+              >
+                {preset.label} — {preset.note}
+              </option>
+            ))}
+          </select>
+        </label>
+        <GifExportMeta frameCount={frameCount} delayCs={gifFrameDelayCs} />
+        <button type="button" className="panel-btn" onClick={onExportGif}>
+          Export GIF
+        </button>
+      </section>
+
+      <section className="panel-section">
+        <h2>SVG</h2>
+        <button
+          type="button"
+          className="panel-btn has-hint"
+          data-hint="Paused colours export as transparent holes"
+          onClick={onExportSvgFrame}
+        >
+          Export SVG Frame
+        </button>
+      </section>
+
+      <section className="panel-section">
+        <button
+          type="button"
+          className="panel-btn panel-btn--ghost"
+          onClick={onResetCanvas}
+        >
+          Reset Canvas
+        </button>
+      </section>
+      </>
+      )}
 
       <footer className="panel-credit">
         <p>

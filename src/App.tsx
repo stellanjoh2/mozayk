@@ -1,16 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   GIF_FRAME_DELAY_CS_DEFAULT,
+  MAX_VIDEO_DURATION_S,
   clampGifFrameDelayCs,
+  getPreviewSize,
   gifDelayMs,
   type ExportPreset,
   type GifExportPreset,
 } from "./config";
 import { CanvasView, Timeline } from "./components/CanvasView";
+import { ConfirmDialog } from "./components/ConfirmDialog";
 import { ControlsPanel, MAX_FRAMES } from "./components/ControlsPanel";
 import { ImportErrorDialog } from "./components/ImportErrorDialog";
 import { MobileGate } from "./components/MobileGate";
 import { ResetCanvasDialog } from "./components/ResetCanvasDialog";
+import { VideoImportOverlay } from "./components/VideoImportOverlay";
 import { exportGif, gifExportToast } from "./export/exportGif";
 import { exportAllFrames, exportCurrentFrame, exportCurrentFrameTransparent } from "./export/exportPng";
 import { exportCurrentFrameSvg } from "./export/exportSvg";
@@ -23,6 +27,7 @@ import {
   addColorToSettings,
   applyDensityChange,
   applyImageImport,
+  applyLookToAllFrames,
   applyPastedSettings,
   clampSettingsForOrientation,
   colorAmountsForSettings,
@@ -40,6 +45,7 @@ import {
   randomizeFrameLayout,
   removeColorFromFrame,
   transposeFrameBlocks,
+  createImportedFrame,
 } from "./state/frameUtils";
 import {
   copySettings,
@@ -52,6 +58,11 @@ import {
 } from "./state/undoHistory";
 import { importImageFileToMosaic } from "./import/imageImport";
 import {
+  formatClipDuration,
+  importVideoFileToMosaic,
+  probeVideoFile,
+} from "./import/videoImport";
+import {
   ensureCachedSourceImage,
   readImageFileAsDataUrl,
 } from "./import/imageSource";
@@ -60,6 +71,11 @@ import {
   unsupportedImageMessage,
   validateImageFile,
 } from "./import/supportedImageTypes";
+import {
+  UnsupportedVideoTypeError,
+  unsupportedVideoMessage,
+  validateVideoFile,
+} from "./import/supportedVideoTypes";
 import type { Frame, FrameSettings, Orientation } from "./types";
 
 import "./App.css";
@@ -130,6 +146,11 @@ export default function App() {
   const [gifPreset, setGifPreset] = useState<GifExportPreset>("480p");
   const [gifFrameDelayCs, setGifFrameDelayCs] = useState(GIF_FRAME_DELAY_CS_DEFAULT);
   const [importingImage, setImportingImage] = useState(false);
+  const [importingLabel, setImportingLabel] = useState<string | null>(null);
+  const [videoWarning, setVideoWarning] = useState<{
+    file: File;
+    duration: number;
+  } | null>(null);
   const [uploadingBackgroundImage, setUploadingBackgroundImage] =
     useState(false);
   const [uploadingTextureOverlay, setUploadingTextureOverlay] = useState(false);
@@ -140,6 +161,9 @@ export default function App() {
   const [viewOriginal, setViewOriginal] = useState(false);
   const [inspecting, setInspecting] = useState(false);
   const inspectingRef = useRef(inspecting);
+  const [workingCanvasSize, setWorkingCanvasSize] = useState<
+    readonly [number, number]
+  >(() => getPreviewSize("landscape"));
   const [toast, setToast] = useState<string | null>(null);
   const layoutRegenTimer = useRef<number | null>(null);
   const appRef = useRef<HTMLDivElement>(null);
@@ -156,6 +180,15 @@ export default function App() {
   orientationRef.current = orientation;
   framesRef.current = frames;
   inspectingRef.current = inspecting;
+
+  const handleWorkingCanvasSize = useCallback(
+    (width: number, height: number) => {
+      setWorkingCanvasSize((prev) =>
+        prev[0] === width && prev[1] === height ? prev : [width, height],
+      );
+    },
+    [],
+  );
 
   const activeFrame = frames[activeIndex] ?? frames[0];
   const canvasOrientation = isPortraitMobile ? "portrait" : orientation;
@@ -498,6 +531,16 @@ export default function App() {
     setToast("Settings pasted");
   }, [pushUndoCheckpoint, updateActiveFrame]);
 
+  const handleApplyLookToAllFrames = useCallback(() => {
+    if (framesRef.current.length <= 1) return;
+    pushUndoCheckpoint();
+    const sourceIndex = activeIndexRef.current;
+    setFrames((prev) =>
+      applyLookToAllFrames(prev, sourceIndex, orientationRef.current),
+    );
+    setToast("Look applied to all frames");
+  }, [pushUndoCheckpoint]);
+
   const runExport = useCallback(async (task: () => Promise<void> | void) => {
     try {
       await task();
@@ -541,6 +584,87 @@ export default function App() {
       }
     },
     [frames, pushUndoCheckpoint, updateActiveFrame],
+  );
+
+  const importVideoFile = useCallback(
+    async (file: File) => {
+      setImportingImage(true);
+      setImportingLabel("Importing…");
+      try {
+        const base =
+          framesRef.current[activeIndexRef.current] ?? framesRef.current[0];
+        const result = await importVideoFileToMosaic(file, {
+          settings: base.settings,
+          maxFrames: MAX_FRAMES,
+          maxDurationS: MAX_VIDEO_DURATION_S,
+          onProgress: setImportingLabel,
+        });
+        const settings = clampSettingsForOrientation(
+          base.settings,
+          result.orientation,
+        );
+        const nextFrames = result.mosaics.map((mosaic) =>
+          createImportedFrame(settings, mosaic),
+        );
+        if (layoutRegenTimer.current) {
+          window.clearTimeout(layoutRegenTimer.current);
+          layoutRegenTimer.current = null;
+        }
+        pushUndoCheckpoint();
+        setOrientation(result.orientation);
+        orientationRef.current = result.orientation;
+        setFrames(nextFrames);
+        setActiveIndex(0);
+        setPlaying(false);
+        setGifFrameDelayCs(
+          clampGifFrameDelayCs(result.delayCs, nextFrames.length),
+        );
+        setToast(
+          nextFrames.length === 1
+            ? "Video imported"
+            : `Imported ${nextFrames.length} frames`,
+        );
+      } catch {
+        setImportErrorMessage(
+          "This video could not be loaded. Try an MP4 or MOV clip (H.264, up to 5 seconds).",
+        );
+      } finally {
+        setImportingImage(false);
+        setImportingLabel(null);
+      }
+    },
+    [pushUndoCheckpoint],
+  );
+
+  const handleImportVideo = useCallback(
+    async (file: File) => {
+      try {
+        validateVideoFile(file);
+      } catch (error) {
+        if (error instanceof UnsupportedVideoTypeError) {
+          setImportErrorMessage(unsupportedVideoMessage(error.label));
+          return;
+        }
+        setImportErrorMessage(
+          "This file could not be imported. Use an MP4 or MOV clip instead.",
+        );
+        return;
+      }
+
+      try {
+        const probe = await probeVideoFile(file);
+        if (probe.duration > MAX_VIDEO_DURATION_S + 0.05) {
+          setVideoWarning({ file, duration: probe.duration });
+          return;
+        }
+        await importVideoFile(file);
+      } catch {
+        setImportErrorMessage(
+          "This video could not be loaded. Try an MP4 or MOV clip (H.264, up to 5 seconds).",
+        );
+      }
+    },
+    [importVideoFile],
   );
 
   const handleBackgroundImageUpload = useCallback(
@@ -793,6 +917,9 @@ export default function App() {
       {toast && !isFullscreen && !isPortraitMobile ? (
         <div className="app-toast">{toast}</div>
       ) : null}
+      {importingLabel ? (
+        <VideoImportOverlay label={importingLabel} />
+      ) : null}
       {importErrorMessage ? (
         <ImportErrorDialog
           message={importErrorMessage}
@@ -807,6 +934,22 @@ export default function App() {
           setResetDialogOpen(false);
         }}
       />
+      <ConfirmDialog
+        open={videoWarning !== null}
+        title="Clip is too long"
+        message={
+          videoWarning
+            ? `Mozayk can import up to ${MAX_VIDEO_DURATION_S} seconds. This clip is ${formatClipDuration(videoWarning.duration)}. Import the first ${MAX_VIDEO_DURATION_S} seconds?`
+            : ""
+        }
+        confirmLabel="Import"
+        onCancel={() => setVideoWarning(null)}
+        onConfirm={() => {
+          const pending = videoWarning;
+          setVideoWarning(null);
+          if (pending) void importVideoFile(pending.file);
+        }}
+      />
       {!isFullscreen && !isPortraitMobile ? (
       <ControlsPanel
         frame={activeFrame}
@@ -818,6 +961,7 @@ export default function App() {
         onSettingsChange={handleSettingsChange}
         onRandomizeLayout={randomizeLayout}
         onRandomizeAll={randomizeAll}
+        onApplyLookToAllFrames={handleApplyLookToAllFrames}
         onCopySettings={() => void handleCopySettings()}
         onPasteSettings={() => void handlePasteSettings()}
         onRandomizeCurrentColors={() => {
@@ -921,6 +1065,7 @@ export default function App() {
               orientation,
               gifPreset,
               clampGifFrameDelayCs(gifFrameDelayCs, frames.length),
+              workingCanvasSize,
             );
             setToast(gifExportToast(bytes));
           })
@@ -937,6 +1082,8 @@ export default function App() {
         }
         onImportImage={(file) => void handleImportImage(file)}
         importingImage={importingImage}
+        importingLabel={importingLabel ?? undefined}
+        onImportVideo={(file) => void handleImportVideo(file)}
         onBackgroundImageUpload={(file) => void handleBackgroundImageUpload(file)}
         onBackgroundImageClear={handleBackgroundImageClear}
         uploadingBackgroundImage={uploadingBackgroundImage}
@@ -957,6 +1104,7 @@ export default function App() {
           fillStage={isPortraitMobile}
           onToggleFullscreen={isPortraitMobile ? undefined : toggleFullscreen}
           onToggleInspect={isPortraitMobile ? undefined : toggleInspect}
+          onWorkingCanvasSize={handleWorkingCanvasSize}
         />
         {!isFullscreen && !isPortraitMobile ? (
         <Timeline

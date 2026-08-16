@@ -2,6 +2,10 @@
 export const MAX_FRAMES = 30;
 export const MAX_COLORS = 8;
 export const MAX_UNDO = 10;
+/** Video import samples up to this many seconds (first N seconds if longer). */
+export const MAX_VIDEO_DURATION_S = 5;
+/** Target sample rate before the MAX_FRAMES cap. */
+export const VIDEO_IMPORT_FPS = 12;
 
 import type { Orientation } from "./types";
 
@@ -144,6 +148,19 @@ export function clampGifFrameDelayCs(
   const maxForGiphy = Math.floor((GIPHY_DURATION_MAX_S * 100) / Math.max(1, frameCount));
   const max = Math.min(GIF_FRAME_DELAY_CS_MAX, Math.max(GIF_FRAME_DELAY_CS_MIN, maxForGiphy));
   return Math.min(max, Math.max(GIF_FRAME_DELAY_CS_MIN, delayCs));
+}
+
+export function closestGifFrameDelayCs(delayCs: number): number {
+  let best = GIF_FRAME_DELAY_PRESETS[0].cs;
+  let bestDiff = Math.abs(best - delayCs);
+  for (const preset of GIF_FRAME_DELAY_PRESETS) {
+    const diff = Math.abs(preset.cs - delayCs);
+    if (diff < bestDiff) {
+      best = preset.cs;
+      bestDiff = diff;
+    }
+  }
+  return best;
 }
 
 /** Prefer the smallest export preset that covers the on-screen fit box at device DPR. */

@@ -24,6 +24,12 @@ const UNSUPPORTED_EXTENSIONS: Record<string, string> = {
   tif: "TIFF",
   tiff: "TIFF",
   psd: "PSD",
+  mp4: "MP4",
+  mov: "MOV",
+  m4v: "M4V",
+  webm: "WebM",
+  mkv: "MKV",
+  avi: "AVI",
   cr2: "RAW",
   nef: "RAW",
   arw: "RAW",
@@ -66,6 +72,16 @@ export function unsupportedImageMessage(label: string): string {
   if (label === "TIFF" || label === "PSD" || label === "RAW") {
     return `${label} files aren't supported. Use JPEG, PNG, WebP, GIF, or AVIF instead.`;
   }
+  if (
+    label === "MP4" ||
+    label === "MOV" ||
+    label === "M4V" ||
+    label === "WebM" ||
+    label === "MKV" ||
+    label === "AVI"
+  ) {
+    return `${label} clips use Upload Video. This button is for still images.`;
+  }
   return `${label} isn't supported. Use JPEG, PNG, WebP, GIF, or AVIF instead.`;
 }
 
@@ -86,6 +102,14 @@ export function validateImageFile(file: File): void {
 
   if (file.type === "image/tiff") {
     throw new UnsupportedImageTypeError("TIFF");
+  }
+
+  if (file.type === "video/quicktime") {
+    throw new UnsupportedImageTypeError("MOV");
+  }
+
+  if (file.type.startsWith("video/")) {
+    throw new UnsupportedImageTypeError(mimeTypeLabel(file.type));
   }
 
   if (file.type.startsWith("image/") && !SUPPORTED_MIME_TYPES.has(file.type)) {

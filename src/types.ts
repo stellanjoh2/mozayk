@@ -125,12 +125,14 @@ export type FrameSettings = {
   wireframePeelStroke?: GridOverlayStroke;
   /** Sparse monospace coordinate labels in cell corners (PNG). */
   dataFields?: boolean;
-  /** Chance a candidate cell gets a label 0–5. At most ~1/16 of cells. Defaults to 3. */
+  /** How many labels appear 0–5. 1 ≈ a few; 5 fills sparse strips (~1/16 of cells). Defaults to 1. */
   dataFieldsSpawnRate?: number;
   /** Glyph scale 1–8. Defaults to 1 (~8pt). */
   dataFieldsSize?: number;
   /** Label colour (hex). Defaults to white. */
   dataFieldsColor?: string;
+  /** Blend mode for data-field labels. Defaults to normal. */
+  dataFieldsBlend?: GridBlendMode;
   /** Reveal the imported photo in gaps between mosaic shapes. Requires imageSource. */
   showSourceImage?: boolean;
   /** Blend mode for the local texture overlay. Defaults to multiply. */

@@ -1,9 +1,14 @@
 type ImportErrorDialogProps = {
+  title?: string;
   message: string;
   onDismiss: () => void;
 };
 
-export function ImportErrorDialog({ message, onDismiss }: ImportErrorDialogProps) {
+export function ImportErrorDialog({
+  title = "Couldn't import file",
+  message,
+  onDismiss,
+}: ImportErrorDialogProps) {
   return (
     <div
       className="import-error-backdrop"
@@ -18,7 +23,7 @@ export function ImportErrorDialog({ message, onDismiss }: ImportErrorDialogProps
         onClick={(event) => event.stopPropagation()}
       >
         <h2 id="import-error-title" className="import-error-dialog__title">
-          Image type not supported
+          {title}
         </h2>
         <p id="import-error-message" className="import-error-dialog__message">
           {message}

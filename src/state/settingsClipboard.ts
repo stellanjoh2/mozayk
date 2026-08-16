@@ -277,6 +277,7 @@ function parseSettingsRecord(candidate: Record<string, unknown>): FrameSettings 
     dataFieldsColor: isValidHex(String(candidate.dataFieldsColor ?? ""))
       ? normalizeHex(String(candidate.dataFieldsColor))
       : DATA_FIELDS_COLOR_DEFAULT,
+    dataFieldsBlend: resolveGridBlendMode(candidate.dataFieldsBlend),
     showSourceImage: Boolean(candidate.showSourceImage),
     textureOverlayBlend: resolveTextureOverlayBlend(
       candidate.textureOverlayBlend,

@@ -534,6 +534,90 @@ export type ImageImportOptions = {
   colorCount?: number;
 };
 
+export type ImportPalette = {
+  colors: string[];
+  paletteRgb: ImageRgb[];
+  colorAmounts: number[];
+};
+
+const PALETTE_PIXEL_BUDGET = 8000;
+
+function sourceDataUrl(image: HTMLImageElement): string {
+  if (image.src.startsWith("data:")) return image.src;
+  return imageToDataUrl(image);
+}
+
+export function paletteFromPixels(
+  pixels: Rgb[],
+  colorCount: number = IMPORT_COLOR_COUNT,
+): ImportPalette {
+  const { centers, counts } = kMeans(pixels, colorCount);
+  const colors = centers.map((center) =>
+    rgbToHex(center.r, center.g, center.b),
+  );
+  return {
+    colors,
+    paletteRgb: centers,
+    colorAmounts: amountsFromCounts(counts),
+  };
+}
+
+export function paletteFromImages(
+  images: HTMLImageElement[],
+  orientation: Orientation,
+  settings: FrameSettings,
+  colorCount: number = IMPORT_COLOR_COUNT,
+): ImportPalette {
+  const { columns, rows } = getGridCounts(orientation, settings.density);
+  const pixels: Rgb[] = [];
+  for (const image of images) {
+    pixels.push(...sampleImageGrid(image, columns, rows).flat());
+  }
+
+  if (pixels.length <= PALETTE_PIXEL_BUDGET) {
+    return paletteFromPixels(pixels, colorCount);
+  }
+
+  const stride = Math.ceil(pixels.length / PALETTE_PIXEL_BUDGET);
+  return paletteFromPixels(
+    pixels.filter((_, index) => index % stride === 0),
+    colorCount,
+  );
+}
+
+export function importImageToMosaicWithPalette(
+  image: HTMLImageElement,
+  orientation: Orientation,
+  settings: FrameSettings,
+  palette: ImportPalette,
+  options: ImageImportOptions = {},
+): ImageImportResult {
+  const { columns, rows } = getGridCounts(orientation, settings.density);
+  const mergeRegions = options.mergeRegions ?? true;
+  const sampled = sampleImageGrid(image, columns, rows);
+  const indexedGrid = sampled.map((line) =>
+    line.map((pixel) => nearestPaletteIndex(pixel, palette.paletteRgb)),
+  );
+
+  const blocks = mergeRegions
+    ? buildBlocksFromIndexedGrid(indexedGrid, palette.colors, settings)
+    : blocksFromCells(indexedGrid, palette.colors, settings);
+
+  const dataUrl = sourceDataUrl(image);
+  cacheSourceImage(dataUrl, image);
+
+  return {
+    colors: palette.colors,
+    colorAmounts: palette.colorAmounts,
+    blocks,
+    imageSource: {
+      dataUrl,
+      palette: palette.colors,
+      paletteRgb: palette.paletteRgb,
+    },
+  };
+}
+
 export function importImageToMosaic(
   image: HTMLImageElement,
   orientation: Orientation,
@@ -542,37 +626,15 @@ export function importImageToMosaic(
 ): ImageImportResult {
   const { columns, rows } = getGridCounts(orientation, settings.density);
   const colorCount = options.colorCount ?? IMPORT_COLOR_COUNT;
-  const mergeRegions = options.mergeRegions ?? true;
-
   const sampled = sampleImageGrid(image, columns, rows);
-  const pixels = sampled.flat();
-
-  const { centers, counts } = kMeans(pixels, colorCount);
-  const palette = centers.map((center) =>
-    rgbToHex(center.r, center.g, center.b),
+  const palette = paletteFromPixels(sampled.flat(), colorCount);
+  return importImageToMosaicWithPalette(
+    image,
+    orientation,
+    settings,
+    palette,
+    options,
   );
-
-  const indexedGrid = sampled.map((line) =>
-    line.map((pixel) => nearestPaletteIndex(pixel, centers)),
-  );
-
-  const blocks = mergeRegions
-    ? buildBlocksFromIndexedGrid(indexedGrid, palette, settings)
-    : blocksFromCells(indexedGrid, palette, settings);
-
-  const dataUrl = imageToDataUrl(image);
-  cacheSourceImage(dataUrl, image);
-
-  return {
-    colors: palette,
-    colorAmounts: amountsFromCounts(counts),
-    blocks,
-    imageSource: {
-      dataUrl,
-      palette,
-      paletteRgb: centers,
-    },
-  };
 }
 
 export async function importImageFileToMosaic(

@@ -274,8 +274,61 @@ html.normal-hover .timeline-thumb:hover:not(.is-active) {
   padding: 20px 0;
 }
 
-.controls-panel__head + .panel-section {
+.controls-panel__tabs {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin: 0 -20px;
+  padding: 0 20px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.controls-panel__tab {
+  appearance: none;
+  border: none;
+  border-radius: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+  padding: 16px 0 14px;
+  cursor: pointer;
+  position: relative;
+}
+
+.controls-panel__tab:hover {
+  color: var(--text);
+}
+
+.controls-panel__tab:focus-visible {
+  outline: 1px solid var(--brand);
+  outline-offset: -1px;
+}
+
+.controls-panel__tab.is-active {
+  color: var(--brand);
+}
+
+.controls-panel__tab-line {
+  position: absolute;
+  left: 20px;
+  bottom: -1px;
+  width: calc((100% - 40px) / 2);
+  height: 2px;
+  background: var(--brand-warm);
+  pointer-events: none;
+}
+
+.controls-panel__tabs + .panel-section {
   margin-top: 0;
+  border-top: none;
 }
 
 .controls-panel__logo {
@@ -1246,6 +1299,36 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
 .phase-orb__dot.is-corner {
   visibility: hidden;
   opacity: 0;
+}
+
+.crt-glide__dot {
+  width: var(--crt-glide-dot);
+  height: var(--crt-glide-dot);
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.08;
+}
+
+.video-import-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  display: grid;
+  place-items: center;
+  pointer-events: all;
+  background: rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.crt-glide {
+  --crt-glide-dot: 28px;
+  --crt-glide-gap: 20px;
+  display: grid;
+  grid-template-columns: repeat(5, var(--crt-glide-dot));
+  grid-template-rows: repeat(5, var(--crt-glide-dot));
+  gap: var(--crt-glide-gap);
+  color: var(--brand-warm);
 }
 
 .timeline__controls {

@@ -10,8 +10,11 @@ import { transposeBlocks } from "../grid/gridMath";
 import {
   generateLayout,
   generateRandomPalette,
+  IMPORTED_LAYOUT_SETTING_KEYS,
+  LAYOUT_SETTING_KEYS,
   pickWeightedColor,
   randomizeColors,
+  rerollShapes,
 } from "../layout/generateLayout";
 import {
   carryOverBlockColors,
@@ -181,6 +184,98 @@ function restorePastedBlocks(
 
   if (!blocksFitGrid(blocks, columns, rows)) return null;
   return blocks;
+}
+
+function remapBlockColors(
+  blocks: MosaicBlock[],
+  fromColors: string[],
+  toColors: string[],
+): MosaicBlock[] {
+  if (toColors.length === 0) return blocks;
+  return blocks.map((block) => {
+    const index = fromColors.indexOf(block.color);
+    const color =
+      index >= 0
+        ? toColors[Math.min(index, toColors.length - 1)]
+        : toColors[0];
+    return color === block.color ? block : { ...block, color };
+  });
+}
+
+function settingsKeyChanged<K extends keyof FrameSettings>(
+  keys: readonly K[],
+  from: FrameSettings,
+  to: FrameSettings,
+): boolean {
+  return keys.some((key) => from[key] !== to[key]);
+}
+
+function shapeSettingsChanged(from: FrameSettings, to: FrameSettings): boolean {
+  if (from.shapeMix !== to.shapeMix) return true;
+  const fromShapes = from.shapes ?? createDefaultShapePalette();
+  const toShapes = to.shapes ?? createDefaultShapePalette();
+  return (
+    fromShapes.sphere !== toShapes.sphere ||
+    fromShapes.ring !== toShapes.ring ||
+    fromShapes.triangle !== toShapes.triangle ||
+    fromShapes.cross !== toShapes.cross
+  );
+}
+
+/** Copy style from `look` onto `frame`. Keeps this frame's picture and mosaic motion. */
+export function applyLookToFrame(
+  frame: Frame,
+  look: Frame,
+  orientation: Orientation,
+): Frame {
+  let settings = clampSettingsForOrientation(
+    structuredClone(look.settings),
+    orientation,
+  );
+  if (settings.layoutSource === "imported" && !frame.imageSource) {
+    settings = { ...settings, layoutSource: "procedural" };
+  }
+
+  const next: Frame = {
+    ...frame,
+    settings,
+    textureOverlay: look.textureOverlay
+      ? structuredClone(look.textureOverlay)
+      : undefined,
+    backgroundImage: look.backgroundImage
+      ? structuredClone(look.backgroundImage)
+      : undefined,
+  };
+
+  const needsRelayout = frame.imageSource
+    ? settingsKeyChanged(IMPORTED_LAYOUT_SETTING_KEYS, frame.settings, settings)
+    : settingsKeyChanged(LAYOUT_SETTING_KEYS, frame.settings, settings);
+
+  if (needsRelayout) {
+    return regenerateFrameLayout(next, orientation);
+  }
+
+  let blocks = remapBlockColors(
+    frame.blocks,
+    frame.settings.colors,
+    settings.colors,
+  );
+  if (shapeSettingsChanged(frame.settings, settings)) {
+    blocks = rerollShapes(blocks, settings);
+  }
+  return { ...next, blocks };
+}
+
+export function applyLookToAllFrames(
+  frames: Frame[],
+  sourceIndex: number,
+  orientation: Orientation,
+): Frame[] {
+  const look = frames[sourceIndex];
+  if (!look || frames.length <= 1) return frames;
+  return frames.map((frame, index) =>
+    index === sourceIndex ? frame : applyLookToFrame(frame, look, orientation),
+  );
 }
 
 export function applyPastedSettings(
@@ -482,4 +577,18 @@ export function applyImageImport(
     blocks: result.blocks,
     imageSource: result.imageSource,
   };
+}
+
+export function createImportedFrame(
+  settings: FrameSettings,
+  result: ImageImportResult,
+): Frame {
+  return applyImageImport(
+    {
+      id: createId(),
+      settings: structuredClone(settings),
+      blocks: [],
+    },
+    result,
+  );
 }

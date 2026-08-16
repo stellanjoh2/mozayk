@@ -68,6 +68,8 @@ type CanvasViewProps = {
   fillStage?: boolean;
   onToggleFullscreen?: () => void;
   onToggleInspect?: () => void;
+  /** Live mosaic backing store — GIF export downscales from this size. */
+  onWorkingCanvasSize?: (width: number, height: number) => void;
 };
 
 export function CanvasView({
@@ -79,6 +81,7 @@ export function CanvasView({
   fillStage = false,
   onToggleFullscreen,
   onToggleInspect,
+  onWorkingCanvasSize,
 }: CanvasViewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -96,9 +99,8 @@ export function CanvasView({
     stagePadding,
   );
   const nativeSize = getPreviewSize(orientation);
-  const [width, height] = isInspecting
-    ? nativeSize
-    : stageSize.width > 0
+  const workingSize =
+    stageSize.width > 0
       ? getPreviewSizeForDisplay(
           orientation,
           availW,
@@ -106,6 +108,7 @@ export function CanvasView({
           typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1,
         )
       : nativeSize;
+  const [width, height] = isInspecting ? nativeSize : workingSize;
   const fitScale =
     isInspecting || stageSize.width <= 0
       ? 1
@@ -116,6 +119,11 @@ export function CanvasView({
           height,
           stagePadding,
         );
+
+  const [workingWidth, workingHeight] = workingSize;
+  useEffect(() => {
+    onWorkingCanvasSize?.(workingWidth, workingHeight);
+  }, [workingWidth, workingHeight, onWorkingCanvasSize]);
 
   useEffect(() => {
     const needsSource =

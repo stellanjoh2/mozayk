@@ -1,13 +1,27 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { playUiSound } from "../ui/sounds";
+import { playUiSound, type UiSound } from "../ui/sounds";
 
-type ResetCanvasDialogProps = {
+type ConfirmDialogProps = {
   open: boolean;
+  title: string;
+  message: string;
+  confirmLabel: string;
+  cancelLabel?: string;
+  confirmSound?: UiSound;
   onConfirm: () => void;
   onCancel: () => void;
 };
 
-export function ResetCanvasDialog({ open, onConfirm, onCancel }: ResetCanvasDialogProps) {
+export function ConfirmDialog({
+  open,
+  title,
+  message,
+  confirmLabel,
+  cancelLabel = "Cancel",
+  confirmSound = "ok",
+  onConfirm,
+  onCancel,
+}: ConfirmDialogProps) {
   const titleId = useId();
   const descId = useId();
   const cancelRef = useRef<HTMLButtonElement>(null);
@@ -67,10 +81,10 @@ export function ResetCanvasDialog({ open, onConfirm, onCancel }: ResetCanvasDial
         onClick={(event) => event.stopPropagation()}
       >
         <h2 id={titleId} className="reset-canvas-dialog__title">
-          Reset canvas
+          {title}
         </h2>
         <p id={descId} className="reset-canvas-dialog__message">
-          Clear the current mosaic and restore the default canvas? This can be undone.
+          {message}
         </p>
         <div className="reset-canvas-dialog__actions">
           <button
@@ -80,15 +94,15 @@ export function ResetCanvasDialog({ open, onConfirm, onCancel }: ResetCanvasDial
             data-ui-sound="close"
             onClick={onCancel}
           >
-            Cancel
+            {cancelLabel}
           </button>
           <button
             type="button"
             className="panel-btn"
-            data-ui-sound="delete"
+            data-ui-sound={confirmSound}
             onClick={onConfirm}
           >
-            Reset
+            {confirmLabel}
           </button>
         </div>
       </div>

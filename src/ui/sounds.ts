@@ -272,7 +272,7 @@ export function initUiSounds(): void {
   for (const name of SOUND_NAMES) void loadRaw(name);
   document.addEventListener("pointerdown", onUnlockGesture, true);
   document.addEventListener("keydown", onUnlockGesture, true);
-  document.addEventListener("click", onPanelBtnClick);
+  document.addEventListener("click", onPanelBtnClick, true);
   document.addEventListener("pointerdown", onRangePointerDown, true);
   document.addEventListener("keydown", onRangeKeyDown, true);
   document.addEventListener("pointerup", onRangePointerUp);

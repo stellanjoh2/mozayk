@@ -1,5 +1,6 @@
 import { normalizeHex } from "../colorMath";
 import { getGridDimensions, gridEdge } from "../grid/gridMath";
+import { resolveGridBlendMode } from "./gridOverlayParams";
 import type { FrameSettings, GridDimensions, Orientation } from "../types";
 
 const PAD_X = 2;
@@ -20,7 +21,9 @@ export const DATA_FIELDS_SIZE_DEFAULT = 1;
 export const DATA_FIELDS_COLOR_DEFAULT = "#ffffff";
 export const DATA_FIELDS_SPAWN_MIN = 0;
 export const DATA_FIELDS_SPAWN_MAX = 5;
-export const DATA_FIELDS_SPAWN_DEFAULT = 3;
+export const DATA_FIELDS_SPAWN_DEFAULT = 1;
+/** Labels drawn when spawn rate is 1, regardless of grid density. */
+const SPAWN_AT_ONE = 3;
 
 /**
  * 5×7 bitmaps for digits / separator — filled rects, no canvas text AA.
@@ -151,6 +154,15 @@ function isCandidate(col: number, row: number): boolean {
   return row % ROW_STRIDE === phase;
 }
 
+/** Rate 1 ≈ a handful of labels; rate 5 fills every candidate. */
+function spawnCount(spawnRate: number, candidateCount: number): number {
+  if (spawnRate <= 0 || candidateCount <= 0) return 0;
+  if (spawnRate >= DATA_FIELDS_SPAWN_MAX) return candidateCount;
+  const atOne = Math.min(SPAWN_AT_ONE, candidateCount);
+  const t = (spawnRate - 1) / (DATA_FIELDS_SPAWN_MAX - 1);
+  return Math.round(atOne * (candidateCount / atOne) ** t);
+}
+
 export function drawDataFields(
   ctx: CanvasRenderingContext2D,
   orientation: Orientation,
@@ -173,6 +185,7 @@ export function drawDataFields(
     settings.dataFieldsColor,
     DATA_FIELDS_COLOR_DEFAULT,
   );
+  const blend = resolveGridBlendMode(settings.dataFieldsBlend);
 
   let grid: GridDimensions;
   try {
@@ -182,27 +195,39 @@ export function drawDataFields(
   }
 
   const { columns, rows } = grid;
+  const candidates: Array<{ col: number; row: number }> = [];
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < columns; col++) {
+      if (isCandidate(col, row)) candidates.push({ col, row });
+    }
+  }
+
+  const count = spawnCount(spawnRate, candidates.length);
+  if (count <= 0) return;
 
   const rng = mulberry32(
     hashSeed(columns, rows, width, height, spawnRate, 0xdf91),
   );
-  // Square so 1 stays sparse (~4% of candidates); 5 still fills all of them.
-  const spawnChance = (spawnRate / DATA_FIELDS_SPAWN_MAX) ** 2;
+  for (let i = 0; i < count; i++) {
+    const j = i + Math.floor(rng() * (candidates.length - i));
+    const swap = candidates[i];
+    candidates[i] = candidates[j];
+    candidates[j] = swap;
+  }
 
   ctx.save();
   ctx.fillStyle = color;
   ctx.globalAlpha = 1;
   ctx.imageSmoothingEnabled = false;
+  if (blend !== "normal") {
+    ctx.globalCompositeOperation = blend;
+  }
 
-  for (let row = 0; row < rows; row++) {
-    for (let col = 0; col < columns; col++) {
-      if (!isCandidate(col, row)) continue;
-      if (rng() >= spawnChance) continue;
-
-      const x = gridEdge(col, columns, width);
-      const y = gridEdge(row, rows, height);
-      drawLabelRtl(ctx, cellLabel(col, row), x, y, scale);
-    }
+  for (let i = 0; i < count; i++) {
+    const { col, row } = candidates[i];
+    const x = gridEdge(col, columns, width);
+    const y = gridEdge(row, rows, height);
+    drawLabelRtl(ctx, cellLabel(col, row), x, y, scale);
   }
 
   ctx.restore();
