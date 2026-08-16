@@ -807,13 +807,8 @@ export default function App() {
 
   const toggleInspect = useCallback(() => {
     if (isFullscreen) return;
-    if (orientation !== "portrait") {
-      handleOrientationChange("portrait");
-      setInspecting(true);
-      return;
-    }
     setInspecting((value) => !value);
-  }, [handleOrientationChange, isFullscreen, orientation]);
+  }, [isFullscreen]);
 
   const toggleFullscreen = useCallback(() => {
     const app = appRef.current;
@@ -830,10 +825,6 @@ export default function App() {
     if (!app) return;
     void requestAppFullscreen(app).catch(() => {});
   }, [isFullscreen]);
-
-  useEffect(() => {
-    if (orientation !== "portrait") setInspecting(false);
-  }, [orientation]);
 
   useEffect(() => {
     if (isFullscreen) setInspecting(false);
@@ -1027,8 +1018,6 @@ export default function App() {
           });
         }}
         onOrientationChange={handleOrientationChange}
-        inspecting={inspecting}
-        onToggleInspect={toggleInspect}
         onExportPresetChange={setExportPreset}
         onExportPngFrame={() =>
           void runExport(() =>

@@ -97,8 +97,6 @@ type ControlsPanelProps = {
   onToggleColorLock: (index: number) => void;
   onColorAmountChange: (index: number, amount: number) => void;
   onOrientationChange: (orientation: Orientation) => void;
-  inspecting: boolean;
-  onToggleInspect: () => void;
   onExportPresetChange: (preset: ExportPreset) => void;
   onExportPngFrame: () => void;
   onExportPngTransparent: () => void;
@@ -120,7 +118,7 @@ type ControlsPanelProps = {
   onResetCanvas: () => void;
 };
 
-type PanelTab = "canvas" | "export";
+type PanelTab = "create" | "export";
 
 export function ControlsPanel({
   frame,
@@ -143,8 +141,6 @@ export function ControlsPanel({
   onToggleColorLock,
   onColorAmountChange,
   onOrientationChange,
-  inspecting,
-  onToggleInspect,
   onExportPresetChange,
   onExportPngFrame,
   onExportPngTransparent,
@@ -173,7 +169,7 @@ export function ControlsPanel({
   const videoInputRef = useRef<HTMLInputElement>(null);
   const backgroundInputRef = useRef<HTMLInputElement>(null);
   const textureInputRef = useRef<HTMLInputElement>(null);
-  const [panelTab, setPanelTab] = useState<PanelTab>("canvas");
+  const [panelTab, setPanelTab] = useState<PanelTab>("create");
   const [soundsOn, setSoundsOn] = useState(getUiSoundsEnabled);
   const [soundVolume, setSoundVolume] = useState(getUiSoundsVolume);
   const [normalHover, setNormalHover] = useState(getNormalHoverEffects);
@@ -277,15 +273,15 @@ export function ControlsPanel({
         <button
           type="button"
           role="tab"
-          aria-selected={panelTab === "canvas"}
+          aria-selected={panelTab === "create"}
           className={
-            panelTab === "canvas"
+            panelTab === "create"
               ? "controls-panel__tab is-active"
               : "controls-panel__tab"
           }
-          onClick={() => selectPanelTab("canvas")}
+          onClick={() => selectPanelTab("create")}
         >
-          Canvas
+          Create
         </button>
         <button
           type="button"
@@ -303,10 +299,11 @@ export function ControlsPanel({
         <span ref={tabLineRef} className="controls-panel__tab-line" aria-hidden />
       </div>
 
-      {panelTab === "canvas" ? (
+      {panelTab === "create" ? (
       <>
       <section className="panel-section">
-        <div className="button-row button-row--3">
+        <h2>Canvas</h2>
+        <div className="button-row button-row--3 button-row--choice">
           <button
             type="button"
             className={orientation === "landscape" ? "is-active" : ""}
@@ -321,43 +318,13 @@ export function ControlsPanel({
           >
             1:1
           </button>
-          <div className="orientation-inspect">
-            <button
-              type="button"
-              className={orientation === "portrait" ? "is-active" : ""}
-              onClick={() => selectOrientation("portrait")}
-            >
-              9:16
-            </button>
-            <button
-              type="button"
-              className={["orientation-inspect__loupe", inspecting ? "is-active" : ""]
-                .filter(Boolean)
-                .join(" ")}
-              onClick={onToggleInspect}
-              aria-label="Inspect 9:16 at 100%"
-              aria-pressed={inspecting}
-              title="Inspect at 100% (1080×1920)"
-            >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <circle
-                  cx="10.5"
-                  cy="10.5"
-                  r="6.25"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                />
-                <path
-                  d="M15.2 15.2 21 21"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </button>
-          </div>
+          <button
+            type="button"
+            className={orientation === "portrait" ? "is-active" : ""}
+            onClick={() => selectOrientation("portrait")}
+          >
+            9:16
+          </button>
         </div>
         <label className="control-row">
           <span className="control-row__label">Grid Density</span>

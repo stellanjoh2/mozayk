@@ -292,15 +292,36 @@ export function CanvasView({
       onToggleInspect ||
       (viewOriginal && frame.imageSource) ? (
         <div className="canvas-stage-controls">
-          {onToggleInspect && isInspecting ? (
+          {onToggleInspect && !isFullscreen ? (
             <button
               type="button"
-              className="canvas-fullscreen-toggle"
+              className="canvas-fullscreen-toggle canvas-inspect-toggle"
               onClick={onToggleInspect}
-              aria-label="Exit 100% inspect"
-              aria-pressed
+              aria-label={
+                isInspecting
+                  ? "Exit 100% inspect"
+                  : `Inspect at 100% (${nativeSize[0]}×${nativeSize[1]})`
+              }
+              aria-pressed={isInspecting}
+              title={`Inspect at 100% (${nativeSize[0]}×${nativeSize[1]})`}
             >
-              100%
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle
+                  cx="10.5"
+                  cy="10.5"
+                  r="6.25"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                />
+                <path
+                  d="M15.2 15.2 21 21"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
             </button>
           ) : null}
           {onToggleFullscreen ? (

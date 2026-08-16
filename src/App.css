@@ -202,6 +202,18 @@ body {
   background: var(--accent-dim);
 }
 
+.canvas-inspect-toggle {
+  display: grid;
+  place-items: center;
+  padding: 6px 8px;
+}
+
+.canvas-inspect-toggle svg {
+  display: block;
+  width: 14px;
+  height: 14px;
+}
+
 .canvas-view-original-badge {
   margin-right: 8px;
   padding: 2px 6px;
@@ -254,6 +266,10 @@ html.normal-hover .color-swatch__remove:hover::before {
   opacity: 1;
 }
 
+html.normal-hover .controls-panel__tab:hover:not(.is-active) {
+  animation: none;
+}
+
 html.normal-hover .timeline-thumb:hover:not(.is-active) {
   animation: none;
   border-color: #ffffff;
@@ -303,8 +319,15 @@ html.normal-hover .timeline-thumb:hover:not(.is-active) {
   position: relative;
 }
 
-.controls-panel__tab:hover {
+.controls-panel__tab:hover:not(.is-active) {
   color: var(--text);
+  animation: hover-plate-blink 0.125s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .controls-panel__tab:hover:not(.is-active) {
+    animation: none;
+  }
 }
 
 .controls-panel__tab:focus-visible {
@@ -313,7 +336,8 @@ html.normal-hover .timeline-thumb:hover:not(.is-active) {
 }
 
 .controls-panel__tab.is-active {
-  color: var(--brand);
+  color: var(--brand-warm);
+  cursor: default;
 }
 
 .controls-panel__tab-line {
@@ -492,6 +516,7 @@ html.normal-hover .timeline-thumb:hover:not(.is-active) {
 }
 
 .panel-btn:active:not(:disabled),
+.button-row button:active:not(:disabled):not(.is-active),
 .timeline__controls button:active:not(:disabled):not(.is-active) {
   background: var(--brand);
   color: var(--on-brand);
@@ -501,6 +526,7 @@ html.normal-hover .timeline-thumb:hover:not(.is-active) {
 }
 
 .panel-btn:active:not(:disabled)::before,
+.button-row button:active:not(:disabled):not(.is-active)::before,
 .timeline__controls button:active:not(:disabled):not(.is-active)::before {
   animation: none;
   opacity: 0;
@@ -706,6 +732,19 @@ html.normal-hover .timeline-thumb:hover:not(.is-active) {
   grid-template-columns: repeat(3, 1fr);
 }
 
+.button-row--choice button.is-active {
+  cursor: default;
+}
+
+.button-row--choice button.is-active:hover::before {
+  animation: none;
+  opacity: 0;
+}
+
+html.normal-hover .button-row--choice button.is-active:hover::before {
+  opacity: 0;
+}
+
 .button-row--4 {
   grid-template-columns: repeat(4, 1fr);
 }
@@ -736,64 +775,6 @@ html.normal-hover .timeline-thumb:hover:not(.is-active) {
   transition:
     background 0s,
     color 0s;
-}
-
-.orientation-inspect {
-  position: relative;
-  min-width: 0;
-}
-
-.orientation-inspect > button:first-child {
-  width: 100%;
-}
-
-.button-row .orientation-inspect__loupe {
-  --hover-plate-on: var(--accent);
-  --hover-plate-off: rgba(15, 15, 15, 0.88);
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  z-index: 1;
-  display: grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  min-height: 0;
-  padding: 0;
-  opacity: 0;
-  pointer-events: none;
-  background: var(--hover-plate-off);
-  color: var(--text);
-  border: 1px solid var(--panel-border);
-  cursor: zoom-in;
-  transition:
-    opacity 0.15s var(--ui-ease),
-    background 0.1s linear,
-    color 0.1s linear;
-}
-
-.orientation-inspect:hover .orientation-inspect__loupe,
-.orientation-inspect:focus-within .orientation-inspect__loupe,
-.button-row .orientation-inspect__loupe.is-active {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.button-row .orientation-inspect__loupe:hover {
-  color: var(--on-brand);
-}
-
-.button-row .orientation-inspect__loupe.is-active {
-  --hover-plate-on: var(--accent);
-  --hover-plate-off: var(--on-brand);
-  background: var(--on-brand);
-  color: var(--accent);
-}
-
-.orientation-inspect__loupe svg {
-  display: block;
-  width: 14px;
-  height: 14px;
 }
 
 .control-row {
