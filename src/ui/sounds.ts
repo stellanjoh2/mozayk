@@ -4,6 +4,7 @@ const FILES = {
   close: "sounds/uisound-close.wav",
   push: "sounds/uisound-ok2.wav",
   slider: "sounds/uisound-slider4.wav",
+  sliderLeft: "sounds/uisound-slider4.wav",
 } as const;
 
 export type UiSound = keyof typeof FILES;
@@ -13,6 +14,11 @@ const SOUND_NAMES = Object.keys(FILES) as UiSound[];
 /** Linear amplitude gain on top of master volume. -5 dB ≈ 0.562 */
 const SOUND_GAIN: Partial<Record<UiSound, number>> = {
   delete: 10 ** (-5 / 20),
+};
+
+/** Left-drag reuses the slider clip a half octave down. */
+const PLAYBACK_RATE: Partial<Record<UiSound, number>> = {
+  sliderLeft: 2 ** -0.5,
 };
 
 const STORAGE_KEY = "mozayk-ui-sounds";
@@ -134,14 +140,16 @@ function startSound(name: UiSound, buf: AudioBuffer): void {
     if (!prefs.enabled || prefs.volume <= 0 || ctx.state !== "running") return;
     const source = ctx.createBufferSource();
     source.buffer = buf;
+    const rate = PLAYBACK_RATE[name] ?? 1;
+    source.playbackRate.value = rate;
     const gain = ctx.createGain();
     const amp = SOUND_GAIN[name] ?? 1;
     gain.gain.value = Math.min(1, (prefs.volume / 100) * amp);
     source.connect(gain);
     gain.connect(ctx.destination);
     source.start(0);
-    if (name === "slider") {
-      sliderUntil = performance.now() + Math.max(buf.duration * 1000, 30);
+    if (isSliderSound(name)) {
+      sliderUntil = performance.now() + Math.max((buf.duration / rate) * 1000, 30);
     }
   };
   if (ctx.state === "running") {
@@ -172,9 +180,13 @@ export function setUiSoundsVolume(volume: number): void {
   savePrefs();
 }
 
+function isSliderSound(name: UiSound): boolean {
+  return name === "slider" || name === "sliderLeft";
+}
+
 export function playUiSound(name: UiSound): void {
   if (!prefs.enabled || prefs.volume <= 0) return;
-  if (name === "slider") {
+  if (isSliderSound(name)) {
     sliderUntil = Math.max(sliderUntil, performance.now() + 50);
   }
   const ctx = unlockAudio();
@@ -212,11 +224,30 @@ function isRangeInput(el: EventTarget | null): el is HTMLInputElement {
 }
 
 let rangeDragging = false;
+const lastRangeValues = new WeakMap<HTMLInputElement, number>();
+
+function snapshotRangeValue(el: HTMLInputElement): void {
+  lastRangeValues.set(el, Number(el.value));
+}
+
+function playRangeSliderSound(el: HTMLInputElement): void {
+  const value = Number(el.value);
+  const prev = lastRangeValues.get(el);
+  lastRangeValues.set(el, value);
+  if (prev === undefined || value === prev) return;
+  if (rangeDragging && performance.now() < sliderUntil) return;
+  playUiSound(value < prev ? "sliderLeft" : "slider");
+}
 
 function onRangePointerDown(event: Event): void {
   if (!isRangeInput(event.target)) return;
   rangeDragging = true;
-  playUiSound("slider");
+  snapshotRangeValue(event.target);
+}
+
+function onRangeKeyDown(event: Event): void {
+  if (!isRangeInput(event.target)) return;
+  snapshotRangeValue(event.target);
 }
 
 function onRangePointerUp(): void {
@@ -225,8 +256,7 @@ function onRangePointerUp(): void {
 
 function onRangeInput(event: Event): void {
   if (!isRangeInput(event.target)) return;
-  if (rangeDragging && performance.now() < sliderUntil) return;
-  playUiSound("slider");
+  playRangeSliderSound(event.target);
 }
 
 function onUnlockGesture(): void {
@@ -243,7 +273,8 @@ export function initUiSounds(): void {
   document.addEventListener("pointerdown", onUnlockGesture, true);
   document.addEventListener("keydown", onUnlockGesture, true);
   document.addEventListener("click", onPanelBtnClick);
-  document.addEventListener("pointerdown", onRangePointerDown);
+  document.addEventListener("pointerdown", onRangePointerDown, true);
+  document.addEventListener("keydown", onRangeKeyDown, true);
   document.addEventListener("pointerup", onRangePointerUp);
   document.addEventListener("pointercancel", onRangePointerUp);
   document.addEventListener("input", onRangeInput);

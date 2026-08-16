@@ -23,6 +23,7 @@ export function exportCurrentFrameSvg(
       frame.settings.showSourceImage && frame.imageSource
         ? frame.imageSource.dataUrl
         : undefined,
+    backgroundDataUrl: frame.backgroundImage?.dataUrl,
   });
 
   const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });

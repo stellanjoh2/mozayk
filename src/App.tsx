@@ -111,6 +111,8 @@ export default function App() {
   const [gifPreset, setGifPreset] = useState<GifExportPreset>("480p");
   const [gifFrameDelayCs, setGifFrameDelayCs] = useState(GIF_FRAME_DELAY_CS_DEFAULT);
   const [importingImage, setImportingImage] = useState(false);
+  const [uploadingBackgroundImage, setUploadingBackgroundImage] =
+    useState(false);
   const [uploadingTextureOverlay, setUploadingTextureOverlay] = useState(false);
   const [importErrorMessage, setImportErrorMessage] = useState<string | null>(
     null,
@@ -517,6 +519,56 @@ export default function App() {
     [frames, pushUndoCheckpoint, updateActiveFrame],
   );
 
+  const handleBackgroundImageUpload = useCallback(
+    async (file: File) => {
+      try {
+        validateImageFile(file);
+      } catch (error) {
+        if (error instanceof UnsupportedImageTypeError) {
+          setImportErrorMessage(unsupportedImageMessage(error.label));
+          return;
+        }
+        setImportErrorMessage(
+          "This file could not be imported. Use JPEG, PNG, WebP, GIF, or AVIF instead.",
+        );
+        return;
+      }
+
+      setUploadingBackgroundImage(true);
+      try {
+        const dataUrl = await readImageFileAsDataUrl(file);
+        await ensureCachedSourceImage(dataUrl);
+        pushUndoCheckpoint();
+        updateActiveFrame((current) => ({
+          ...current,
+          backgroundImage: { dataUrl, name: file.name },
+          settings: {
+            ...current.settings,
+            transparentBackground: false,
+            showSourceImage: false,
+          },
+        }));
+        setToast("Background uploaded");
+      } catch {
+        setImportErrorMessage(
+          "This image could not be loaded. Try JPEG, PNG, WebP, GIF, or AVIF instead.",
+        );
+      } finally {
+        setUploadingBackgroundImage(false);
+      }
+    },
+    [pushUndoCheckpoint, updateActiveFrame],
+  );
+
+  const handleBackgroundImageClear = useCallback(() => {
+    pushUndoCheckpoint();
+    updateActiveFrame((current) => ({
+      ...current,
+      backgroundImage: undefined,
+    }));
+    setToast("Background cleared");
+  }, [pushUndoCheckpoint, updateActiveFrame]);
+
   const handleTextureOverlayUpload = useCallback(
     async (file: File) => {
       try {
@@ -856,6 +908,9 @@ export default function App() {
         }
         onImportImage={(file) => void handleImportImage(file)}
         importingImage={importingImage}
+        onBackgroundImageUpload={(file) => void handleBackgroundImageUpload(file)}
+        onBackgroundImageClear={handleBackgroundImageClear}
+        uploadingBackgroundImage={uploadingBackgroundImage}
         onTextureOverlayUpload={(file) => void handleTextureOverlayUpload(file)}
         onTextureOverlayClear={handleTextureOverlayClear}
         uploadingTextureOverlay={uploadingTextureOverlay}

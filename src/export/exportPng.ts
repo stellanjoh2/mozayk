@@ -17,6 +17,17 @@ export async function loadSourceImageForFrame(
   }
 }
 
+export async function loadBackgroundImageForFrame(
+  frame: Frame,
+): Promise<HTMLImageElement | null> {
+  if (!frame.backgroundImage) return null;
+  try {
+    return await ensureCachedSourceImage(frame.backgroundImage.dataUrl);
+  } catch {
+    return null;
+  }
+}
+
 export async function loadTextureOverlayForFrame(
   frame: Frame,
 ): Promise<HTMLImageElement | null> {
@@ -35,8 +46,9 @@ export async function exportCurrentFrame(
   frameIndex: number,
 ): Promise<void> {
   const [width, height] = getExportSize(orientation, preset);
-  const [sourceImage, textureOverlayImage] = await Promise.all([
+  const [sourceImage, backgroundImage, textureOverlayImage] = await Promise.all([
     loadSourceImageForFrame(frame),
+    loadBackgroundImageForFrame(frame),
     loadTextureOverlayForFrame(frame),
   ]);
   const blob = await renderMosaicToBlob({
@@ -46,6 +58,7 @@ export async function exportCurrentFrame(
     width,
     height,
     sourceImage,
+    backgroundImage,
     textureOverlayImage,
   });
   if (!blob) throw new Error("PNG export failed");
@@ -59,8 +72,9 @@ export async function exportCurrentFrameTransparent(
   frameIndex: number,
 ): Promise<void> {
   const [width, height] = getExportSize(orientation, preset);
-  const [sourceImage, textureOverlayImage] = await Promise.all([
+  const [sourceImage, backgroundImage, textureOverlayImage] = await Promise.all([
     loadSourceImageForFrame(frame),
+    loadBackgroundImageForFrame(frame),
     loadTextureOverlayForFrame(frame),
   ]);
   const blob = await renderMosaicToBlob({
@@ -70,6 +84,7 @@ export async function exportCurrentFrameTransparent(
     width,
     height,
     sourceImage,
+    backgroundImage,
     textureOverlayImage,
     omitColors: lockedColorsSet(frame.settings),
     transparentBackground: true,
@@ -87,8 +102,9 @@ export async function exportAllFrames(
   const files: Record<string, Uint8Array> = {};
 
   for (let i = 0; i < frames.length; i++) {
-    const [sourceImage, textureOverlayImage] = await Promise.all([
+    const [sourceImage, backgroundImage, textureOverlayImage] = await Promise.all([
       loadSourceImageForFrame(frames[i]),
+      loadBackgroundImageForFrame(frames[i]),
       loadTextureOverlayForFrame(frames[i]),
     ]);
     const blob = await renderMosaicToBlob({
@@ -98,6 +114,7 @@ export async function exportAllFrames(
       width,
       height,
       sourceImage,
+      backgroundImage,
       textureOverlayImage,
     });
     if (!blob) throw new Error("PNG export failed");

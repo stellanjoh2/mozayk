@@ -148,6 +148,67 @@ function run(): void {
   );
   assert(gap !== null, "shape gap settings should parse");
   assert(gap.settings.shapeGap === 40, "shape gap kept");
+
+  const bg = parseSettingsClipboard(
+    JSON.stringify({
+      density: 5,
+      colors: ["#ffffff"],
+      background: "#ff5300",
+      transparentBackground: true,
+    }),
+  );
+  assert(bg !== null, "background settings should parse");
+  assert(bg.settings.background === "#ff5300", "background hex kept");
+  assert(bg.settings.transparentBackground === true, "transparent toggle kept");
+
+  const legacyBlack = parseSettingsClipboard(
+    JSON.stringify({
+      density: 5,
+      colors: ["#ffffff"],
+      background: "black",
+    }),
+  );
+  assert(legacyBlack !== null, "legacy black background should parse");
+  assert(legacyBlack.settings.background === "#000000", "legacy black becomes hex");
+  assert(
+    legacyBlack.settings.transparentBackground === false,
+    "legacy black is not transparent",
+  );
+
+  const legacyTransparent = parseSettingsClipboard(
+    JSON.stringify({
+      density: 5,
+      colors: ["#ffffff"],
+      background: "transparent",
+    }),
+  );
+  assert(legacyTransparent !== null, "legacy transparent background should parse");
+  assert(
+    legacyTransparent.settings.background === "#000000",
+    "legacy transparent keeps a black fill colour",
+  );
+  assert(
+    legacyTransparent.settings.transparentBackground === true,
+    "legacy transparent becomes the toggle",
+  );
+
+  const roundTrip = parseSettingsClipboard(
+    serializeSettingsClipboard(
+      {
+        ...createDefaultSettings(),
+        background: "#112233",
+        transparentBackground: true,
+      },
+      sampleBlocks(),
+      "landscape",
+    ),
+  );
+  assert(roundTrip !== null, "background round-trip should parse");
+  assert(roundTrip.settings.background === "#112233", "hex survives round-trip");
+  assert(
+    roundTrip.settings.transparentBackground === true,
+    "transparent toggle survives round-trip",
+  );
 }
 
 run();

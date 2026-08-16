@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
+import { playUiSound } from "../ui/sounds";
 
 type ResetCanvasDialogProps = {
   open: boolean;
@@ -34,6 +35,7 @@ export function ResetCanvasDialog({ open, onConfirm, onCancel }: ResetCanvasDial
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
+        playUiSound("close");
         onCancel();
       }
     };
@@ -47,7 +49,10 @@ export function ResetCanvasDialog({ open, onConfirm, onCancel }: ResetCanvasDial
     <div
       className={["reset-canvas-backdrop", entered ? "is-open" : ""].filter(Boolean).join(" ")}
       role="presentation"
-      onClick={onCancel}
+      onClick={() => {
+        playUiSound("close");
+        onCancel();
+      }}
       onTransitionEnd={(event) => {
         if (event.target !== event.currentTarget) return;
         if (!open) setMounted(false);
@@ -72,11 +77,17 @@ export function ResetCanvasDialog({ open, onConfirm, onCancel }: ResetCanvasDial
             ref={cancelRef}
             type="button"
             className="panel-btn panel-btn--ghost"
+            data-ui-sound="close"
             onClick={onCancel}
           >
             Cancel
           </button>
-          <button type="button" className="panel-btn" onClick={onConfirm}>
+          <button
+            type="button"
+            className="panel-btn"
+            data-ui-sound="ok"
+            onClick={onConfirm}
+          >
             Reset
           </button>
         </div>

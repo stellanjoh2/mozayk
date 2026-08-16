@@ -15,7 +15,6 @@ export type TextureOverlayBlendMode =
   | "screen"
   | "difference";
 export type ShapeType = "block" | "sphere" | "ring" | "triangle" | "cross";
-export type BackgroundMode = "black" | "transparent";
 export type LayoutSource = "procedural" | "imported";
 
 export type ShapePalette = {
@@ -62,7 +61,10 @@ export type FrameSettings = {
   colorAmounts: number[];
   /** When true, that slot keeps its hex during New Random Colours. */
   colorsLocked?: boolean[];
-  background: BackgroundMode;
+  /** Solid fill colour (hex). Ignored while transparentBackground is on. */
+  background: string;
+  /** Checkerboard preview · no fill in SVG / transparent export. */
+  transparentBackground?: boolean;
   /** Stroked grid over mosaic shapes. */
   gridOverlay?: boolean;
   /** Overlay grid density — independent of layout density. Defaults to 1. */
@@ -145,6 +147,11 @@ export type TextureOverlayData = {
   dataUrl: string;
 };
 
+export type BackgroundImageData = {
+  dataUrl: string;
+  name: string;
+};
+
 export type Frame = {
   id: string;
   settings: FrameSettings;
@@ -153,6 +160,8 @@ export type Frame = {
   imageSource?: ImageSourceData;
   /** Local texture overlay image (dirt / paper / etc.). Not pasted with settings. */
   textureOverlay?: TextureOverlayData;
+  /** Local background photo. Not pasted with settings. */
+  backgroundImage?: BackgroundImageData;
 };
 
 export type GridDimensions = {

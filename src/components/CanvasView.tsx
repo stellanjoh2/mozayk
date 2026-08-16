@@ -82,6 +82,8 @@ export function CanvasView({
   const stageRef = useRef<HTMLDivElement>(null);
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
   const [sourceImage, setSourceImage] = useState<HTMLImageElement | null>(null);
+  const [backgroundImage, setBackgroundImage] =
+    useState<HTMLImageElement | null>(null);
   const [textureOverlayImage, setTextureOverlayImage] =
     useState<HTMLImageElement | null>(null);
 
@@ -141,6 +143,26 @@ export function CanvasView({
   ]);
 
   useEffect(() => {
+    if (!frame.backgroundImage) {
+      setBackgroundImage(null);
+      return;
+    }
+
+    let cancelled = false;
+    void ensureCachedSourceImage(frame.backgroundImage.dataUrl)
+      .then((image) => {
+        if (!cancelled) setBackgroundImage(image);
+      })
+      .catch(() => {
+        if (!cancelled) setBackgroundImage(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [frame.backgroundImage?.dataUrl]);
+
+  useEffect(() => {
     if (!frame.textureOverlay) {
       setTextureOverlayImage(null);
       return;
@@ -179,6 +201,7 @@ export function CanvasView({
         width,
         height,
         sourceImage: frame.settings.showSourceImage ? sourceImage : null,
+        backgroundImage,
         textureOverlayImage,
       });
     } catch (error) {
@@ -187,11 +210,13 @@ export function CanvasView({
   }, [
     viewOriginal,
     sourceImage,
+    backgroundImage,
     textureOverlayImage,
     frame.settings,
     frame.blocks,
     frame.id,
     frame.imageSource,
+    frame.backgroundImage,
     frame.textureOverlay,
     orientation,
     width,
@@ -306,7 +331,12 @@ function FrameThumbnail({
   const [thumbW, thumbH] = getThumbnailSize(orientation);
   const [renderW, renderH] = getThumbnailRenderSize(orientation);
   const overlayDataUrl = frame.textureOverlay?.dataUrl;
+  const backgroundDataUrl = frame.backgroundImage?.dataUrl;
   const [sourceImage, setSourceImage] = useState<HTMLImageElement | null>(null);
+  const [backgroundImage, setBackgroundImage] =
+    useState<HTMLImageElement | null>(() =>
+      backgroundDataUrl ? getCachedSourceImage(backgroundDataUrl) ?? null : null,
+    );
   const [textureOverlayImage, setTextureOverlayImage] =
     useState<HTMLImageElement | null>(() =>
       overlayDataUrl ? getCachedSourceImage(overlayDataUrl) ?? null : null,
@@ -331,6 +361,32 @@ function FrameThumbnail({
       cancelled = true;
     };
   }, [frame.settings.showSourceImage, frame.imageSource?.dataUrl]);
+
+  useEffect(() => {
+    if (!backgroundDataUrl) {
+      setBackgroundImage(null);
+      return;
+    }
+
+    const cached = getCachedSourceImage(backgroundDataUrl);
+    if (cached) {
+      setBackgroundImage(cached);
+      return;
+    }
+
+    let cancelled = false;
+    void ensureCachedSourceImage(backgroundDataUrl)
+      .then((image) => {
+        if (!cancelled) setBackgroundImage(image);
+      })
+      .catch(() => {
+        if (!cancelled) setBackgroundImage(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [backgroundDataUrl]);
 
   useEffect(() => {
     if (!overlayDataUrl) {
@@ -369,6 +425,7 @@ function FrameThumbnail({
         width: renderW,
         height: renderH,
         sourceImage: frame.settings.showSourceImage ? sourceImage : null,
+        backgroundImage,
         textureOverlayImage,
       });
     } catch (error) {
@@ -379,11 +436,13 @@ function FrameThumbnail({
     frame.blocks,
     frame.id,
     frame.imageSource,
+    frame.backgroundImage,
     frame.textureOverlay,
     orientation,
     renderW,
     renderH,
     sourceImage,
+    backgroundImage,
     textureOverlayImage,
   ]);
 

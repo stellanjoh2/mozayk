@@ -103,6 +103,9 @@ type ControlsPanelProps = {
   onExportSvgFrame: () => void;
   onImportImage: (file: File) => void;
   importingImage?: boolean;
+  onBackgroundImageUpload: (file: File) => void;
+  onBackgroundImageClear: () => void;
+  uploadingBackgroundImage?: boolean;
   onTextureOverlayUpload: (file: File) => void;
   onTextureOverlayClear: () => void;
   uploadingTextureOverlay?: boolean;
@@ -141,6 +144,9 @@ export function ControlsPanel({
   onExportSvgFrame,
   onImportImage,
   importingImage = false,
+  onBackgroundImageUpload,
+  onBackgroundImageClear,
+  uploadingBackgroundImage = false,
   onTextureOverlayUpload,
   onTextureOverlayClear,
   uploadingTextureOverlay = false,
@@ -148,6 +154,7 @@ export function ControlsPanel({
 }: ControlsPanelProps) {
   const { settings } = frame;
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const backgroundInputRef = useRef<HTMLInputElement>(null);
   const textureInputRef = useRef<HTMLInputElement>(null);
   const [soundsOn, setSoundsOn] = useState(getUiSoundsEnabled);
   const [soundVolume, setSoundVolume] = useState(getUiSoundsVolume);
@@ -211,7 +218,13 @@ export function ControlsPanel({
   return (
     <aside className="controls-panel">
       <header className="controls-panel__head">
-        <BrandLogo className="controls-panel__logo" onClick={onResetCanvas} />
+        <BrandLogo
+          className="controls-panel__logo"
+          onClick={() => {
+            playUiSound("ok");
+            onResetCanvas();
+          }}
+        />
       </header>
 
       <section className="panel-section">
@@ -513,23 +526,65 @@ export function ControlsPanel({
         <button type="button" className="panel-btn panel-btn--ghost" onClick={onRandomizeNewColors}>
           New Random Colours
         </button>
-        <label className="control-row">
-          <span className="control-row__label">Background</span>
-          <select
-            value={settings.background}
-            onChange={(e) =>
-              onSettingsChange(
-                {
-                  background: e.target.value as FrameSettings["background"],
-                },
-                false,
-              )
-            }
+      </section>
+
+      <section className="panel-section">
+        <h2>Background</h2>
+        <div className="control-row">
+          <span className="control-row__label">Colour</span>
+          <ColorSwatch
+            color={settings.background}
+            onChange={(background) => onSettingsChange({ background }, false)}
+          />
+        </div>
+        <ToggleRow
+          label="Transparent"
+          hint="Checkerboard preview · no fill in SVG"
+          checked={Boolean(settings.transparentBackground)}
+          onChange={(transparentBackground) =>
+            onSettingsChange({ transparentBackground }, false)
+          }
+        />
+        <input
+          ref={backgroundInputRef}
+          type="file"
+          accept={SUPPORTED_IMAGE_ACCEPT}
+          className="import-file-input"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            if (file) onBackgroundImageUpload(file);
+          }}
+        />
+        <div className="color-swatch-wrap">
+          <button
+            type="button"
+            className="panel-btn"
+            disabled={uploadingBackgroundImage}
+            onClick={() => backgroundInputRef.current?.click()}
           >
-            <option value="black">Black</option>
-            <option value="transparent">Transparent</option>
-          </select>
-        </label>
+            {uploadingBackgroundImage
+              ? "Uploading…"
+              : frame.backgroundImage
+                ? frame.backgroundImage.name || "Background Image"
+                : "Upload Background Image"}
+          </button>
+          {frame.backgroundImage ? (
+            <div className="color-swatch__actions">
+              <button
+                type="button"
+                className="color-swatch__remove"
+                aria-label="Remove background image"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onBackgroundImageClear();
+                }}
+              >
+                ×
+              </button>
+            </div>
+          ) : null}
+        </div>
       </section>
 
       <section
@@ -756,10 +811,13 @@ export function ControlsPanel({
           checked={Boolean(settings.gridBlur)}
           onChange={(gridBlur) => onSettingsChange({ gridBlur }, false)}
         />
-        <label className="control-row">
+        <label
+          className={`control-row${settings.gridBlur ? "" : " control-row--muted"}`}
+        >
           <span className="control-row__label">Grid Density</span>
           <select
             value={settings.gridBlurDensity ?? settings.density}
+            disabled={!settings.gridBlur}
             onChange={(e) =>
               onSettingsChange(
                 {
@@ -782,6 +840,7 @@ export function ControlsPanel({
           value={settings.gridBlurAmount ?? 50}
           min={0}
           max={100}
+          disabled={!settings.gridBlur}
           onChange={(gridBlurAmount) =>
             onSettingsChange({ gridBlurAmount }, false)
           }
@@ -792,6 +851,7 @@ export function ControlsPanel({
           value={settings.gridBlurChaos ?? 50}
           min={0}
           max={100}
+          disabled={!settings.gridBlur}
           onChange={(gridBlurChaos) =>
             onSettingsChange({ gridBlurChaos }, false)
           }

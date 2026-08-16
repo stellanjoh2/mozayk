@@ -118,16 +118,22 @@ function svgBackground(
   settings: RenderOptions["settings"],
   sourceDataUrl?: string,
   transparentBackground?: boolean,
+  backgroundDataUrl?: string,
 ): string {
   if (settings.showSourceImage && sourceDataUrl) {
     return `<image href="${sourceDataUrl}" x="0" y="0" width="${width}" height="${height}" preserveAspectRatio="xMidYMid slice"/>`;
   }
 
-  if (transparentBackground || settings.background === "transparent") {
+  if (transparentBackground || settings.transparentBackground) {
     return "";
   }
 
-  return `<rect width="${width}" height="${height}" fill="#000000"/>`;
+  if (backgroundDataUrl) {
+    return `<image href="${backgroundDataUrl}" x="0" y="0" width="${width}" height="${height}" preserveAspectRatio="xMidYMid slice"/>`;
+  }
+
+  const fill = settings.background || "#000000";
+  return `<rect width="${width}" height="${height}" fill="${fill}"/>`;
 }
 
 function svgOverlayPath(style: GridOverlayStyle, d: string): string {
@@ -168,6 +174,7 @@ function svgGridOverlay(
 
 export type SvgRenderOptions = RenderOptions & {
   sourceDataUrl?: string;
+  backgroundDataUrl?: string;
 };
 
 export function renderMosaicToSvg(options: SvgRenderOptions): string {
@@ -178,6 +185,7 @@ export function renderMosaicToSvg(options: SvgRenderOptions): string {
     width,
     height,
     sourceDataUrl,
+    backgroundDataUrl,
     omitColors,
     transparentBackground,
   } = options;
@@ -223,6 +231,7 @@ export function renderMosaicToSvg(options: SvgRenderOptions): string {
       settings,
       sourceDataUrl,
       transparentBackground,
+      backgroundDataUrl,
     ),
     shapes,
     overlay,

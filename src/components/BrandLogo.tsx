@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import logoSvg from "../assets/mozayk_logo.svg?raw";
+import { playUiSound } from "../ui/sounds";
 
 /**
  * Must match --logo-fill-1/2/3/4 in App.css :root
@@ -543,12 +544,13 @@ export function BrandLogo({
   const intervalRef = useRef<number | null>(null);
 
   const showNext = () => {
+    if (pool.length <= 1) return;
     setIndex((current) => {
-      if (pool.length <= 1) return 0;
       let next = Math.floor(Math.random() * pool.length);
       if (next === current) next = (next + 1) % pool.length;
       return next;
     });
+    playUiSound("slider");
   };
 
   const stopCycling = () => {

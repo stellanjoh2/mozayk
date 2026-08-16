@@ -40,6 +40,8 @@ export type RenderOptions = {
   height: number;
   /** Loaded source photo — required when settings.showSourceImage is enabled. */
   sourceImage?: HTMLImageElement | null;
+  /** Local background photo when frame.backgroundImage is set. */
+  backgroundImage?: HTMLImageElement | null;
   /** Local texture overlay image when frame.textureOverlay is set. */
   textureOverlayImage?: HTMLImageElement | null;
   /** Skip drawing blocks with these colours (export holes). */
@@ -178,19 +180,25 @@ function drawBackground(
   width: number,
   height: number,
   sourceImage?: HTMLImageElement | null,
+  backgroundImage?: HTMLImageElement | null,
 ): void {
   if (settings.showSourceImage && sourceImage) {
     drawCoverImage(ctx, sourceImage, width, height);
     return;
   }
 
-  if (settings.background === "black") {
-    ctx.fillStyle = "#000000";
-    ctx.fillRect(0, 0, width, height);
+  if (settings.transparentBackground) {
+    drawCheckerboard(ctx, width, height);
     return;
   }
 
-  drawCheckerboard(ctx, width, height);
+  if (backgroundImage) {
+    drawCoverImage(ctx, backgroundImage, width, height);
+    return;
+  }
+
+  ctx.fillStyle = settings.background || "#000000";
+  ctx.fillRect(0, 0, width, height);
 }
 
 function strokeOverlayPath(
@@ -244,6 +252,7 @@ export function renderMosaic(
     width,
     height,
     sourceImage,
+    backgroundImage,
     textureOverlayImage,
     omitColors,
     transparentBackground,
@@ -262,7 +271,14 @@ export function renderMosaic(
       drawCoverImage(ctx, sourceImage, width, height);
     }
   } else {
-    drawBackground(ctx, settings, width, height, sourceImage);
+    drawBackground(
+      ctx,
+      settings,
+      width,
+      height,
+      sourceImage,
+      backgroundImage,
+    );
   }
 
   const fillRadius = largestRingRadius(blocks, grid);

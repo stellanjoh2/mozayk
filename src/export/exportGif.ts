@@ -10,6 +10,7 @@ import { renderMosaic } from "../render/renderFrame";
 import type { Frame, Orientation } from "../types";
 import { downloadBlob, mosaicFrameFileName } from "./downloadBlob";
 import {
+  loadBackgroundImageForFrame,
   loadSourceImageForFrame,
   loadTextureOverlayForFrame,
 } from "./exportPng";
@@ -64,8 +65,9 @@ export async function exportGif(
   const images: ImageData[] = [];
 
   for (const frame of frames) {
-    const [sourceImage, textureOverlayImage] = await Promise.all([
+    const [sourceImage, backgroundImage, textureOverlayImage] = await Promise.all([
       loadSourceImageForFrame(frame),
+      loadBackgroundImageForFrame(frame),
       loadTextureOverlayForFrame(frame),
     ]);
     renderMosaic(source, {
@@ -75,6 +77,7 @@ export async function exportGif(
       width: renderWidth,
       height: renderHeight,
       sourceImage,
+      backgroundImage,
       textureOverlayImage,
     });
     images.push(downscaleFrame(source, dest, width, height));

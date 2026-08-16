@@ -186,7 +186,8 @@ export function drawDataFields(
   const rng = mulberry32(
     hashSeed(columns, rows, width, height, spawnRate, 0xdf91),
   );
-  const spawnChance = spawnRate / DATA_FIELDS_SPAWN_MAX;
+  // Square so 1 stays sparse (~4% of candidates); 5 still fills all of them.
+  const spawnChance = (spawnRate / DATA_FIELDS_SPAWN_MAX) ** 2;
 
   ctx.save();
   ctx.fillStyle = color;

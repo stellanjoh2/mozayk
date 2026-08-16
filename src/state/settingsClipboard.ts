@@ -22,7 +22,6 @@ import {
 } from "../render/textureOverlay";
 import { WIREFRAME_PEEL_STROKE_DEFAULT } from "../render/wireframePeel";
 import type {
-  BackgroundMode,
   Density,
   FrameSettings,
   LayoutSource,
@@ -58,8 +57,28 @@ export type SettingsClipboard = {
 
 let memoryClipboard: SettingsClipboard | null = null;
 
-function isBackground(value: string): value is BackgroundMode {
-  return value === "black" || value === "transparent";
+function parseBackground(candidate: Record<string, unknown>): {
+  background: string;
+  transparentBackground: boolean;
+} {
+  const raw = candidate.background;
+  if (raw === "transparent") {
+    return { background: "#000000", transparentBackground: true };
+  }
+  if (raw === "black") {
+    return {
+      background: "#000000",
+      transparentBackground: Boolean(candidate.transparentBackground),
+    };
+  }
+  const background =
+    typeof raw === "string" && isValidHex(raw)
+      ? normalizeHex(raw)
+      : "#000000";
+  return {
+    background,
+    transparentBackground: Boolean(candidate.transparentBackground),
+  };
 }
 
 function isOrientation(value: unknown): value is Orientation {
@@ -197,9 +216,7 @@ function parseSettingsRecord(candidate: Record<string, unknown>): FrameSettings 
     colors,
     colorAmounts: parseColorAmounts(candidate.colorAmounts, colors.length),
     ...(colorsLocked ? { colorsLocked } : {}),
-    background: isBackground(String(candidate.background))
-      ? (candidate.background as BackgroundMode)
-      : "black",
+    ...parseBackground(candidate),
     gridOverlay: Boolean(candidate.gridOverlay),
     gridOverlayDensity: parseOptionalDensity(candidate.gridOverlayDensity),
     gridOverlayColor: isValidHex(String(candidate.gridOverlayColor ?? ""))

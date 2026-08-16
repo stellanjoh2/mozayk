@@ -1080,6 +1080,18 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
   width: 100%;
 }
 
+.color-swatch-wrap .panel-btn {
+  min-width: 0;
+}
+
+.color-swatch-wrap:has(.color-swatch__actions) .panel-btn {
+  padding-right: 40px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-transform: none;
+}
+
 .color-swatch {
   grid-area: 1 / 1;
   display: flex;

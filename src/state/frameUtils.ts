@@ -22,7 +22,6 @@ import type { ImageImportResult } from "../import/imageImport";
 import { getCachedSourceImage } from "../import/imageSource";
 import type { SettingsClipboard } from "./settingsClipboard";
 import type {
-  BackgroundMode,
   Density,
   Frame,
   FrameSettings,
@@ -88,9 +87,9 @@ export function createDefaultSettings(): FrameSettings {
     fillAmount: 1,
     weight: 50,
     scaleBlend: 3,
-    colors: ["#1e1e1e"],
+    colors: ["#4b4b4b"],
     colorAmounts: [100],
-    background: "black",
+    background: "#000000",
   };
 }
 
@@ -125,6 +124,9 @@ export function duplicateFrame(frame: Frame): Frame {
       : undefined,
     textureOverlay: frame.textureOverlay
       ? structuredClone(frame.textureOverlay)
+      : undefined,
+    backgroundImage: frame.backgroundImage
+      ? structuredClone(frame.backgroundImage)
       : undefined,
   };
 }
@@ -388,7 +390,7 @@ export function removeColorFromFrame(frame: Frame, index: number): Frame {
 
 export function setBackground(
   settings: FrameSettings,
-  background: BackgroundMode,
+  background: string,
 ): FrameSettings {
   return { ...settings, background };
 }

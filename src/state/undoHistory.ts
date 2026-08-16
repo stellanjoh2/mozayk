@@ -7,7 +7,7 @@ export type CanvasSnapshot = {
   orientation: Orientation;
 };
 
-/** Clone editable canvas data; reuse imageSource / textureOverlay refs (dataUrls are large). */
+/** Clone editable canvas data; reuse imageSource / textureOverlay / backgroundImage refs (dataUrls are large). */
 export function cloneFrameForHistory(frame: Frame): Frame {
   return {
     id: frame.id,
@@ -15,6 +15,7 @@ export function cloneFrameForHistory(frame: Frame): Frame {
     blocks: frame.blocks.map((block) => ({ ...block })),
     imageSource: frame.imageSource,
     textureOverlay: frame.textureOverlay,
+    backgroundImage: frame.backgroundImage,
   };
 }
 
