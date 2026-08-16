@@ -77,16 +77,20 @@ export function ResetCanvasDialog({ open, onConfirm, onCancel }: ResetCanvasDial
             ref={cancelRef}
             type="button"
             className="panel-btn panel-btn--ghost"
-            data-ui-sound="close"
-            onClick={onCancel}
+            onClick={() => {
+              playUiSound("close");
+              onCancel();
+            }}
           >
             Cancel
           </button>
           <button
             type="button"
             className="panel-btn"
-            data-ui-sound="ok"
-            onClick={onConfirm}
+            onClick={() => {
+              playUiSound("delete");
+              onConfirm();
+            }}
           >
             Reset
           </button>
