@@ -1706,3 +1706,77 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
     max-height: 40vh;
   }
 }
+
+/* Phone portrait only — desktop / landscape layouts are unchanged. */
+.mobile-gate {
+  display: none;
+}
+
+@media (max-width: 767px) and (orientation: portrait) {
+  .app {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr;
+  }
+
+  .controls-panel,
+  .timeline,
+  .canvas-stage-controls,
+  .app-toast {
+    display: none;
+  }
+
+  .canvas-stage {
+    padding: 0;
+    place-items: stretch;
+  }
+
+  .canvas-stage__frame {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .mosaic-canvas {
+    width: 100% !important;
+    height: 100% !important;
+    box-shadow: none;
+  }
+
+  .mobile-gate {
+    position: fixed;
+    inset: 0;
+    z-index: 300;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 56px;
+    padding: 32px;
+    background: rgba(15, 15, 15, 0.38);
+    user-select: none;
+  }
+
+  .mobile-gate__logo {
+    width: min(78vw, 280px);
+  }
+
+  .mobile-gate__mark,
+  .mobile-gate__mark svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    pointer-events: none;
+  }
+
+  .mobile-gate__copy {
+    margin: 0;
+    max-width: 22em;
+    text-align: center;
+    font-size: 13px;
+    line-height: 1.45;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text);
+  }
+}

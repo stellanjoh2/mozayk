@@ -534,23 +534,27 @@ function buildLogoPool(): string[] {
 export function BrandLogo({
   className,
   onClick,
+  alwaysCycle = false,
 }: {
   className?: string;
   onClick?: () => void;
+  alwaysCycle?: boolean;
 }) {
   const pool = useMemo(buildLogoPool, []);
   const [index, setIndex] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<number | null>(null);
+  const alwaysCycleRef = useRef(alwaysCycle);
+  alwaysCycleRef.current = alwaysCycle;
 
-  const showNext = () => {
+  const showNext = (silent = false) => {
     if (pool.length <= 1) return;
     setIndex((current) => {
       let next = Math.floor(Math.random() * pool.length);
       if (next === current) next = (next + 1) % pool.length;
       return next;
     });
-    playUiSound("slider");
+    if (!silent) playUiSound("slider");
   };
 
   const stopCycling = () => {
@@ -563,14 +567,19 @@ export function BrandLogo({
     stopCycling();
     // Hold the current mark so CSS can light white tiles before the pool cycles.
     intervalRef.current = window.setInterval(() => {
-      // SVG swaps can drop pointerleave; bail if the wrapper is no longer hovered.
-      if (!rootRef.current?.matches(":hover")) {
+      if (!alwaysCycleRef.current && !rootRef.current?.matches(":hover")) {
         stopCycling();
         return;
       }
-      showNext();
+      showNext(alwaysCycleRef.current);
     }, HOVER_CYCLE_MS);
   };
+
+  useEffect(() => {
+    if (!alwaysCycle) return;
+    startCycling();
+    return stopCycling;
+  }, [alwaysCycle]);
 
   useEffect(() => stopCycling, []);
 
@@ -591,9 +600,9 @@ export function BrandLogo({
             }
           : undefined
       }
-      onPointerEnter={startCycling}
-      onPointerLeave={stopCycling}
-      onPointerCancel={stopCycling}
+      onPointerEnter={alwaysCycle ? undefined : startCycling}
+      onPointerLeave={alwaysCycle ? undefined : stopCycling}
+      onPointerCancel={alwaysCycle ? undefined : stopCycling}
       dangerouslySetInnerHTML={{ __html: pool[index] }}
     />
   );

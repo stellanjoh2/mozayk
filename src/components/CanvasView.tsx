@@ -65,6 +65,7 @@ type CanvasViewProps = {
   viewOriginal?: boolean;
   isFullscreen?: boolean;
   isInspecting?: boolean;
+  fillStage?: boolean;
   onToggleFullscreen?: () => void;
   onToggleInspect?: () => void;
 };
@@ -75,6 +76,7 @@ export function CanvasView({
   viewOriginal = false,
   isFullscreen = false,
   isInspecting = false,
+  fillStage = false,
   onToggleFullscreen,
   onToggleInspect,
 }: CanvasViewProps) {
@@ -244,10 +246,14 @@ export function CanvasView({
   // resurrects 0.5px hairlines between tiles under CSS interpolation.
   const displayWidth = isInspecting
     ? nativeSize[0]
-    : Math.max(1, Math.round(width * fitScale));
+    : fillStage
+      ? Math.max(1, Math.round(stageSize.width) || width)
+      : Math.max(1, Math.round(width * fitScale));
   const displayHeight = isInspecting
     ? nativeSize[1]
-    : Math.max(1, Math.round(displayWidth * (height / width)));
+    : fillStage
+      ? Math.max(1, Math.round(stageSize.height) || height)
+      : Math.max(1, Math.round(displayWidth * (height / width)));
 
   return (
     <div

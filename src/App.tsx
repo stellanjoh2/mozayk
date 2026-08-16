@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   GIF_FRAME_DELAY_CS_DEFAULT,
   clampGifFrameDelayCs,
@@ -9,6 +9,7 @@ import {
 import { CanvasView, Timeline } from "./components/CanvasView";
 import { ControlsPanel, MAX_FRAMES } from "./components/ControlsPanel";
 import { ImportErrorDialog } from "./components/ImportErrorDialog";
+import { MobileGate } from "./components/MobileGate";
 import { ResetCanvasDialog } from "./components/ResetCanvasDialog";
 import { exportGif, gifExportToast } from "./export/exportGif";
 import { exportAllFrames, exportCurrentFrame, exportCurrentFrameTransparent } from "./export/exportPng";
@@ -66,6 +67,23 @@ import "./App.css";
 const LAYOUT_REGEN_MS = 280;
 /** Idle gap after which continuous edits (sliders) become a new undo step. */
 const UNDO_COALESCE_MS = 400;
+const PORTRAIT_MOBILE_MQ = "(max-width: 767px) and (orientation: portrait)";
+
+function usePortraitMobile(): boolean {
+  const [matches, setMatches] = useState(
+    () => window.matchMedia(PORTRAIT_MOBILE_MQ).matches,
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia(PORTRAIT_MOBILE_MQ);
+    const onChange = () => setMatches(mq.matches);
+    mq.addEventListener("change", onChange);
+    setMatches(mq.matches);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  return matches;
+}
 
 function getFullscreenElement(): Element | null {
   const doc = document as Document & { webkitFullscreenElement?: Element | null };
@@ -100,6 +118,7 @@ function isTextInputTarget(target: EventTarget | null): boolean {
 }
 
 export default function App() {
+  const isPortraitMobile = usePortraitMobile();
   const [orientation, setOrientation] = useState<Orientation>("landscape");
   const [frames, setFrames] = useState<Frame[]>(() => [
     createInitialFrame("landscape"),
@@ -139,6 +158,11 @@ export default function App() {
   inspectingRef.current = inspecting;
 
   const activeFrame = frames[activeIndex] ?? frames[0];
+  const canvasOrientation = isPortraitMobile ? "portrait" : orientation;
+  const canvasFrame = useMemo(() => {
+    if (!isPortraitMobile || orientation !== "landscape") return activeFrame;
+    return transposeFrameBlocks(activeFrame, "landscape", "portrait");
+  }, [isPortraitMobile, orientation, activeFrame]);
 
   useEffect(() => {
     if (!activeFrame.imageSource) {
@@ -761,9 +785,14 @@ export default function App() {
   return (
     <div
       ref={appRef}
-      className={["app", isFullscreen ? "is-fullscreen" : ""].filter(Boolean).join(" ")}
+      className={["app", isFullscreen ? "is-fullscreen" : "", isPortraitMobile ? "is-portrait-mobile" : ""]
+        .filter(Boolean)
+        .join(" ")}
     >
-      {toast && !isFullscreen ? <div className="app-toast">{toast}</div> : null}
+      {isPortraitMobile ? <MobileGate /> : null}
+      {toast && !isFullscreen && !isPortraitMobile ? (
+        <div className="app-toast">{toast}</div>
+      ) : null}
       {importErrorMessage ? (
         <ImportErrorDialog
           message={importErrorMessage}
@@ -778,7 +807,7 @@ export default function App() {
           setResetDialogOpen(false);
         }}
       />
-      {!isFullscreen ? (
+      {!isFullscreen && !isPortraitMobile ? (
       <ControlsPanel
         frame={activeFrame}
         orientation={orientation}
@@ -918,17 +947,18 @@ export default function App() {
       />
       ) : null}
 
-      <main className={["workspace", isFullscreen ? "is-fullscreen" : ""].filter(Boolean).join(" ")}>
+      <main className={["workspace", isFullscreen || isPortraitMobile ? "is-fullscreen" : ""].filter(Boolean).join(" ")}>
         <CanvasView
-          frame={activeFrame}
-          orientation={orientation}
+          frame={canvasFrame}
+          orientation={canvasOrientation}
           viewOriginal={viewOriginal}
-          isFullscreen={isFullscreen}
+          isFullscreen={isFullscreen || isPortraitMobile}
           isInspecting={inspecting}
-          onToggleFullscreen={toggleFullscreen}
-          onToggleInspect={toggleInspect}
+          fillStage={isPortraitMobile}
+          onToggleFullscreen={isPortraitMobile ? undefined : toggleFullscreen}
+          onToggleInspect={isPortraitMobile ? undefined : toggleInspect}
         />
-        {!isFullscreen ? (
+        {!isFullscreen && !isPortraitMobile ? (
         <Timeline
           frames={frames}
           activeIndex={activeIndex}
