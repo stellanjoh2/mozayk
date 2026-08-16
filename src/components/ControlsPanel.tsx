@@ -58,6 +58,7 @@ import type {
 } from "../types";
 import { SUPPORTED_IMAGE_ACCEPT } from "../import/supportedImageTypes";
 import { SUPPORTED_VIDEO_ACCEPT } from "../import/supportedVideoTypes";
+import { isMzkFile, MZK_EXTENSION } from "../project/mzkFormat";
 import { BrandLogo } from "./BrandLogo";
 import { ColorSwatch } from "./ColorSwatch";
 import { HeadlineToggle, SliderRow, ToggleRow } from "./ControlRow";
@@ -116,9 +117,12 @@ type ControlsPanelProps = {
   onTextureOverlayClear: () => void;
   uploadingTextureOverlay?: boolean;
   onResetCanvas: () => void;
+  onSaveProject: () => void;
+  onLoadProject: (file: File) => void;
+  loadingProject?: boolean;
 };
 
-type PanelTab = "create" | "export";
+type PanelTab = "create" | "export" | "settings";
 
 export function ControlsPanel({
   frame,
@@ -160,6 +164,9 @@ export function ControlsPanel({
   onTextureOverlayClear,
   uploadingTextureOverlay = false,
   onResetCanvas,
+  onSaveProject,
+  onLoadProject,
+  loadingProject = false,
 }: ControlsPanelProps) {
   const { settings } = frame;
   const panelRef = useRef<HTMLElement>(null);
@@ -169,6 +176,7 @@ export function ControlsPanel({
   const videoInputRef = useRef<HTMLInputElement>(null);
   const backgroundInputRef = useRef<HTMLInputElement>(null);
   const textureInputRef = useRef<HTMLInputElement>(null);
+  const projectInputRef = useRef<HTMLInputElement>(null);
   const [panelTab, setPanelTab] = useState<PanelTab>("create");
   const [soundsOn, setSoundsOn] = useState(getUiSoundsEnabled);
   const [soundVolume, setSoundVolume] = useState(getUiSoundsVolume);
@@ -187,12 +195,10 @@ export function ControlsPanel({
   };
   const selectOrientation = (next: Orientation) => {
     if (next === orientation) return;
-    playUiSound("ok");
     onOrientationChange(next);
   };
   const selectPanelTab = (tab: PanelTab) => {
     if (tab === panelTab) return;
-    playUiSound("ok");
     setPanelTab(tab);
     panelRef.current?.scrollTo({ top: 0 });
   };
@@ -205,7 +211,8 @@ export function ControlsPanel({
         "(prefers-reduced-motion: reduce)",
       ).matches;
       gsap.to(line, {
-        xPercent: panelTab === "export" ? 100 : 0,
+        xPercent:
+          panelTab === "export" ? 100 : panelTab === "settings" ? 200 : 0,
         duration: reduce ? 0 : 0.5,
         ease: "power4.inOut",
         overwrite: true,
@@ -295,6 +302,19 @@ export function ControlsPanel({
           onClick={() => selectPanelTab("export")}
         >
           Export
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={panelTab === "settings"}
+          className={
+            panelTab === "settings"
+              ? "controls-panel__tab is-active"
+              : "controls-panel__tab"
+          }
+          onClick={() => selectPanelTab("settings")}
+        >
+          Settings
         </button>
         <span ref={tabLineRef} className="controls-panel__tab-line" aria-hidden />
       </div>
@@ -671,10 +691,13 @@ export function ControlsPanel({
           checked={Boolean(settings.gridOverlay)}
           onChange={(gridOverlay) => onSettingsChange({ gridOverlay }, false)}
         />
-        <label className="control-row">
+        <label
+          className={`control-row${settings.gridOverlay ? "" : " control-row--muted"}`}
+        >
           <span className="control-row__label">Grid Density</span>
           <select
             value={settings.gridOverlayDensity ?? 1}
+            disabled={!settings.gridOverlay}
             onChange={(e) =>
               onSettingsChange(
                 {
@@ -691,10 +714,13 @@ export function ControlsPanel({
             ))}
           </select>
         </label>
-        <div className="control-row">
+        <div
+          className={`control-row${settings.gridOverlay ? "" : " control-row--muted"}`}
+        >
           <span className="control-row__label">Colour</span>
           <ColorSwatch
             color={settings.gridOverlayColor ?? "#ffffff"}
+            disabled={!settings.gridOverlay}
             onChange={(gridOverlayColor) =>
               onSettingsChange({ gridOverlayColor }, false)
             }
@@ -710,6 +736,7 @@ export function ControlsPanel({
           max={GRID_OVERLAY_STROKES.length - 1}
           step={1}
           formatValue={(i) => `${GRID_OVERLAY_STROKES[i]}px`}
+          disabled={!settings.gridOverlay}
           onChange={(i) =>
             onSettingsChange(
               { gridOverlayStroke: GRID_OVERLAY_STROKES[i] },
@@ -722,6 +749,7 @@ export function ControlsPanel({
           value={settings.gridOverlayOpacity ?? 100}
           min={0}
           max={100}
+          disabled={!settings.gridOverlay}
           onChange={(gridOverlayOpacity) =>
             onSettingsChange({ gridOverlayOpacity }, false)
           }
@@ -732,11 +760,14 @@ export function ControlsPanel({
           value={settings.gridOverlayChaos ?? 0}
           min={0}
           max={100}
+          disabled={!settings.gridOverlay}
           onChange={(gridOverlayChaos) =>
             onSettingsChange({ gridOverlayChaos }, false)
           }
         />
-        <label className="control-row">
+        <label
+          className={`control-row${settings.gridOverlay ? "" : " control-row--muted"}`}
+        >
           <span className="control-row__label">
             <HintLabel hint="How grid strokes mix with colours underneath">
               Blend
@@ -744,6 +775,7 @@ export function ControlsPanel({
           </span>
           <select
             value={settings.gridOverlayBlend ?? "normal"}
+            disabled={!settings.gridOverlay}
             onChange={(e) =>
               onSettingsChange(
                 {
@@ -773,10 +805,13 @@ export function ControlsPanel({
           checked={Boolean(settings.gridCrosses)}
           onChange={(gridCrosses) => onSettingsChange({ gridCrosses }, false)}
         />
-        <label className="control-row">
+        <label
+          className={`control-row${settings.gridCrosses ? "" : " control-row--muted"}`}
+        >
           <span className="control-row__label">Grid Density</span>
           <select
             value={settings.gridCrossesDensity ?? 1}
+            disabled={!settings.gridCrosses}
             onChange={(e) =>
               onSettingsChange(
                 {
@@ -793,10 +828,13 @@ export function ControlsPanel({
             ))}
           </select>
         </label>
-        <div className="control-row">
+        <div
+          className={`control-row${settings.gridCrosses ? "" : " control-row--muted"}`}
+        >
           <span className="control-row__label">Colour</span>
           <ColorSwatch
             color={settings.gridCrossesColor ?? "#ffffff"}
+            disabled={!settings.gridCrosses}
             onChange={(gridCrossesColor) =>
               onSettingsChange({ gridCrossesColor }, false)
             }
@@ -812,6 +850,7 @@ export function ControlsPanel({
           max={GRID_OVERLAY_STROKES.length - 1}
           step={1}
           formatValue={(i) => `${GRID_OVERLAY_STROKES[i]}px`}
+          disabled={!settings.gridCrosses}
           onChange={(i) =>
             onSettingsChange(
               { gridCrossesStroke: GRID_OVERLAY_STROKES[i] },
@@ -826,6 +865,7 @@ export function ControlsPanel({
           min={GRID_CROSS_SIZE_MIN}
           max={GRID_CROSS_SIZE_MAX}
           formatValue={(v) => `${v}px`}
+          disabled={!settings.gridCrosses}
           onChange={(gridCrossesSize) =>
             onSettingsChange({ gridCrossesSize }, false)
           }
@@ -835,6 +875,7 @@ export function ControlsPanel({
           value={settings.gridCrossesOpacity ?? 100}
           min={0}
           max={100}
+          disabled={!settings.gridCrosses}
           onChange={(gridCrossesOpacity) =>
             onSettingsChange({ gridCrossesOpacity }, false)
           }
@@ -845,11 +886,14 @@ export function ControlsPanel({
           value={settings.gridCrossesChaos ?? 0}
           min={0}
           max={100}
+          disabled={!settings.gridCrosses}
           onChange={(gridCrossesChaos) =>
             onSettingsChange({ gridCrossesChaos }, false)
           }
         />
-        <label className="control-row">
+        <label
+          className={`control-row${settings.gridCrosses ? "" : " control-row--muted"}`}
+        >
           <span className="control-row__label">
             <HintLabel hint="How crosses mix with colours underneath">
               Blend
@@ -857,6 +901,7 @@ export function ControlsPanel({
           </span>
           <select
             value={settings.gridCrossesBlend ?? "normal"}
+            disabled={!settings.gridCrosses}
             onChange={(e) =>
               onSettingsChange(
                 {
@@ -892,6 +937,7 @@ export function ControlsPanel({
           value={settings.dataFieldsSpawnRate ?? DATA_FIELDS_SPAWN_DEFAULT}
           min={DATA_FIELDS_SPAWN_MIN}
           max={DATA_FIELDS_SPAWN_MAX}
+          disabled={!settings.dataFields}
           onChange={(dataFieldsSpawnRate) =>
             onSettingsChange({ dataFieldsSpawnRate }, false)
           }
@@ -903,20 +949,26 @@ export function ControlsPanel({
           min={DATA_FIELDS_SIZE_MIN}
           max={DATA_FIELDS_SIZE_MAX}
           formatValue={(v) => `${v}×`}
+          disabled={!settings.dataFields}
           onChange={(dataFieldsSize) =>
             onSettingsChange({ dataFieldsSize }, false)
           }
         />
-        <div className="control-row">
+        <div
+          className={`control-row${settings.dataFields ? "" : " control-row--muted"}`}
+        >
           <span className="control-row__label">Colour</span>
           <ColorSwatch
             color={settings.dataFieldsColor ?? DATA_FIELDS_COLOR_DEFAULT}
+            disabled={!settings.dataFields}
             onChange={(dataFieldsColor) =>
               onSettingsChange({ dataFieldsColor }, false)
             }
           />
         </div>
-        <label className="control-row">
+        <label
+          className={`control-row${settings.dataFields ? "" : " control-row--muted"}`}
+        >
           <span className="control-row__label">
             <HintLabel hint="How labels mix with colours underneath">
               Blend
@@ -924,6 +976,7 @@ export function ControlsPanel({
           </span>
           <select
             value={settings.dataFieldsBlend ?? "normal"}
+            disabled={!settings.dataFields}
             onChange={(e) =>
               onSettingsChange(
                 {
@@ -1196,56 +1249,16 @@ export function ControlsPanel({
       </section>
 
       <section className="panel-section">
-        <h2>Copy / Paste Settings</h2>
-        <div className="button-row">
-          <button type="button" className="panel-btn panel-btn--ghost" onClick={onCopySettings}>
-            Copy Settings
-          </button>
-          <button
-            type="button"
-            className="panel-btn panel-btn--ghost"
-            onClick={onPasteSettings}
-          >
-            Paste Settings
-          </button>
-        </div>
-      </section>
-
-      <section className={`panel-section${soundsOn ? "" : " is-off"}`}>
-        <h2>Settings</h2>
-        <ToggleRow
-          label="UI Sounds"
-          checked={soundsOn}
-          onChange={(next) => {
-            setUiSoundsEnabled(next);
-            setSoundsOn(next);
-            playUiSound(next ? "ok" : "close");
-          }}
-        />
-        <SliderRow
-          label="UI Sounds Volume"
-          value={soundVolume}
-          min={0}
-          max={100}
-          suffix="%"
-          disabled={!soundsOn}
-          onChange={(volume) => {
-            setUiSoundsVolume(volume);
-            setSoundVolume(volume);
-          }}
-        />
-        <ToggleRow
-          label="Normal Hover Effects"
-          hint="Static highlights · no blink"
-          checked={normalHover}
-          onChange={(next) => {
-            setNormalHoverEffects(next);
-            setNormalHover(next);
-          }}
-        />
+        <button
+          type="button"
+          className="panel-btn panel-btn--ghost"
+          onClick={onResetCanvas}
+        >
+          Reset Canvas
+        </button>
       </section>
       </>
-      ) : (
+      ) : panelTab === "export" ? (
       <>
       <section className="panel-section">
         <h2>PNG</h2>
@@ -1348,15 +1361,87 @@ export function ControlsPanel({
           Export SVG Frame
         </button>
       </section>
+      </>
+      ) : (
+      <>
+      <section className="panel-section">
+        <h2>Project</h2>
+        <input
+          ref={projectInputRef}
+          type="file"
+          accept={MZK_EXTENSION}
+          className="import-file-input"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            if (!file) return;
+            if (!isMzkFile(file)) return;
+            onLoadProject(file);
+          }}
+        />
+        <div className="button-row">
+          <button type="button" className="panel-btn" onClick={onSaveProject}>
+            Save Project
+          </button>
+          <button
+            type="button"
+            className="panel-btn panel-btn--ghost"
+            disabled={loadingProject}
+            onClick={() => projectInputRef.current?.click()}
+          >
+            {loadingProject ? "Loading…" : "Load Project"}
+          </button>
+        </div>
+      </section>
 
       <section className="panel-section">
-        <button
-          type="button"
-          className="panel-btn panel-btn--ghost"
-          onClick={onResetCanvas}
-        >
-          Reset Canvas
-        </button>
+        <h2>Copy / Paste Settings</h2>
+        <div className="button-row">
+          <button type="button" className="panel-btn panel-btn--ghost" onClick={onCopySettings}>
+            Copy Settings
+          </button>
+          <button
+            type="button"
+            className="panel-btn panel-btn--ghost"
+            onClick={onPasteSettings}
+          >
+            Paste Settings
+          </button>
+        </div>
+      </section>
+
+      <section className={`panel-section${soundsOn ? "" : " is-off"}`}>
+        <h2>More</h2>
+        <ToggleRow
+          label="UI Sounds"
+          checked={soundsOn}
+          onChange={(next) => {
+            setUiSoundsEnabled(next);
+            setSoundsOn(next);
+            playUiSound(next ? "ok" : "close");
+          }}
+        />
+        <SliderRow
+          label="UI Sounds Volume"
+          value={soundVolume}
+          min={0}
+          max={100}
+          suffix="%"
+          disabled={!soundsOn}
+          onChange={(volume) => {
+            setUiSoundsVolume(volume);
+            setSoundVolume(volume);
+          }}
+        />
+        <ToggleRow
+          label="Normal Hover Effects"
+          hint="Static highlights · no blink"
+          checked={normalHover}
+          onChange={(next) => {
+            setNormalHoverEffects(next);
+            setNormalHover(next);
+          }}
+        />
       </section>
       </>
       )}

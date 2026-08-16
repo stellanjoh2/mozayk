@@ -5,6 +5,7 @@ import { hexToRgb, normalizeHex } from "../colorMath";
 type ColorSwatchProps = {
   color: string;
   locked?: boolean;
+  disabled?: boolean;
   onChange: (hex: string) => void;
   onToggleLock?: () => void;
   onRemove?: () => void;
@@ -19,6 +20,7 @@ function hexOnColor(hex: string): string {
 export function ColorSwatch({
   color,
   locked = false,
+  disabled = false,
   onChange,
   onToggleLock,
   onRemove,
@@ -37,7 +39,11 @@ export function ColorSwatch({
         className="color-swatch"
         style={{ background: hex, color: hexOnColor(hex) }}
         aria-label={`Color ${hex}`}
-        onClick={() => setOpen(true)}
+        disabled={disabled}
+        onClick={() => {
+          if (disabled) return;
+          setOpen(true);
+        }}
       >
         {hex.toUpperCase()}
       </button>

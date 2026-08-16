@@ -146,7 +146,7 @@ function parseShapePalette(value: unknown): ShapePalette {
   };
 }
 
-function parseBlocks(value: unknown): MosaicBlock[] | undefined {
+export function parseBlocks(value: unknown): MosaicBlock[] | undefined {
   if (!Array.isArray(value) || value.length === 0) return undefined;
 
   const blocks: MosaicBlock[] = [];
@@ -190,7 +190,9 @@ function parseOptionalDensity(value: unknown): Density | undefined {
   return clampDensity(n);
 }
 
-function parseSettingsRecord(candidate: Record<string, unknown>): FrameSettings | null {
+export function parseSettingsRecord(
+  candidate: Record<string, unknown>,
+): FrameSettings | null {
   const density = clampDensity(Number(candidate.density));
 
   const colors = parseColors(candidate.colors);

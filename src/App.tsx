@@ -16,6 +16,7 @@ import { MobileGate } from "./components/MobileGate";
 import { ResetCanvasDialog } from "./components/ResetCanvasDialog";
 import { VideoImportOverlay } from "./components/VideoImportOverlay";
 import { exportGif, gifExportToast } from "./export/exportGif";
+import { downloadBlob } from "./export/downloadBlob";
 import { exportAllFrames, exportCurrentFrame, exportCurrentFrameTransparent } from "./export/exportPng";
 import { exportCurrentFrameSvg } from "./export/exportSvg";
 import {
@@ -76,6 +77,11 @@ import {
   unsupportedVideoMessage,
   validateVideoFile,
 } from "./import/supportedVideoTypes";
+import {
+  defaultMzkFileName,
+  readMzkFile,
+  serializeMzkProject,
+} from "./project/mzkFormat";
 import type { Frame, FrameSettings, Orientation } from "./types";
 
 import "./App.css";
@@ -154,6 +160,7 @@ export default function App() {
   const [uploadingBackgroundImage, setUploadingBackgroundImage] =
     useState(false);
   const [uploadingTextureOverlay, setUploadingTextureOverlay] = useState(false);
+  const [loadingProject, setLoadingProject] = useState(false);
   const [importErrorMessage, setImportErrorMessage] = useState<string | null>(
     null,
   );
@@ -790,6 +797,73 @@ export default function App() {
     setToast("Canvas reset");
   }, [pushUndoCheckpoint]);
 
+  const handleSaveProject = useCallback(() => {
+    const json = serializeMzkProject({
+      orientation: orientationRef.current,
+      frames: framesRef.current,
+      activeIndex: activeIndexRef.current,
+      exportPreset,
+      gifPreset,
+      gifFrameDelayCs,
+    });
+    downloadBlob(
+      new Blob([json], { type: "application/x-mozayk-project" }),
+      defaultMzkFileName(),
+    );
+    setToast("Project saved");
+  }, [exportPreset, gifPreset, gifFrameDelayCs]);
+
+  const handleLoadProject = useCallback(
+    async (file: File) => {
+      setLoadingProject(true);
+      try {
+        const project = await readMzkFile(file);
+        const dataUrls = new Set<string>();
+        for (const frame of project.frames) {
+          if (frame.imageSource?.dataUrl) dataUrls.add(frame.imageSource.dataUrl);
+          if (frame.textureOverlay?.dataUrl) {
+            dataUrls.add(frame.textureOverlay.dataUrl);
+          }
+          if (frame.backgroundImage?.dataUrl) {
+            dataUrls.add(frame.backgroundImage.dataUrl);
+          }
+        }
+        await Promise.all(
+          [...dataUrls].map((dataUrl) => ensureCachedSourceImage(dataUrl)),
+        );
+
+        pushUndoCheckpoint();
+        if (layoutRegenTimer.current) {
+          window.clearTimeout(layoutRegenTimer.current);
+          layoutRegenTimer.current = null;
+        }
+
+        setOrientation(project.orientation);
+        orientationRef.current = project.orientation;
+        setFrames(project.frames);
+        framesRef.current = project.frames;
+        setActiveIndex(project.activeIndex);
+        activeIndexRef.current = project.activeIndex;
+        setExportPreset(project.exportPreset);
+        setGifPreset(project.gifPreset);
+        setGifFrameDelayCs(project.gifFrameDelayCs);
+        setPlaying(false);
+        setViewOriginal(false);
+        setInspecting(false);
+        setToast("Project loaded");
+      } catch (error) {
+        setImportErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "This .mzk file could not be loaded.",
+        );
+      } finally {
+        setLoadingProject(false);
+      }
+    },
+    [pushUndoCheckpoint],
+  );
+
   useEffect(() => {
     if (!playing) return;
     const delayMs = gifDelayMs(
@@ -913,6 +987,11 @@ export default function App() {
       ) : null}
       {importErrorMessage ? (
         <ImportErrorDialog
+          title={
+            importErrorMessage.includes(".mzk")
+              ? "Couldn't load project"
+              : undefined
+          }
           message={importErrorMessage}
           onDismiss={() => setImportErrorMessage(null)}
         />
@@ -1080,6 +1159,9 @@ export default function App() {
         onTextureOverlayClear={handleTextureOverlayClear}
         uploadingTextureOverlay={uploadingTextureOverlay}
         onResetCanvas={() => setResetDialogOpen(true)}
+        onSaveProject={handleSaveProject}
+        onLoadProject={(file) => void handleLoadProject(file)}
+        loadingProject={loadingProject}
       />
       ) : null}
 

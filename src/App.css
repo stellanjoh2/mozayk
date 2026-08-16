@@ -295,7 +295,7 @@ html.normal-hover .timeline-thumb:hover:not(.is-active) {
   top: 0;
   z-index: 2;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   margin: 0 -20px;
   padding: 0 20px;
   background: var(--panel);
@@ -309,8 +309,8 @@ html.normal-hover .timeline-thumb:hover:not(.is-active) {
   background: none;
   color: var(--muted);
   font: inherit;
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 400;
   letter-spacing: 0.06em;
   line-height: 1;
   text-transform: uppercase;
@@ -344,7 +344,7 @@ html.normal-hover .timeline-thumb:hover:not(.is-active) {
   position: absolute;
   left: 20px;
   bottom: -1px;
-  width: calc((100% - 40px) / 2);
+  width: calc((100% - 40px) / 3);
   height: 2px;
   background: var(--brand-warm);
   pointer-events: none;
@@ -382,7 +382,7 @@ html.normal-hover .timeline-thumb:hover:not(.is-active) {
 .panel-section h2 {
   margin: 0 0 24px;
   font-size: 15px;
-  font-weight: 700;
+  font-weight: 400;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--brand);
@@ -393,6 +393,11 @@ html.normal-hover .timeline-thumb:hover:not(.is-active) {
 .panel-section.is-off .headline-toggle h2,
 .panel-section.is-off .headline-toggle h3 {
   color: var(--muted);
+}
+
+.panel-section.is-off:has(.headline-toggle) > :not(.headline-toggle) {
+  opacity: 0.4;
+  pointer-events: none;
 }
 
 .panel-hint {
@@ -890,8 +895,14 @@ html.normal-hover .button-row--choice button.is-active:hover::before {
 }
 
 .control-row--muted input[type="range"],
-.control-row--muted input[type="checkbox"] {
+.control-row--muted input[type="checkbox"],
+.control-row--muted select,
+.control-row--muted .color-swatch {
   pointer-events: none;
+}
+
+.color-swatch:disabled {
+  cursor: not-allowed;
 }
 
 .control-row__label--solo {

@@ -210,13 +210,26 @@ function onPanelBtnClick(event: Event): void {
   const el = event.target;
   if (!(el instanceof Element)) return;
   const btn = el.closest(".panel-btn");
-  if (!(btn instanceof HTMLButtonElement) || btn.disabled) return;
-  const cue = btn.dataset.uiSound;
-  if (cue && cue in FILES) {
-    playUiSound(cue as UiSound);
+  if (btn instanceof HTMLButtonElement && !btn.disabled) {
+    const cue = btn.dataset.uiSound;
+    if (cue && cue in FILES) {
+      playUiSound(cue as UiSound);
+      return;
+    }
+    playUiSound("push");
     return;
   }
-  playUiSound("push");
+
+  const choiceBtn = el.closest(
+    ".controls-panel__tab, .button-row--choice button",
+  );
+  if (
+    choiceBtn instanceof HTMLButtonElement &&
+    !choiceBtn.disabled &&
+    !choiceBtn.classList.contains("is-active")
+  ) {
+    playUiSound("push");
+  }
 }
 
 function isRangeInput(el: EventTarget | null): el is HTMLInputElement {
