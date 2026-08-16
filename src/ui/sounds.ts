@@ -1,19 +1,29 @@
 const FILES = {
-  delete: "sounds/uisound-delete2.wav",
+  delete: "sounds/uisound-delete.wav",
   ok: "sounds/uisound-ok.wav",
   close: "sounds/uisound-close.wav",
-  push: "sounds/uisound-ok2.wav",
-  slider: "sounds/uisound-slider4.wav",
-  sliderLeft: "sounds/uisound-slider4.wav",
+  push: "sounds/uisound-push.wav",
+  slider: "sounds/uisound-slider.wav",
+  sliderLeft: "sounds/uisound-slider.wav",
+  hover: "sounds/uisound-hover.wav",
 } as const;
+
+const HOVER_SELECTOR =
+  ".panel-btn, .button-row button, .timeline__controls button, .canvas-fullscreen-toggle, .color-swatch__lock, .color-swatch__remove, .controls-panel__tab, .timeline-thumb";
 
 export type UiSound = keyof typeof FILES;
 
 const SOUND_NAMES = Object.keys(FILES) as UiSound[];
 
-/** Linear amplitude gain on top of master volume. -5 dB ≈ 0.562 */
+/** Per-cue gain matched to median RMS (−29 dBFS), peak-limited to −6 dBFS. */
 const SOUND_GAIN: Partial<Record<UiSound, number>> = {
-  delete: 10 ** (-5 / 20),
+  delete: 0.9958 * 10 ** (-5 / 20),
+  ok: 1.0,
+  close: 1.0,
+  push: 3.5818 * 10 ** (-10 / 20),
+  slider: 0.7532,
+  sliderLeft: 0.7532,
+  hover: 0.9189 * 10 ** (5 / 20),
 };
 
 /** Left-drag reuses the slider clip a half octave down. */
@@ -63,6 +73,7 @@ const decoded = new Map<UiSound, AudioBuffer>();
 const loadingRaw = new Map<UiSound, Promise<ArrayBuffer | null>>();
 const loadingDecoded = new Map<UiSound, Promise<AudioBuffer | null>>();
 let sliderUntil = 0;
+let hoverUntil = 0;
 
 function createAudioContext(): AudioContext | null {
   const AC = window.AudioContext ?? (window as WindowWithWebkit).webkitAudioContext;
@@ -88,48 +99,55 @@ function unlockAudio(): AudioContext | null {
 }
 
 async function loadRaw(name: UiSound): Promise<ArrayBuffer | null> {
-  const cached = rawFiles.get(name);
-  if (cached) return cached;
-  const inflight = loadingRaw.get(name);
-  if (inflight) return inflight;
+  if (!import.meta.env.DEV) {
+    const cached = rawFiles.get(name);
+    if (cached) return cached;
+    const inflight = loadingRaw.get(name);
+    if (inflight) return inflight;
+  }
   const promise = (async () => {
     try {
-      const res = await fetch(soundUrl(FILES[name]));
+      const url = soundUrl(FILES[name]);
+      const res = await fetch(
+        import.meta.env.DEV ? `${url}?t=${Date.now()}` : url,
+      );
       if (!res.ok) return null;
       const data = await res.arrayBuffer();
-      rawFiles.set(name, data);
+      if (!import.meta.env.DEV) rawFiles.set(name, data);
       return data;
     } catch {
       return null;
     } finally {
-      loadingRaw.delete(name);
+      if (!import.meta.env.DEV) loadingRaw.delete(name);
     }
   })();
-  loadingRaw.set(name, promise);
+  if (!import.meta.env.DEV) loadingRaw.set(name, promise);
   return promise;
 }
 
 async function bufferFor(name: UiSound): Promise<AudioBuffer | null> {
-  const cached = decoded.get(name);
-  if (cached) return cached;
-  const inflight = loadingDecoded.get(name);
-  if (inflight) return inflight;
+  if (!import.meta.env.DEV) {
+    const cached = decoded.get(name);
+    if (cached) return cached;
+    const inflight = loadingDecoded.get(name);
+    if (inflight) return inflight;
+  }
   const promise = (async () => {
     const ctx = audioContext();
     const raw = await loadRaw(name);
     if (!ctx || ctx.state === "closed" || !raw) return null;
     try {
       const buf = await ctx.decodeAudioData(raw.slice(0));
-      decoded.set(name, buf);
+      if (!import.meta.env.DEV) decoded.set(name, buf);
       return buf;
     } catch {
-      decoded.delete(name);
+      if (!import.meta.env.DEV) decoded.delete(name);
       return null;
     } finally {
-      loadingDecoded.delete(name);
+      if (!import.meta.env.DEV) loadingDecoded.delete(name);
     }
   })();
-  loadingDecoded.set(name, promise);
+  if (!import.meta.env.DEV) loadingDecoded.set(name, promise);
   return promise;
 }
 
@@ -144,7 +162,7 @@ function startSound(name: UiSound, buf: AudioBuffer): void {
     source.playbackRate.value = rate;
     const gain = ctx.createGain();
     const amp = SOUND_GAIN[name] ?? 1;
-    gain.gain.value = Math.min(1, (prefs.volume / 100) * amp);
+    gain.gain.value = (prefs.volume / 100) * amp;
     source.connect(gain);
     gain.connect(ctx.destination);
     source.start(0);
@@ -191,7 +209,7 @@ export function playUiSound(name: UiSound): void {
   }
   const ctx = unlockAudio();
   if (!ctx) return;
-  const ready = decoded.get(name);
+  const ready = import.meta.env.DEV ? undefined : decoded.get(name);
   if (ready) {
     try {
       startSound(name, ready);
@@ -204,6 +222,35 @@ export function playUiSound(name: UiSound): void {
     if (!buf || !prefs.enabled || prefs.volume <= 0) return;
     startSound(name, buf);
   });
+}
+
+function shouldPlayHover(btn: HTMLButtonElement): boolean {
+  if (btn.disabled) return false;
+  if (
+    btn.classList.contains("controls-panel__tab") &&
+    btn.classList.contains("is-active")
+  ) {
+    return false;
+  }
+  if (
+    btn.classList.contains("timeline-thumb") &&
+    btn.classList.contains("is-active")
+  ) {
+    return false;
+  }
+  return true;
+}
+
+function onButtonHover(event: MouseEvent): void {
+  const el = event.target;
+  if (!(el instanceof Element)) return;
+  const btn = el.closest(HOVER_SELECTOR);
+  if (!(btn instanceof HTMLButtonElement) || !shouldPlayHover(btn)) return;
+  const related = event.relatedTarget;
+  if (related instanceof Node && btn.contains(related)) return;
+  if (performance.now() < hoverUntil) return;
+  hoverUntil = performance.now() + 80;
+  playUiSound("hover");
 }
 
 function onPanelBtnClick(event: Event): void {
@@ -286,6 +333,7 @@ export function initUiSounds(): void {
   document.addEventListener("pointerdown", onUnlockGesture, true);
   document.addEventListener("keydown", onUnlockGesture, true);
   document.addEventListener("click", onPanelBtnClick, true);
+  document.addEventListener("mouseover", onButtonHover, true);
   document.addEventListener("pointerdown", onRangePointerDown, true);
   document.addEventListener("keydown", onRangeKeyDown, true);
   document.addEventListener("pointerup", onRangePointerUp);
