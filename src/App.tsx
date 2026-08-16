@@ -16,6 +16,7 @@ import { MobileGate } from "./components/MobileGate";
 import { ResetCanvasDialog } from "./components/ResetCanvasDialog";
 import { VideoImportOverlay } from "./components/VideoImportOverlay";
 import { exportGif, gifExportToast } from "./export/exportGif";
+import { exportMp4, mp4ExportToast } from "./export/exportMp4";
 import { downloadBlob } from "./export/downloadBlob";
 import { exportAllFrames, exportCurrentFrame, exportCurrentFrameTransparent } from "./export/exportPng";
 import { exportCurrentFrameSvg } from "./export/exportSvg";
@@ -153,6 +154,7 @@ export default function App() {
   const [gifFrameDelayCs, setGifFrameDelayCs] = useState(GIF_FRAME_DELAY_CS_DEFAULT);
   const [importingImage, setImportingImage] = useState(false);
   const [importingLabel, setImportingLabel] = useState<string | null>(null);
+  const [exportingLabel, setExportingLabel] = useState<string | null>(null);
   const [videoWarning, setVideoWarning] = useState<{
     file: File;
     duration: number;
@@ -982,8 +984,8 @@ export default function App() {
       {toast && !isFullscreen && !isPortraitMobile ? (
         <div className="app-toast">{toast}</div>
       ) : null}
-      {importingLabel ? (
-        <VideoImportOverlay label={importingLabel} />
+      {importingLabel || exportingLabel ? (
+        <VideoImportOverlay label={importingLabel ?? exportingLabel ?? ""} />
       ) : null}
       {importErrorMessage ? (
         <ImportErrorDialog
@@ -1122,6 +1124,23 @@ export default function App() {
           void runExport(() =>
             exportAllFrames(frames, orientation, exportPreset),
           )
+        }
+        onExportMp4={() =>
+          void runExport(async () => {
+            setExportingLabel("Exporting…");
+            try {
+              const bytes = await exportMp4(
+                frames,
+                orientation,
+                exportPreset,
+                clampGifFrameDelayCs(gifFrameDelayCs, frames.length),
+                setExportingLabel,
+              );
+              setToast(mp4ExportToast(bytes));
+            } finally {
+              setExportingLabel(null);
+            }
+          })
         }
         onGifPresetChange={setGifPreset}
         onGifFrameDelayChange={setGifFrameDelayCs}

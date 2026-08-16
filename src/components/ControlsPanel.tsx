@@ -103,6 +103,7 @@ type ControlsPanelProps = {
   onExportPngFrame: () => void;
   onExportPngTransparent: () => void;
   onExportPngSequence: () => void;
+  onExportMp4: () => void;
   onGifPresetChange: (preset: GifExportPreset) => void;
   onGifFrameDelayChange: (delayCs: number) => void;
   onExportGif: () => void;
@@ -150,6 +151,7 @@ export function ControlsPanel({
   onExportPngFrame,
   onExportPngTransparent,
   onExportPngSequence,
+  onExportMp4,
   onGifPresetChange,
   onGifFrameDelayChange,
   onExportGif,
@@ -1302,6 +1304,19 @@ export function ControlsPanel({
       </section>
 
       <section className="panel-section">
+        <h2>MP4</h2>
+        <Mp4ExportMeta frameCount={frameCount} delayCs={gifFrameDelayCs} />
+        <button
+          type="button"
+          className="panel-btn has-hint"
+          data-hint="Offline render at PNG resolution · H.264 via WebCodecs"
+          onClick={onExportMp4}
+        >
+          Export MP4
+        </button>
+      </section>
+
+      <section className="panel-section">
         <h2>GIF</h2>
         <label className="control-row">
           <span className="control-row__label">
@@ -1478,6 +1493,26 @@ export function ControlsPanel({
       </footer>
       <AboutOverlay open={aboutOpen} onClose={() => setAboutOpen(false)} />
     </aside>
+  );
+}
+
+function Mp4ExportMeta({
+  frameCount,
+  delayCs,
+}: {
+  frameCount: number;
+  delayCs: number;
+}) {
+  const heldCs = clampGifFrameDelayCs(delayCs, frameCount);
+  const durationS = gifDurationSeconds(frameCount, heldCs);
+  const fps = gifFpsFromDelayCs(heldCs);
+  const fpsLabel = Number.isInteger(fps) ? String(fps) : fps.toFixed(1);
+
+  return (
+    <p className="export-group__meta">
+      {frameCount} {frameCount === 1 ? "frame" : "frames"} · {durationS.toFixed(2)}s ·{" "}
+      {fpsLabel} fps · uses PNG resolution and playback timing
+    </p>
   );
 }
 

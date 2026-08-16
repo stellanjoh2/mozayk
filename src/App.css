@@ -1475,7 +1475,7 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
   color: var(--brand-warm);
   font: inherit;
   font-size: 15px;
-  font-weight: 700;
+  font-weight: 400;
   letter-spacing: 0.04em;
   line-height: calc(var(--icon-btn-size) - 2px);
   text-transform: uppercase;
@@ -1493,7 +1493,7 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
 
 .timeline__fps option {
   font-size: 16px;
-  font-weight: 500;
+  font-weight: 400;
   letter-spacing: 0;
 }
 
