@@ -17,8 +17,8 @@ const SOUND_NAMES = Object.keys(FILES) as UiSound[];
 
 /** Per-cue gain matched to median RMS (−29 dBFS), peak-limited to −6 dBFS. */
 const SOUND_GAIN: Partial<Record<UiSound, number>> = {
-  delete: 0.9958 * 10 ** (-5 / 20),
-  ok: 1.0,
+  delete: 0.9958 * 10 ** (-10 / 20),
+  ok: 10 ** (-2 / 20),
   close: 1.0,
   push: 3.5818 * 10 ** (-10 / 20),
   slider: 0.7532,
@@ -42,14 +42,14 @@ function clampVolume(value: number): number {
 function loadPrefs(): UiSoundPrefs {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { enabled: true, volume: 100 };
+    if (!raw) return { enabled: true, volume: 80 };
     const parsed = JSON.parse(raw) as Partial<UiSoundPrefs>;
     return {
       enabled: parsed.enabled !== false,
-      volume: clampVolume(Number(parsed.volume ?? 100)),
+      volume: clampVolume(Number(parsed.volume ?? 80)),
     };
   } catch {
-    return { enabled: true, volume: 100 };
+    return { enabled: true, volume: 80 };
   }
 }
 
