@@ -789,7 +789,7 @@ export default function App() {
         .filter(Boolean)
         .join(" ")}
     >
-      {isPortraitMobile ? <MobileGate /> : null}
+      {isPortraitMobile ? <MobileGate onRandomizeAll={randomizeAll} /> : null}
       {toast && !isFullscreen && !isPortraitMobile ? (
         <div className="app-toast">{toast}</div>
       ) : null}

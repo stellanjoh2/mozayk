@@ -535,10 +535,12 @@ export function BrandLogo({
   className,
   onClick,
   alwaysCycle = false,
+  ariaLabel,
 }: {
   className?: string;
   onClick?: () => void;
   alwaysCycle?: boolean;
+  ariaLabel?: string;
 }) {
   const pool = useMemo(buildLogoPool, []);
   const [index, setIndex] = useState(0);
@@ -589,7 +591,7 @@ export function BrandLogo({
       className={className}
       role={onClick ? "button" : undefined}
       tabIndex={onClick ? 0 : undefined}
-      aria-label={onClick ? "Reset canvas" : undefined}
+      aria-label={onClick ? ariaLabel ?? "Reset canvas" : undefined}
       onClick={onClick}
       onKeyDown={
         onClick

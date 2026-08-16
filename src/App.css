@@ -1758,9 +1758,16 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
 
   .mobile-gate__logo {
     width: min(78vw, 280px);
+    cursor: pointer;
+    pointer-events: auto;
   }
 
-  .mobile-gate__mark,
+  .mobile-gate__mark {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
   .mobile-gate__mark svg {
     display: block;
     width: 100%;
