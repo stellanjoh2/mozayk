@@ -879,6 +879,8 @@ export default function App() {
           activeIndex={activeIndex}
           orientation={orientation}
           playing={playing}
+          gifFrameDelayCs={gifFrameDelayCs}
+          onGifFrameDelayChange={setGifFrameDelayCs}
           onSelect={setActiveIndex}
           onReorder={handleReorderFrames}
           onAdd={handleAddFrame}

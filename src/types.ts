@@ -2,7 +2,7 @@ import type { ImageSourceData } from "./import/imageSource";
 
 export type Orientation = "landscape" | "portrait" | "square";
 /** 7 and 9 omitted — fractional cells (17/18, 13/14) broke square spans. */
-export type Density = 1 | 2 | 3 | 4 | 5 | 6 | 8;
+export type Density = 1 | 2 | 3 | 4 | 5 | 6 | 8 | 10 | 12;
 export type GridOverlayStroke = 1 | 2 | 4;
 /** Blend mode for grid overlay strokes over the mosaic. */
 export type GridBlendMode = "normal" | "difference" | "screen";
@@ -111,9 +111,19 @@ export type FrameSettings = {
   brightness?: number;
   /** Invert the finished image (full-frame difference with white). */
   invert?: boolean;
+  /** Corner radius for box shapes 0–100. 100 = pill. Defaults to 0. */
+  cornerRadius?: number;
+  /** Shrink shapes from centre 0–100. 100 = 25% smaller. Defaults to 0. */
+  shapeGap?: number;
+  /** Draw a share of blocks as inner outlines (smallest first). */
+  wireframePeel?: boolean;
+  /** Share of blocks to outline 0–100. Defaults to 50. */
+  wireframePeelAmount?: number;
+  /** Outline thickness in px: 1, 2, or 4. Defaults to 1. */
+  wireframePeelStroke?: GridOverlayStroke;
   /** Sparse monospace coordinate labels in cell corners (PNG). */
   dataFields?: boolean;
-  /** Chance a candidate cell gets a label 0–100. At most ~1/16 of cells. Defaults to 50. */
+  /** Chance a candidate cell gets a label 0–5. At most ~1/16 of cells. Defaults to 3. */
   dataFieldsSpawnRate?: number;
   /** Glyph scale 1–8. Defaults to 1 (~8pt). */
   dataFieldsSize?: number;

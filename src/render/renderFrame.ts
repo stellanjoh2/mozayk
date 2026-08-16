@@ -12,6 +12,7 @@ import type {
   Orientation,
 } from "../types";
 import { applyBonusFx } from "./bonusFx";
+import { blockCornerRadiusPx } from "./cornerRadius";
 import { drawDataFields } from "./dataFields";
 import { applyGridBlur } from "./gridBlur";
 import {
@@ -23,7 +24,13 @@ import {
   type GridOverlayStyle,
 } from "./gridOverlay";
 import { largestRingRadius, ringInnerRadius } from "./ringGeometry";
+import { scaleCrossRects, scalePixelRect, shapeGapScale } from "./shapeGap";
 import { applyTextureOverlay } from "./textureOverlay";
+import {
+  drawWireframeBlock,
+  peeledBlockSet,
+  resolveWireframePeelStroke,
+} from "./wireframePeel";
 
 export type RenderOptions = {
   orientation: Orientation;
@@ -65,14 +72,18 @@ function drawRing(
   cellSize: number,
   color: string,
   fillRadius: number,
+  gapScale: number,
 ): void {
   if (outerR <= 0) return;
 
-  const innerR = ringInnerRadius(outerR, ringThickness, cellSize, fillRadius);
+  const innerR =
+    ringInnerRadius(outerR, ringThickness, cellSize, fillRadius) * gapScale;
+  const r = outerR * gapScale;
+  if (r <= 0) return;
 
   ctx.fillStyle = color;
   ctx.beginPath();
-  ctx.arc(cx, cy, outerR, 0, Math.PI * 2);
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
   if (innerR > 0) {
     ctx.arc(cx, cy, innerR, 0, Math.PI * 2, true);
     ctx.fill("evenodd");
@@ -87,21 +98,24 @@ function drawBlock(
   grid: GridDimensions,
   ringThickness: number,
   fillRadius: number,
+  cornerRadius: number,
+  shapeGap: number,
 ): void {
-  const rect = blockPixelRect(grid, block);
+  const raw = blockPixelRect(grid, block);
+  const rect = scalePixelRect(raw, shapeGap);
   const { x, y, width: drawW, height: drawH } = rect;
 
   if (block.shape === "ring") {
-    const diameter = Math.min(drawW, drawH);
     drawRing(
       ctx,
-      x + drawW / 2,
-      y + drawH / 2,
-      diameter / 2,
+      raw.x + raw.width / 2,
+      raw.y + raw.height / 2,
+      Math.min(raw.width, raw.height) / 2,
       ringThickness,
       grid.cellSize,
       block.color,
       fillRadius,
+      shapeGapScale(shapeGap),
     );
     return;
   }
@@ -130,7 +144,12 @@ function drawBlock(
   }
 
   if (block.shape === "cross") {
-    const { horizontal, vertical } = crossFillRects(grid, block);
+    const arms = crossFillRects(grid, block);
+    const { horizontal, vertical } = scaleCrossRects(
+      arms.horizontal,
+      arms.vertical,
+      shapeGap,
+    );
     ctx.fillStyle = block.color;
     ctx.fillRect(
       horizontal.x,
@@ -143,6 +162,13 @@ function drawBlock(
   }
 
   ctx.fillStyle = block.color;
+  const radius = blockCornerRadiusPx(drawW, drawH, cornerRadius);
+  if (radius > 0) {
+    ctx.beginPath();
+    ctx.roundRect(x, y, drawW, drawH, radius);
+    ctx.fill();
+    return;
+  }
   ctx.fillRect(x, y, drawW, drawH);
 }
 
@@ -240,10 +266,31 @@ export function renderMosaic(
   }
 
   const fillRadius = largestRingRadius(blocks, grid);
+  const peeled = peeledBlockSet(blocks, settings);
+  const peelStroke = resolveWireframePeelStroke(settings.wireframePeelStroke);
   for (const block of blocks) {
     if (!block.color) continue;
     if (omitColors?.has(block.color)) continue;
-    drawBlock(ctx, block, grid, settings.ringThickness, fillRadius);
+    if (peeled.has(block)) {
+      drawWireframeBlock(
+        ctx,
+        block,
+        grid,
+        peelStroke,
+        settings.cornerRadius,
+        settings.shapeGap,
+      );
+      continue;
+    }
+    drawBlock(
+      ctx,
+      block,
+      grid,
+      settings.ringThickness,
+      fillRadius,
+      settings.cornerRadius ?? 0,
+      settings.shapeGap ?? 0,
+    );
   }
 
   try {

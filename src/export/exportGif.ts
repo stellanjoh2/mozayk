@@ -27,10 +27,10 @@ function formatGifBytes(bytes: number): string {
 export function gifExportToast(bytes: number): string {
   const size = formatGifBytes(bytes);
   if (bytes > GIPHY_FILE_SIZE_MAX) {
-    return `Exported ${size} GIF — over GIPHY’s 100 MB limit`;
+    return `Exported ${size} GIF — over 100 MB`;
   }
   if (bytes > GIPHY_FILE_SIZE_RECOMMENDED) {
-    return `Exported ${size} GIF — GIPHY recommends 8 MB or less`;
+    return `Exported ${size} GIF — 8 MB or less recommended`;
   }
   return `Exported ${size} GIF`;
 }

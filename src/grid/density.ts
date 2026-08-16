@@ -4,9 +4,9 @@ import type { Density, Orientation } from "../types";
 export const REFERENCE_DENSITY = 3;
 
 /** Allowed grid densities (7 and 9 dropped — uneven cell widths). */
-export const DENSITIES = [1, 2, 3, 4, 5, 6, 8] as const satisfies readonly Density[];
+export const DENSITIES = [1, 2, 3, 4, 5, 6, 8, 10, 12] as const satisfies readonly Density[];
 
-export const MAX_DENSITY = 8 as const;
+export const MAX_DENSITY = 12 as const;
 
 export type DensityInfo = {
   level: Density;
@@ -23,6 +23,8 @@ export const DENSITY_INFO: DensityInfo[] = [
   { level: 5, label: "5", landscape: { columns: 80, rows: 45 }, cellPx1080: 24 },
   { level: 6, label: "6", landscape: { columns: 96, rows: 54 }, cellPx1080: 20 },
   { level: 8, label: "8", landscape: { columns: 128, rows: 72 }, cellPx1080: 15 },
+  { level: 10, label: "10", landscape: { columns: 160, rows: 90 }, cellPx1080: 12 },
+  { level: 12, label: "12", landscape: { columns: 192, rows: 108 }, cellPx1080: 10 },
 ];
 
 export function isDensity(value: number): value is Density {

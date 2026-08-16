@@ -18,9 +18,17 @@ import {
   getCachedSourceImage,
 } from "../import/imageSource";
 import { renderMosaic } from "../render/renderFrame";
-import { getPreviewSize, getPreviewSizeForDisplay } from "../config";
+import {
+  GIF_FRAME_DELAY_PRESETS,
+  GIPHY_DURATION_MAX_S,
+  clampGifFrameDelayCs,
+  getPreviewSize,
+  getPreviewSizeForDisplay,
+  gifDurationSeconds,
+} from "../config";
 import type { Frame, Orientation } from "../types";
 import { playUiSound } from "../ui/sounds";
+import { PhaseOrb } from "./PhaseOrb";
 
 const STAGE_PADDING = 24;
 
@@ -490,6 +498,8 @@ type TimelineProps = {
   activeIndex: number;
   orientation: Orientation;
   playing: boolean;
+  gifFrameDelayCs: number;
+  onGifFrameDelayChange: (delayCs: number) => void;
   onSelect: (index: number) => void;
   onReorder: (fromIndex: number, toIndex: number) => void;
   onAdd: () => void;
@@ -504,6 +514,8 @@ export function Timeline({
   activeIndex,
   orientation,
   playing,
+  gifFrameDelayCs,
+  onGifFrameDelayChange,
   onSelect,
   onReorder,
   onAdd,
@@ -790,6 +802,11 @@ export function Timeline({
 
   return (
     <footer className="timeline">
+      {playing ? (
+        <div className="timeline__phase-orb" aria-hidden="true">
+          <PhaseOrb />
+        </div>
+      ) : null}
       <div className="timeline__controls">
         <button
           type="button"
@@ -812,6 +829,30 @@ export function Timeline({
             </svg>
           )}
         </button>
+        <select
+          className="timeline__fps"
+          value={clampGifFrameDelayCs(gifFrameDelayCs, frames.length)}
+          aria-label="Playback speed"
+          title="Playback speed"
+          onChange={(event) => {
+            playUiSound("push");
+            onGifFrameDelayChange(Number(event.target.value));
+            event.currentTarget.blur();
+          }}
+        >
+          {GIF_FRAME_DELAY_PRESETS.map((preset) => (
+            <option
+              key={preset.cs}
+              value={preset.cs}
+              disabled={
+                gifDurationSeconds(frames.length, preset.cs) >
+                GIPHY_DURATION_MAX_S
+              }
+            >
+              {preset.fps} FPS
+            </option>
+          ))}
+        </select>
         <button
           type="button"
           className="timeline__btn"

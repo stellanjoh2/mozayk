@@ -61,7 +61,7 @@ export function getExportSize(
   return sizes.square;
 }
 
-/** GIPHY upload guidance — 16:9 sizes that stay on the mosaic grid. */
+/** GIF export sizes — 16:9 that stay on the mosaic grid. */
 export type GifExportPreset = "480p" | "720p";
 
 export const GIF_EXPORT_PRESETS: Record<
@@ -74,17 +74,17 @@ export const GIF_EXPORT_PRESETS: Record<
     square: [number, number];
   }
 > = {
-  /** 18px cells at density 3; exact 16:9 near GIPHY’s 480p recommendation. */
+  /** 18px cells at density 3; exact 16:9 near 480p. */
   "480p": {
     label: "480p",
-    note: "GIPHY recommended",
+    note: "recommended",
     landscape: [864, 486],
     portrait: [486, 864],
     square: [486, 486],
   },
   "720p": {
     label: "720p",
-    note: "GIPHY max",
+    note: "max",
     landscape: [1280, 720],
     portrait: [720, 1280],
     square: [720, 720],
@@ -99,14 +99,15 @@ export const GIPHY_FILE_SIZE_MAX = 100 * 1024 * 1024;
 /** Discrete GIF holds in centiseconds. */
 export const GIF_FRAME_DELAY_PRESETS: readonly {
   cs: number;
+  fps: number;
   label: string;
   note: string;
 }[] = [
-  { cs: 4, label: "0.04s", note: "24 fps" },
-  { cs: 7, label: "0.07s", note: "15 fps · GIPHY" },
-  { cs: 10, label: "0.10s", note: "10 fps" },
-  { cs: 20, label: "0.20s", note: "5 fps" },
-  { cs: 50, label: "0.50s", note: "2 fps" },
+  { cs: 4, fps: 24, label: "0.04s", note: "24 fps" },
+  { cs: 7, fps: 15, label: "0.07s", note: "15 fps" },
+  { cs: 10, fps: 10, label: "0.10s", note: "10 fps" },
+  { cs: 20, fps: 5, label: "0.20s", note: "5 fps" },
+  { cs: 50, fps: 2, label: "0.50s", note: "2 fps" },
 ];
 
 export const GIF_FRAME_DELAY_CS_DEFAULT = 7;

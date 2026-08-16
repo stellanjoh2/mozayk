@@ -469,6 +469,43 @@ export function pickWeightedColor(
   return colors[colors.length - 1];
 }
 
+function shuffleInPlace<T>(items: T[], rng: Rng): void {
+  for (let i = items.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [items[i], items[j]] = [items[j], items[i]];
+  }
+}
+
+/** Largest-remainder counts so Amount weights become an exact mix, not a dice roll. */
+function weightedCounts(weights: number[], total: number): number[] {
+  const safe = weights.map((weight) => Math.max(0, weight));
+  const weightTotal = safe.reduce((sum, weight) => sum + weight, 0);
+  if (total <= 0) return safe.map(() => 0);
+  if (weightTotal <= 0) {
+    const counts = safe.map(() => 0);
+    counts[0] = total;
+    return counts;
+  }
+
+  const raw = safe.map((weight) => (weight / weightTotal) * total);
+  const counts = raw.map(Math.floor);
+  let leftover = total - counts.reduce((sum, count) => sum + count, 0);
+  const byFrac = raw
+    .map((value, index) => ({
+      index,
+      frac: value - Math.floor(value),
+      weight: safe[index],
+    }))
+    .filter((item) => item.weight > 0)
+    .sort((a, b) => b.frac - a.frac || a.index - b.index);
+
+  for (let i = 0; leftover > 0 && byFrac.length > 0; i++) {
+    counts[byFrac[i % byFrac.length].index] += 1;
+    leftover -= 1;
+  }
+  return counts;
+}
+
 export function randomizeColors(
   blocks: MosaicBlock[],
   colors: string[],
@@ -494,12 +531,25 @@ export function randomizeColors(
 
   if (unlockedColors.length === 0) return blocks;
 
+  let unlockedCount = 0;
+  for (const block of blocks) {
+    if (!lockedColorSet.has(block.color)) unlockedCount += 1;
+  }
+  if (unlockedCount === 0) return blocks;
+
+  const counts = weightedCounts(unlockedAmounts, unlockedCount);
+  const bag: string[] = [];
+  for (let c = 0; c < unlockedColors.length; c++) {
+    for (let n = 0; n < counts[c]; n++) bag.push(unlockedColors[c]);
+  }
+  shuffleInPlace(bag, rng);
+
+  let bagIndex = 0;
   return blocks.map((block) => {
     if (lockedColorSet.has(block.color)) return block;
-    return {
-      ...block,
-      color: pickWeightedColor(unlockedColors, unlockedAmounts, rng),
-    };
+    const color = bag[bagIndex] ?? unlockedColors[0];
+    bagIndex += 1;
+    return { ...block, color };
   });
 }
 

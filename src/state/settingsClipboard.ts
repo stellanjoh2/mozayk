@@ -20,6 +20,7 @@ import {
   TEXTURE_OVERLAY_OPACITY_DEFAULT,
   resolveTextureOverlayBlend,
 } from "../render/textureOverlay";
+import { WIREFRAME_PEEL_STROKE_DEFAULT } from "../render/wireframePeel";
 import type {
   BackgroundMode,
   Density,
@@ -238,6 +239,14 @@ function parseSettingsRecord(candidate: Record<string, unknown>): FrameSettings 
     contrast: clampInt(candidate.contrast, -100, 100, 0),
     brightness: clampInt(candidate.brightness, -100, 100, 0),
     invert: Boolean(candidate.invert),
+    cornerRadius: clampInt(candidate.cornerRadius, 0, 100, 0),
+    shapeGap: clampInt(candidate.shapeGap, 0, 100, 0),
+    wireframePeel: Boolean(candidate.wireframePeel),
+    wireframePeelAmount: clampInt(candidate.wireframePeelAmount, 0, 100, 50),
+    wireframePeelStroke: resolveGridOverlayStroke(
+      candidate.wireframePeelStroke,
+      WIREFRAME_PEEL_STROKE_DEFAULT,
+    ),
     dataFields: Boolean(candidate.dataFields),
     dataFieldsSpawnRate: clampInt(
       candidate.dataFieldsSpawnRate,

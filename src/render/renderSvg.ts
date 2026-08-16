@@ -13,8 +13,15 @@ import {
   resolveGridOverlayStyle,
   type GridOverlayStyle,
 } from "./gridOverlay";
+import { blockCornerRadiusPx } from "./cornerRadius";
 import type { RenderOptions } from "./renderFrame";
 import { largestRingRadius, ringInnerRadius } from "./ringGeometry";
+import { scaleCrossRects, scalePixelRect, shapeGapScale } from "./shapeGap";
+import {
+  peeledBlockSet,
+  resolveWireframePeelStroke,
+  svgWireframeBlock,
+} from "./wireframePeel";
 
 function svgRing(
   cx: number,
@@ -24,19 +31,23 @@ function svgRing(
   cellSize: number,
   color: string,
   fillRadius: number,
+  gapScale: number,
 ): string {
   if (outerR <= 0) return "";
 
-  const innerR = ringInnerRadius(outerR, ringThickness, cellSize, fillRadius);
+  const innerR =
+    ringInnerRadius(outerR, ringThickness, cellSize, fillRadius) * gapScale;
+  const r = outerR * gapScale;
+  if (r <= 0) return "";
 
   if (innerR <= 0) {
-    return `<circle cx="${cx}" cy="${cy}" r="${outerR}" fill="${color}"/>`;
+    return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${color}"/>`;
   }
 
   const d = [
-    `M ${cx - outerR} ${cy}`,
-    `a ${outerR} ${outerR} 0 1 0 ${outerR * 2} 0`,
-    `a ${outerR} ${outerR} 0 1 0 ${-outerR * 2} 0`,
+    `M ${cx - r} ${cy}`,
+    `a ${r} ${r} 0 1 0 ${r * 2} 0`,
+    `a ${r} ${r} 0 1 0 ${-r * 2} 0`,
     `M ${cx - innerR} ${cy}`,
     `a ${innerR} ${innerR} 0 1 1 ${innerR * 2} 0`,
     `a ${innerR} ${innerR} 0 1 1 ${-innerR * 2} 0`,
@@ -50,19 +61,22 @@ function svgBlock(
   grid: GridDimensions,
   ringThickness: number,
   fillRadius: number,
+  cornerRadius: number,
+  shapeGap: number,
 ): string {
-  const { x, y, width: drawW, height: drawH } = blockPixelRect(grid, block);
+  const raw = blockPixelRect(grid, block);
+  const { x, y, width: drawW, height: drawH } = scalePixelRect(raw, shapeGap);
 
   if (block.shape === "ring") {
-    const diameter = Math.min(drawW, drawH);
     return svgRing(
-      x + drawW / 2,
-      y + drawH / 2,
-      diameter / 2,
+      raw.x + raw.width / 2,
+      raw.y + raw.height / 2,
+      Math.min(raw.width, raw.height) / 2,
       ringThickness,
       grid.cellSize,
       block.color,
       fillRadius,
+      shapeGapScale(shapeGap),
     );
   }
 
@@ -81,14 +95,21 @@ function svgBlock(
   }
 
   if (block.shape === "cross") {
-    const { horizontal, vertical } = crossFillRects(grid, block);
+    const arms = crossFillRects(grid, block);
+    const { horizontal, vertical } = scaleCrossRects(
+      arms.horizontal,
+      arms.vertical,
+      shapeGap,
+    );
     return [
       `<rect x="${horizontal.x}" y="${horizontal.y}" width="${horizontal.width}" height="${horizontal.height}" fill="${block.color}"/>`,
       `<rect x="${vertical.x}" y="${vertical.y}" width="${vertical.width}" height="${vertical.height}" fill="${block.color}"/>`,
     ].join("");
   }
 
-  return `<rect x="${x}" y="${y}" width="${drawW}" height="${drawH}" fill="${block.color}"/>`;
+  const radius = blockCornerRadiusPx(drawW, drawH, cornerRadius);
+  const round = radius > 0 ? ` rx="${radius}" ry="${radius}"` : "";
+  return `<rect x="${x}" y="${y}" width="${drawW}" height="${drawH}"${round} fill="${block.color}"/>`;
 }
 
 function svgBackground(
@@ -163,9 +184,29 @@ export function renderMosaicToSvg(options: SvgRenderOptions): string {
   const grid = getGridDimensions(orientation, settings.density, width, height);
 
   const fillRadius = largestRingRadius(blocks, grid);
+  const peeled = peeledBlockSet(blocks, settings);
+  const peelStroke = resolveWireframePeelStroke(settings.wireframePeelStroke);
   const shapes = blocks
     .filter((block) => block.color && !omitColors?.has(block.color))
-    .map((block) => svgBlock(block, grid, settings.ringThickness, fillRadius))
+    .map((block, index) =>
+      peeled.has(block)
+        ? svgWireframeBlock(
+            block,
+            grid,
+            peelStroke,
+            `wp${index}`,
+            settings.cornerRadius,
+            settings.shapeGap,
+          )
+        : svgBlock(
+            block,
+            grid,
+            settings.ringThickness,
+            fillRadius,
+            settings.cornerRadius ?? 0,
+            settings.shapeGap ?? 0,
+          ),
+    )
     .join("\n  ");
 
   const overlay =

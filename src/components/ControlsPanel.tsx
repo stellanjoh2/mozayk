@@ -42,6 +42,10 @@ import {
   TEXTURE_OVERLAY_OPACITY_DEFAULT,
   TEXTURE_OVERLAY_TINT_DEFAULT,
 } from "../render/textureOverlay";
+import {
+  WIREFRAME_PEEL_AMOUNT_DEFAULT,
+  WIREFRAME_PEEL_STROKE_DEFAULT,
+} from "../render/wireframePeel";
 import type {
   Density,
   Frame,
@@ -55,6 +59,10 @@ import { BrandLogo } from "./BrandLogo";
 import { ColorSwatch } from "./ColorSwatch";
 import { HeadlineToggle, SliderRow, ToggleRow } from "./ControlRow";
 import { HintLabel } from "./HintLabel";
+import {
+  getNormalHoverEffects,
+  setNormalHoverEffects,
+} from "../ui/hover";
 import {
   getUiSoundsEnabled,
   getUiSoundsVolume,
@@ -143,6 +151,7 @@ export function ControlsPanel({
   const textureInputRef = useRef<HTMLInputElement>(null);
   const [soundsOn, setSoundsOn] = useState(getUiSoundsEnabled);
   const [soundVolume, setSoundVolume] = useState(getUiSoundsVolume);
+  const [normalHover, setNormalHover] = useState(getNormalHoverEffects);
   const shapes = settings.shapes ?? {
     sphere: false,
     ring: false,
@@ -926,6 +935,64 @@ export function ControlsPanel({
           checked={Boolean(settings.invert)}
           onChange={(invert) => onSettingsChange({ invert }, false)}
         />
+        <SliderRow
+          label="Corner radius"
+          hint="0 = square · 100 = pill · boxes only"
+          value={settings.cornerRadius ?? 0}
+          onChange={(cornerRadius) =>
+            onSettingsChange({ cornerRadius }, false)
+          }
+        />
+        <SliderRow
+          label="Gap"
+          hint="0 = flush · 100 = 25% smaller"
+          value={settings.shapeGap ?? 0}
+          onChange={(shapeGap) => onSettingsChange({ shapeGap }, false)}
+        />
+        <ToggleRow
+          label="Wireframe peel"
+          hint="Smallest shapes become outlines"
+          checked={Boolean(settings.wireframePeel)}
+          onChange={(wireframePeel) =>
+            onSettingsChange({ wireframePeel }, false)
+          }
+        />
+        {settings.wireframePeel ? (
+          <>
+            <SliderRow
+              label="Amount"
+              hint="0 = solid · 100 = all outlines · smallest first"
+              value={
+                settings.wireframePeelAmount ?? WIREFRAME_PEEL_AMOUNT_DEFAULT
+              }
+              min={0}
+              max={100}
+              onChange={(wireframePeelAmount) =>
+                onSettingsChange({ wireframePeelAmount }, false)
+              }
+            />
+            <SliderRow
+              label="Stroke"
+              hint="Outline thickness"
+              value={GRID_OVERLAY_STROKES.indexOf(
+                resolveGridOverlayStroke(
+                  settings.wireframePeelStroke,
+                  WIREFRAME_PEEL_STROKE_DEFAULT,
+                ),
+              )}
+              min={0}
+              max={GRID_OVERLAY_STROKES.length - 1}
+              step={1}
+              formatValue={(i) => `${GRID_OVERLAY_STROKES[i]}px`}
+              onChange={(i) =>
+                onSettingsChange(
+                  { wireframePeelStroke: GRID_OVERLAY_STROKES[i] },
+                  false,
+                )
+              }
+            />
+          </>
+        ) : null}
         <ToggleRow
           label="Data fields"
           hint="Sparse monospace coordinates in cell corners · PNG only"
@@ -1014,7 +1081,7 @@ export function ControlsPanel({
           <h3 className="export-group__title">GIF</h3>
           <label className="control-row">
             <span className="control-row__label">
-              <HintLabel hint="GIPHY recommended 480p · max 720p">
+              <HintLabel hint="Recommended 480p · max 720p">
                 Resolution
               </HintLabel>
             </span>
@@ -1033,7 +1100,7 @@ export function ControlsPanel({
           </label>
           <label className="control-row">
             <span className="control-row__label">
-              <HintLabel hint="How long each frame holds in the GIF and viewport · GIPHY prefers 15–24 fps">
+              <HintLabel hint="How long each frame holds in the GIF and viewport · 15–24 fps recommended">
                 Frame duration
               </HintLabel>
             </span>
@@ -1123,6 +1190,15 @@ export function ControlsPanel({
             setSoundVolume(volume);
           }}
         />
+        <ToggleRow
+          label="Normal Hover Effects"
+          hint="Static highlights · no blink"
+          checked={normalHover}
+          onChange={(next) => {
+            setNormalHoverEffects(next);
+            setNormalHover(next);
+          }}
+        />
       </section>
 
       <footer className="panel-credit">
@@ -1161,9 +1237,9 @@ function GifExportMeta({
   const overLimit = durationS > GIPHY_DURATION_MAX_S;
   const overRecommended = durationS > GIPHY_DURATION_RECOMMENDED_S;
   const note = overLimit
-    ? " · over GIPHY’s 15s limit"
+    ? " · over 15s limit"
     : overRecommended
-      ? " · over GIPHY’s 6s recommendation"
+      ? " · over 6s recommendation"
       : "";
 
   return (

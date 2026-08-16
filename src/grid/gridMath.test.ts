@@ -45,6 +45,16 @@ function run(): void {
     for (const density of DENSITIES) {
       for (const [width, height] of CANVASES[orientation]) {
         const grid = getGridDimensions(orientation, density, width, height);
+        if (
+          (width === 1920 && height === 1080) ||
+          (width === 1080 && height === 1920) ||
+          (width === 1080 && height === 1080)
+        ) {
+          assert(
+            Number.isInteger(grid.cellSize),
+            `1080p cells must be integer px at ${width}×${height} d=${density}`,
+          );
+        }
 
         let prevX = 0;
         for (let col = 0; col <= grid.columns; col++) {

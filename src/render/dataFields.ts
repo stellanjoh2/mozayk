@@ -181,13 +181,12 @@ export function drawDataFields(
     return;
   }
 
-  const { columns, rows, cellSize } = grid;
-  if (cellSize < GLYPH_H * scale + PAD_Y * 2) return;
+  const { columns, rows } = grid;
 
   const rng = mulberry32(
     hashSeed(columns, rows, width, height, spawnRate, 0xdf91),
   );
-  const spawnChance = spawnRate / 100;
+  const spawnChance = spawnRate / DATA_FIELDS_SPAWN_MAX;
 
   ctx.save();
   ctx.fillStyle = color;

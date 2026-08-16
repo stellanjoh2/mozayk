@@ -86,6 +86,10 @@ function run(): void {
   assert(legacy.settings.randomWidth === true, "omitted randomWidth defaults on");
   assert(legacy.settings.randomHeight === true, "omitted randomHeight defaults on");
   assert(legacy.settings.shapes.sphere === true, "omitted shapes default to the mix palette");
+  assert(legacy.settings.wireframePeel === false, "omitted wireframe peel defaults off");
+  assert(legacy.settings.wireframePeelStroke === 1, "omitted wireframe peel stroke defaults to 1px");
+  assert(legacy.settings.cornerRadius === 0, "omitted corner radius defaults to 0");
+  assert(legacy.settings.shapeGap === 0, "omitted shape gap defaults to 0");
 
   const rawPreset = parseSettingsClipboard(
     JSON.stringify({
@@ -110,6 +114,40 @@ function run(): void {
   assert(explicitOff !== null, "explicit flags should parse");
   assert(explicitOff.settings.randomWidth === false, "explicit randomWidth false is kept");
   assert(explicitOff.settings.randomHeight === false, "explicit randomHeight false is kept");
+
+  const peel = parseSettingsClipboard(
+    JSON.stringify({
+      density: 5,
+      colors: ["#ffffff"],
+      wireframePeel: true,
+      wireframePeelAmount: 80,
+      wireframePeelStroke: 4,
+    }),
+  );
+  assert(peel !== null, "wireframe peel settings should parse");
+  assert(peel.settings.wireframePeel === true, "wireframe peel toggle kept");
+  assert(peel.settings.wireframePeelAmount === 80, "wireframe peel amount kept");
+  assert(peel.settings.wireframePeelStroke === 4, "wireframe peel stroke kept");
+
+  const radius = parseSettingsClipboard(
+    JSON.stringify({
+      density: 5,
+      colors: ["#ffffff"],
+      cornerRadius: 70,
+    }),
+  );
+  assert(radius !== null, "corner radius settings should parse");
+  assert(radius.settings.cornerRadius === 70, "corner radius kept");
+
+  const gap = parseSettingsClipboard(
+    JSON.stringify({
+      density: 5,
+      colors: ["#ffffff"],
+      shapeGap: 40,
+    }),
+  );
+  assert(gap !== null, "shape gap settings should parse");
+  assert(gap.settings.shapeGap === 40, "shape gap kept");
 }
 
 run();
