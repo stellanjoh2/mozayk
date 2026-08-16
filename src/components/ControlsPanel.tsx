@@ -60,6 +60,7 @@ import { SUPPORTED_IMAGE_ACCEPT } from "../import/supportedImageTypes";
 import { SUPPORTED_VIDEO_ACCEPT } from "../import/supportedVideoTypes";
 import { isMzkFile, MZK_EXTENSION } from "../project/mzkFormat";
 import { BrandLogo } from "./BrandLogo";
+import { AboutOverlay } from "./AboutOverlay";
 import { ColorSwatch } from "./ColorSwatch";
 import { HeadlineToggle, SliderRow, ToggleRow } from "./ControlRow";
 import { HintLabel } from "./HintLabel";
@@ -181,6 +182,7 @@ export function ControlsPanel({
   const [soundsOn, setSoundsOn] = useState(getUiSoundsEnabled);
   const [soundVolume, setSoundVolume] = useState(getUiSoundsVolume);
   const [normalHover, setNormalHover] = useState(getNormalHoverEffects);
+  const [aboutOpen, setAboutOpen] = useState(false);
   const shapes = settings.shapes ?? {
     sphere: false,
     ring: false,
@@ -1448,7 +1450,17 @@ export function ControlsPanel({
 
       <footer className="panel-credit">
         <p>
-          Mozayk is created by Stellan Johansson
+          Mozayk is created by{" "}
+          <button
+            type="button"
+            className="panel-credit__author"
+            onClick={() => {
+              playUiSound("ok");
+              setAboutOpen(true);
+            }}
+          >
+            Stellan Johansson
+          </button>
           <a
             href="https://github.com/stellanjoh2/Mosaik"
             target="_blank"
@@ -1464,6 +1476,7 @@ export function ControlsPanel({
           </a>
         </p>
       </footer>
+      <AboutOverlay open={aboutOpen} onClose={() => setAboutOpen(false)} />
     </aside>
   );
 }
