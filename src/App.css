@@ -1646,7 +1646,7 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
   -webkit-backdrop-filter: blur(36px);
   box-shadow: 8px 0 32px rgba(0, 0, 0, 0.28);
   transform: translateX(-100%);
-  transition: transform 0.45s var(--ui-ease);
+  transition: transform 0.45s cubic-bezier(0.83, 0, 0.17, 1);
   pointer-events: none;
 }
 
