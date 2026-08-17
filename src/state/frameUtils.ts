@@ -20,7 +20,13 @@ import {
   carryOverBlockColors,
   randomizeLayoutSettings,
 } from "../layout/randomizeLayoutSettings";
-import { buildMergedLayoutFromImage } from "../import/imageImport";
+import {
+  buildMergedLayoutFromColorGrid,
+  buildMergedLayoutFromImage,
+  gridExtentsFromBlocks,
+  rasterizeBlockColorGrid,
+  resampleColorGrid,
+} from "../import/imageImport";
 import type { ImageImportResult } from "../import/imageImport";
 import { getCachedSourceImage } from "../import/imageSource";
 import type { SettingsClipboard } from "./settingsClipboard";
@@ -203,6 +209,16 @@ function remapBlockColors(
   });
 }
 
+/** When blocks still use the photo palette, remap by import slot — not current settings. */
+function importPaletteForRemap(frame: Frame): string[] | null {
+  if (!frame.imageSource) return null;
+  const importPalette = frame.imageSource.palette;
+  if (importPalette.length === 0) return null;
+  const importColors = new Set(importPalette);
+  if (!frame.blocks.every((block) => importColors.has(block.color))) return null;
+  return importPalette;
+}
+
 function settingsKeyChanged<K extends keyof FrameSettings>(
   keys: readonly K[],
   from: FrameSettings,
@@ -258,7 +274,7 @@ export function applyLookToFrame(
 
   let blocks = remapBlockColors(
     frame.blocks,
-    frame.settings.colors,
+    importPaletteForRemap(frame) ?? frame.settings.colors,
     settings.colors,
   );
   if (shapeSettingsChanged(frame.settings, settings)) {
@@ -274,9 +290,7 @@ export function applyLookToAllFrames(
 ): Frame[] {
   const look = frames[sourceIndex];
   if (!look || frames.length <= 1) return frames;
-  return frames.map((frame, index) =>
-    index === sourceIndex ? frame : applyLookToFrame(frame, look, orientation),
-  );
+  return frames.map((frame) => applyLookToFrame(frame, look, orientation));
 }
 
 export function applyPastedSettings(
@@ -326,13 +340,7 @@ export function relayoutImportedFrame(
   const image = getCachedSourceImage(frame.imageSource.dataUrl);
   if (!image) return frame;
 
-  // Keep user/edited colours when the palette length still matches the
-  // import clusters — never wipe New Random Colours back to the photo palette.
-  const clusterCount = frame.imageSource.paletteRgb.length;
-  const displayPalette =
-    frame.settings.colors.length === clusterCount
-      ? [...frame.settings.colors]
-      : [...frame.imageSource.palette];
+  const displayPalette = [...frame.settings.colors];
 
   const settings = clampSettingsForOrientation(
     {
@@ -347,14 +355,38 @@ export function relayoutImportedFrame(
     orientation,
   );
 
-  const blocks = buildMergedLayoutFromImage(
-    image,
-    orientation,
-    settings,
-    displayPalette,
-    frame.imageSource.paletteRgb,
-    rng,
-  );
+  const { columns, rows } = getGridCounts(orientation, settings.density);
+  const oldExtents = gridExtentsFromBlocks(frame.blocks);
+  const densityChanged =
+    oldExtents.columns > 0 &&
+    oldExtents.rows > 0 &&
+    (oldExtents.columns !== columns || oldExtents.rows !== rows);
+
+  let blocks: MosaicBlock[];
+  if (frame.blocks.length > 0 && densityChanged) {
+    const colorGrid = rasterizeBlockColorGrid(
+      frame.blocks,
+      oldExtents.columns,
+      oldExtents.rows,
+      settings.background,
+    );
+    const resampled = resampleColorGrid(colorGrid, columns, rows);
+    blocks = buildMergedLayoutFromColorGrid(
+      resampled,
+      displayPalette,
+      settings,
+      rng,
+    );
+  } else {
+    blocks = buildMergedLayoutFromImage(
+      image,
+      orientation,
+      settings,
+      displayPalette,
+      frame.imageSource.paletteRgb,
+      rng,
+    );
+  }
 
   return { ...frame, settings, blocks };
 }
@@ -442,6 +474,12 @@ export function applyPalettePresetToFrame(
     colorAmounts,
     colorsLocked,
   };
+  // Imported frames derive block colours from the photo — remap by palette
+  // slot instead of shuffling, so the silhouette stays intact.
+  if (frame.imageSource) {
+    const blocks = remapBlockColors(frame.blocks, frame.settings.colors, colors);
+    return { ...frame, settings, blocks };
+  }
   const blocks = randomizeColors(
     frame.blocks,
     colors,

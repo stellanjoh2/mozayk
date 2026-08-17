@@ -1,6 +1,7 @@
 import {
   applyLookToAllFrames,
   applyLookToFrame,
+  applyPalettePresetToFrame,
   createDefaultSettings,
 } from "./frameUtils";
 import type { Frame, MosaicBlock } from "../types";
@@ -88,7 +89,8 @@ function run(): void {
   const frames = [look, other, importedFrame("third", otherColors)];
   const applied = applyLookToAllFrames(frames, 0, "landscape");
 
-  assert(applied[0] === look, "selected look frame is left in place");
+  assert(applied[0].id === look.id, "selected look frame keeps its id");
+  assert(applied[0].settings.hueShift === 40, "selected look frame keeps the look settings");
   assert(applied[1].id === "other", "second frame keeps its id");
   assert(applied[2].id === "third", "third frame keeps its id");
   assert(
@@ -103,9 +105,64 @@ function run(): void {
   assert(applied[2].settings.hueShift === 40, "third frame gets the look");
   assert(applied[1].blocks[0].width === 4, "second mosaic geometry stays");
   assert(applied[2].blocks[1].height === 3, "third mosaic geometry stays");
+  assert(
+    applied[0].blocks[0].color === look.blocks[0].color,
+    "look frame keeps its colour order",
+  );
 
   const unchanged = applyLookToAllFrames([look], 0, "landscape");
   assert(unchanged[0] === look, "single-frame apply is a no-op");
+
+  const importColors: [string, string, string] = ["#ff0000", "#00ff00", "#0000ff"];
+  const themeColors: [string, string, string] = ["#111111", "#222222", "#333333"];
+  const imported = importedFrame("palette", importColors);
+  const withTheme = applyPalettePresetToFrame(imported, {
+    id: "test-theme",
+    label: "Test",
+    category: "common",
+    colors: themeColors,
+  });
+  assert(withTheme.blocks[0].color === "#111111", "imported theme remaps slot 0");
+  assert(withTheme.blocks[1].color === "#222222", "imported theme remaps slot 1");
+  assert(withTheme.blocks[2].color === "#333333", "imported theme remaps slot 2");
+  assert(withTheme.blocks[0].width === 4, "imported theme keeps tile geometry");
+
+  const eightColorFrame = importedFrame("eight", [
+    "#100000",
+    "#200000",
+    "#300000",
+    "#400000",
+    "#500000",
+    "#600000",
+    "#700000",
+    "#800000",
+  ] as unknown as [string, string, string]);
+  eightColorFrame.imageSource!.paletteRgb = Array.from({ length: 8 }, (_, i) => ({
+    r: (i + 1) * 16,
+    g: 0,
+    b: 0,
+  }));
+  const fiveColorTheme: [string, string, string, string, string] = [
+    "#111111",
+    "#222222",
+    "#333333",
+    "#444444",
+    "#555555",
+  ];
+  const themedEight = applyPalettePresetToFrame(eightColorFrame, {
+    id: "five-theme",
+    label: "Five",
+    category: "common",
+    colors: fiveColorTheme,
+  });
+  assert(
+    themedEight.settings.colors.length === 5,
+    "preset replaces palette length",
+  );
+  assert(
+    themedEight.blocks[0].color === "#111111",
+    "shorter theme remaps by slot",
+  );
 }
 
 run();

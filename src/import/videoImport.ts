@@ -24,7 +24,7 @@ export type VideoProbe = {
 export type VideoImportResult = {
   mosaics: ImageImportResult[];
   orientation: Orientation;
-  delayCs: number;
+  playbackFps: number;
   durationS: number;
 };
 
@@ -55,6 +55,33 @@ export function videoFrameCount(
   const duration = Math.max(0, durationS);
   if (duration <= 0) return 1;
   return Math.max(1, Math.min(maxFrames, Math.round(duration * targetFps)));
+}
+
+export function videoImportMaxFrames(
+  targetFps: number,
+  maxDurationS = MAX_VIDEO_DURATION_S,
+): number {
+  return Math.max(1, Math.round(maxDurationS * targetFps));
+}
+
+export function videoImportFrameCount(
+  durationS: number,
+  targetFps: number,
+  maxDurationS = MAX_VIDEO_DURATION_S,
+): number {
+  const importDurationS = Math.min(Math.max(0, durationS), maxDurationS);
+  return videoFrameCount(
+    importDurationS,
+    videoImportMaxFrames(targetFps, maxDurationS),
+    targetFps,
+  );
+}
+
+export function videoImportDurationS(
+  durationS: number,
+  maxDurationS = MAX_VIDEO_DURATION_S,
+): number {
+  return Math.min(Math.max(0, durationS), maxDurationS);
 }
 
 export function videoFrameTimestamps(
@@ -272,7 +299,6 @@ export async function importVideoFileToMosaic(
     const durationS = Math.min(video.duration, maxDurationS);
     const frameCount = videoFrameCount(durationS, maxFrames, targetFps);
     const timestamps = videoFrameTimestamps(durationS, frameCount);
-    const delayCs = videoPlaybackDelayCs(durationS, frameCount);
     const settings = { ...options.settings, fillAmount: 100 };
 
     const images = await extractFrameImages(
@@ -295,6 +321,6 @@ export async function importVideoFileToMosaic(
       await nextPaint();
     }
 
-    return { mosaics, orientation, delayCs, durationS };
+    return { mosaics, orientation, playbackFps: targetFps, durationS };
   });
 }

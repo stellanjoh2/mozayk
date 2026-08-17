@@ -1,4 +1,4 @@
-import { rgbToHex } from "../colorMath";
+import { hexToRgb, rgbToHex } from "../colorMath";
 import { getGridCounts } from "../grid/gridMath";
 import { assignShape, type Rng } from "../shapes/shapePalette";
 import type {
@@ -424,19 +424,123 @@ function buildBlocksFromIndexedGrid(
   }));
 }
 
+function paletteRgbForIndexing(palette: string[]): ImageRgb[] {
+  return palette.map((hex) => hexToRgb(hex));
+}
+
+export function gridExtentsFromBlocks(blocks: MosaicBlock[]): {
+  columns: number;
+  rows: number;
+} {
+  let columns = 0;
+  let rows = 0;
+  for (const block of blocks) {
+    columns = Math.max(columns, block.col + block.width);
+    rows = Math.max(rows, block.row + block.height);
+  }
+  return { columns, rows };
+}
+
+export function rasterizeBlockColorGrid(
+  blocks: MosaicBlock[],
+  columns: number,
+  rows: number,
+  emptyColor: string,
+): string[][] {
+  const grid = Array.from({ length: rows }, () =>
+    Array<string>(columns).fill(emptyColor),
+  );
+  for (const block of blocks) {
+    for (let row = block.row; row < block.row + block.height; row++) {
+      for (let col = block.col; col < block.col + block.width; col++) {
+        if (row >= 0 && row < rows && col >= 0 && col < columns) {
+          grid[row][col] = block.color;
+        }
+      }
+    }
+  }
+  return grid;
+}
+
+/** Nearest-neighbour upscale/downscale of a cell colour grid. */
+export function resampleColorGrid(
+  grid: string[][],
+  newColumns: number,
+  newRows: number,
+): string[][] {
+  const oldRows = grid.length;
+  const oldColumns = grid[0]?.length ?? 0;
+  if (oldRows === 0 || oldColumns === 0 || newColumns <= 0 || newRows <= 0) {
+    return Array.from({ length: Math.max(0, newRows) }, () =>
+      Array<string>(Math.max(0, newColumns)).fill(""),
+    );
+  }
+
+  return Array.from({ length: newRows }, (_, row) =>
+    Array.from({ length: newColumns }, (_, col) => {
+      const srcCol = Math.min(
+        oldColumns - 1,
+        Math.floor(((col + 0.5) / newColumns) * oldColumns),
+      );
+      const srcRow = Math.min(
+        oldRows - 1,
+        Math.floor(((row + 0.5) / newRows) * oldRows),
+      );
+      return grid[srcRow][srcCol];
+    }),
+  );
+}
+
+function colorGridToIndexedGrid(
+  colorGrid: string[][],
+  palette: string[],
+): number[][] {
+  return colorGrid.map((row) =>
+    row.map((color) => {
+      const index = palette.indexOf(color);
+      return index >= 0 ? index : 0;
+    }),
+  );
+}
+
+export function buildMergedLayoutFromIndexedGrid(
+  indexedGrid: number[][],
+  palette: string[],
+  settings: FrameSettings,
+  rng: Rng = Math.random,
+): MosaicBlock[] {
+  return buildBlocksFromIndexedGrid(indexedGrid, palette, settings, rng, true);
+}
+
+/** Rebuild merge layout from an existing colour grid (e.g. after density change). */
+export function buildMergedLayoutFromColorGrid(
+  colorGrid: string[][],
+  palette: string[],
+  settings: FrameSettings,
+  rng: Rng = Math.random,
+): MosaicBlock[] {
+  return buildMergedLayoutFromIndexedGrid(
+    colorGridToIndexedGrid(colorGrid, palette),
+    palette,
+    settings,
+    rng,
+  );
+}
+
 /** Same merge pipeline as first import, with shuffled merge order for variation. */
 export function buildMergedLayoutFromImage(
   image: HTMLImageElement,
   orientation: Orientation,
   settings: FrameSettings,
   palette: string[],
-  paletteRgb: ImageRgb[],
+  _paletteRgb: ImageRgb[],
   rng: Rng = Math.random,
 ): MosaicBlock[] {
   const { columns, rows } = getGridCounts(orientation, settings.density);
   const sampled = sampleImageGrid(image, columns, rows);
+  const indexPalette = paletteRgbForIndexing(palette);
   const indexedGrid = sampled.map((line) =>
-    line.map((pixel) => nearestPaletteIndex(pixel, paletteRgb)),
+    line.map((pixel) => nearestPaletteIndex(pixel, indexPalette)),
   );
 
   return buildBlocksFromIndexedGrid(

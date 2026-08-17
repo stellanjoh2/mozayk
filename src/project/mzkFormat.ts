@@ -1,5 +1,8 @@
 import {
   clampGifFrameDelayCs,
+  gifFpsFromDelayCs,
+  normalizePlaybackFps,
+  PLAYBACK_FPS_DEFAULT,
   type ExportPreset,
   type GifExportPreset,
   MAX_FRAMES,
@@ -23,6 +26,7 @@ export type MzkProject = {
   exportPreset: ExportPreset;
   gifPreset: GifExportPreset;
   gifFrameDelayCs: number;
+  playbackFps: number;
 };
 
 export type MzkProjectPayload = {
@@ -34,6 +38,7 @@ export type MzkProjectPayload = {
   exportPreset?: ExportPreset;
   gifPreset?: GifExportPreset;
   gifFrameDelayCs?: number;
+  playbackFps?: number;
 };
 
 function isOrientation(value: unknown): value is Orientation {
@@ -146,6 +151,7 @@ export function serializeMzkProject(project: MzkProject): string {
     exportPreset: project.exportPreset,
     gifPreset: project.gifPreset,
     gifFrameDelayCs: project.gifFrameDelayCs,
+    playbackFps: project.playbackFps,
   };
   return JSON.stringify(payload);
 }
@@ -199,6 +205,11 @@ export function parseMzkProject(raw: string): MzkProject | null {
       Number(record.gifFrameDelayCs) || 7,
       frames.length,
     );
+    const playbackFps = normalizePlaybackFps(
+      Number(record.playbackFps) ||
+        gifFpsFromDelayCs(gifFrameDelayCs) ||
+        PLAYBACK_FPS_DEFAULT,
+    );
 
     return {
       orientation: record.orientation,
@@ -207,6 +218,7 @@ export function parseMzkProject(raw: string): MzkProject | null {
       exportPreset,
       gifPreset,
       gifFrameDelayCs,
+      playbackFps,
     };
   } catch {
     return null;

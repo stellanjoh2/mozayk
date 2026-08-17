@@ -86,6 +86,7 @@ type ControlsPanelProps = {
   exportPreset: ExportPreset;
   gifPreset: GifExportPreset;
   gifFrameDelayCs: number;
+  playbackFps: number;
   frameCount: number;
   onSettingsChange: (patch: Partial<FrameSettings>, immediateLayout?: boolean) => void;
   onRandomizeLayout: () => void;
@@ -136,6 +137,7 @@ export function ControlsPanel({
   exportPreset,
   gifPreset,
   gifFrameDelayCs,
+  playbackFps,
   frameCount,
   onSettingsChange,
   onRandomizeLayout,
@@ -1340,7 +1342,7 @@ export function ControlsPanel({
 
       <section className="panel-section">
         <h2>MP4</h2>
-        <Mp4ExportMeta frameCount={frameCount} delayCs={gifFrameDelayCs} />
+        <Mp4ExportMeta frameCount={frameCount} playbackFps={playbackFps} />
         <button
           type="button"
           className="panel-btn has-hint"
@@ -1374,7 +1376,7 @@ export function ControlsPanel({
         </label>
         <label className="control-row">
           <span className="control-row__label">
-            <HintLabel hint="How long each frame holds in the GIF and viewport · 15–24 fps recommended">
+            <HintLabel hint="GIF frame holds — approximate timing · use MP4 for exact fps">
               Frame duration
             </HintLabel>
           </span>
@@ -1593,20 +1595,17 @@ export function ControlsPanel({
 
 function Mp4ExportMeta({
   frameCount,
-  delayCs,
+  playbackFps,
 }: {
   frameCount: number;
-  delayCs: number;
+  playbackFps: number;
 }) {
-  const heldCs = clampGifFrameDelayCs(delayCs, frameCount);
-  const durationS = gifDurationSeconds(frameCount, heldCs);
-  const fps = gifFpsFromDelayCs(heldCs);
-  const fpsLabel = Number.isInteger(fps) ? String(fps) : fps.toFixed(1);
+  const durationS = frameCount / Math.max(playbackFps, 1);
 
   return (
     <p className="export-group__meta">
       {frameCount} {frameCount === 1 ? "frame" : "frames"} · {durationS.toFixed(2)}s ·{" "}
-      {fpsLabel} fps · uses PNG resolution and playback timing
+      {playbackFps} fps · exact timing for import/export
     </p>
   );
 }

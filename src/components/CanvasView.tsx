@@ -19,12 +19,11 @@ import {
 } from "../import/imageSource";
 import { renderMosaic } from "../render/renderFrame";
 import {
-  GIF_FRAME_DELAY_PRESETS,
   GIPHY_DURATION_MAX_S,
-  clampGifFrameDelayCs,
+  PLAYBACK_FPS_OPTIONS,
   getPreviewSize,
   getPreviewSizeForDisplay,
-  gifDurationSeconds,
+  playbackDurationSeconds,
 } from "../config";
 import type { Frame, Orientation } from "../types";
 import { playUiSound } from "../ui/sounds";
@@ -552,8 +551,8 @@ type TimelineProps = {
   activeIndex: number;
   orientation: Orientation;
   playing: boolean;
-  gifFrameDelayCs: number;
-  onGifFrameDelayChange: (delayCs: number) => void;
+  playbackFps: number;
+  onPlaybackFpsChange: (fps: number) => void;
   onSelect: (index: number) => void;
   onReorder: (fromIndex: number, toIndex: number) => void;
   onAdd: () => void;
@@ -568,8 +567,8 @@ export function Timeline({
   activeIndex,
   orientation,
   playing,
-  gifFrameDelayCs,
-  onGifFrameDelayChange,
+  playbackFps,
+  onPlaybackFpsChange,
   onSelect,
   onReorder,
   onAdd,
@@ -861,7 +860,11 @@ export function Timeline({
           <PhaseOrb />
         </div>
       ) : null}
-      <div className="timeline__controls">
+      <div className="timeline__toolbar">
+        <p className="timeline__frame-index" aria-live="polite">
+          Frame {activeIndex + 1}
+        </p>
+        <div className="timeline__controls">
         <button
           type="button"
           className={`timeline__btn${playing ? " is-active" : ""}`}
@@ -885,25 +888,24 @@ export function Timeline({
         </button>
         <select
           className="timeline__fps"
-          value={clampGifFrameDelayCs(gifFrameDelayCs, frames.length)}
+          value={playbackFps}
           aria-label="Playback speed"
           title="Playback speed"
           onChange={(event) => {
             playUiSound("push");
-            onGifFrameDelayChange(Number(event.target.value));
+            onPlaybackFpsChange(Number(event.target.value));
             event.currentTarget.blur();
           }}
         >
-          {GIF_FRAME_DELAY_PRESETS.map((preset) => (
+          {PLAYBACK_FPS_OPTIONS.map((fps) => (
             <option
-              key={preset.cs}
-              value={preset.cs}
+              key={fps}
+              value={fps}
               disabled={
-                gifDurationSeconds(frames.length, preset.cs) >
-                GIPHY_DURATION_MAX_S
+                playbackDurationSeconds(frames.length, fps) > GIPHY_DURATION_MAX_S
               }
             >
-              {preset.fps} FPS
+              {fps} FPS
             </option>
           ))}
         </select>
@@ -963,6 +965,7 @@ export function Timeline({
             />
           </svg>
         </button>
+      </div>
       </div>
       <div ref={stripRef} className="timeline__scroll">
         <div

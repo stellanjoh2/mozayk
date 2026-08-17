@@ -43,6 +43,7 @@ function sampleProject(): MzkProject {
     exportPreset: "1440p",
     gifPreset: "720p",
     gifFrameDelayCs: 5,
+    playbackFps: 24,
   };
 }
 
@@ -58,6 +59,7 @@ function run(): void {
   assert(parsed.exportPreset === "1440p", "export preset survives round-trip");
   assert(parsed.gifPreset === "720p", "gif preset survives round-trip");
   assert(parsed.gifFrameDelayCs === 5, "gif delay survives round-trip");
+  assert(parsed.playbackFps === 24, "playback fps survives round-trip");
   assert(parsed.frames[0].blocks.length === 2, "blocks survive round-trip");
   assert(
     parsed.frames[0].imageSource?.dataUrl === "data:image/png;base64,abc",
@@ -100,6 +102,7 @@ function run(): void {
     exportPreset: "1080p",
     gifPreset: "480p",
     gifFrameDelayCs: 7,
+    playbackFps: 15,
   });
   const emptyBlocksParsed = parseMzkProject(emptyBlocksJson);
   assert(emptyBlocksParsed !== null, "frames with empty blocks should parse");
@@ -111,6 +114,23 @@ function run(): void {
   assert(isMzkFile(new File(["{}"], "scene.mzk")), ".mzk extension is accepted");
   assert(!isMzkFile(new File(["{}"], "scene.json")), ".json extension is rejected");
   assert(defaultMzkFileName() === "mozayk.mzk", "default filename uses .mzk");
+
+  const legacyJson = JSON.stringify({
+    v: 1,
+    mozayk: "project",
+    orientation: "portrait",
+    frames: sampleProject().frames,
+    activeIndex: 1,
+    exportPreset: "1440p",
+    gifPreset: "720p",
+    gifFrameDelayCs: 7,
+  });
+  const legacyParsed = parseMzkProject(legacyJson);
+  assert(legacyParsed !== null, "legacy project without playbackFps should parse");
+  assert(
+    legacyParsed?.playbackFps === 15,
+    "legacy playback fps is derived from gif delay",
+  );
 
   console.log("mzkFormat.test.ts: all passed");
 }

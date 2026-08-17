@@ -8,6 +8,8 @@ import {
   orientationFromVideoSize,
   videoFrameCount,
   videoFrameTimestamps,
+  videoImportFrameCount,
+  videoImportMaxFrames,
   videoPlaybackDelayCs,
 } from "./videoImport";
 
@@ -28,8 +30,18 @@ function run(): void {
   assert(videoFrameCount(2.5, 30, 12) === 30, "2.5s at 12fps hits the cap");
   assert(videoFrameCount(0.04, 30, 12) === 1, "tiny clip still yields a frame");
   assert(
-    videoFrameCount(5, MAX_FRAMES, VIDEO_IMPORT_FPS) === MAX_FRAMES,
-    "default helpers use the app cap",
+    videoFrameCount(5, MAX_FRAMES, VIDEO_IMPORT_FPS) === 60,
+    "default max allows full 12fps sampling for 5s",
+  );
+
+  assert(videoImportMaxFrames(12) === 60, "12fps over 5s is 60 frames max");
+  assert(videoImportMaxFrames(30) === 150, "30fps over 5s is 150 frames max");
+  assert(videoImportFrameCount(5, 12) === 60, "5s clip at 12fps yields 60 frames");
+  assert(videoImportFrameCount(5, 30) === 150, "5s clip at 30fps yields 150 frames");
+  assert(videoImportFrameCount(1, 30) === 30, "1s clip at 30fps yields 30 frames");
+  assert(
+    videoImportFrameCount(8, 24) === 120,
+    "long clips sample only the first 5 seconds",
   );
 
   const stamps = videoFrameTimestamps(5, 5);

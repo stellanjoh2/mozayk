@@ -1,6 +1,4 @@
 import {
-  gifDelayMs,
-  gifFpsFromDelayCs,
   getExportSize,
   type ExportPreset,
 } from "../config";
@@ -28,7 +26,7 @@ export async function exportMp4(
   frames: Frame[],
   orientation: Orientation,
   preset: ExportPreset,
-  delayCs: number,
+  playbackFps: number,
   onProgress?: (label: string) => void,
 ): Promise<number> {
   if (frames.length === 0) throw new Error("MP4 export failed");
@@ -53,8 +51,8 @@ export async function exportMp4(
   }
 
   const [width, height] = getExportSize(orientation, preset);
-  const fps = gifFpsFromDelayCs(delayCs);
-  const frameDurationS = gifDelayMs(delayCs) / 1000;
+  const fps = Math.max(playbackFps, 1);
+  const frameDurationS = 1 / fps;
   const total = frames.length;
 
   const canvas = document.createElement("canvas");

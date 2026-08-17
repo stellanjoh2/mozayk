@@ -1,11 +1,22 @@
 /** Soft-coded limits — expected to change later. */
-export const MAX_FRAMES = 30;
+export const MAX_FRAMES = 150;
 export const MAX_COLORS = 8;
 export const MAX_UNDO = 10;
 /** Video import samples up to this many seconds (first N seconds if longer). */
 export const MAX_VIDEO_DURATION_S = 5;
-/** Target sample rate before the MAX_FRAMES cap. */
+/** Default video import sample rate (shown pre-selected in the import dialog). */
 export const VIDEO_IMPORT_FPS = 12;
+export const VIDEO_IMPORT_FPS_OPTIONS = [
+  { fps: 12, label: "12 fps", note: "Fast import" },
+  { fps: 24, label: "24 fps", note: "Smooth" },
+  { fps: 30, label: "30 fps", note: "Smoothest" },
+] as const;
+export type VideoImportFps = (typeof VIDEO_IMPORT_FPS_OPTIONS)[number]["fps"];
+
+/** Exact fps for in-app playback and MP4 export. */
+export const PLAYBACK_FPS_DEFAULT = 15;
+export const PLAYBACK_FPS_OPTIONS = [30, 24, 15, 12, 10, 5, 2] as const;
+export type PlaybackFps = (typeof PLAYBACK_FPS_OPTIONS)[number];
 
 import type { Orientation } from "./types";
 
@@ -107,6 +118,7 @@ export const GIF_FRAME_DELAY_PRESETS: readonly {
   label: string;
   note: string;
 }[] = [
+  { cs: 3, fps: 30, label: "0.03s", note: "~30 fps (GIF)" },
   { cs: 4, fps: 24, label: "0.04s", note: "24 fps" },
   { cs: 7, fps: 15, label: "0.07s", note: "15 fps" },
   { cs: 10, fps: 10, label: "0.10s", note: "10 fps" },
@@ -139,6 +151,32 @@ export function gifDurationSeconds(frameCount: number, delayCs: number): number 
 
 export function gifFpsFromDelayCs(delayCs: number): number {
   return delayCs > 0 ? 100 / delayCs : 0;
+}
+
+export function playbackDelayMs(fps: number): number {
+  return 1000 / Math.max(fps, 1);
+}
+
+export function playbackDurationSeconds(frameCount: number, fps: number): number {
+  return frameCount / Math.max(fps, 1);
+}
+
+export function normalizePlaybackFps(fps: number): PlaybackFps {
+  if (!Number.isFinite(fps) || fps <= 0) return PLAYBACK_FPS_DEFAULT;
+  let best: PlaybackFps = PLAYBACK_FPS_OPTIONS[0];
+  let bestDiff = Math.abs(best - fps);
+  for (const option of PLAYBACK_FPS_OPTIONS) {
+    const diff = Math.abs(option - fps);
+    if (diff < bestDiff) {
+      best = option;
+      bestDiff = diff;
+    }
+  }
+  return best;
+}
+
+export function gifFrameDelayCsForPlaybackFps(fps: number): number {
+  return closestGifFrameDelayCs(100 / fps);
 }
 
 export function clampGifFrameDelayCs(
