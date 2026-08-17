@@ -1,5 +1,5 @@
 import {
-  getExportSize,
+  getMp4ExportSize,
   type ExportPreset,
 } from "../config";
 import { renderMosaic } from "../render/renderFrame";
@@ -50,7 +50,7 @@ export async function exportMp4(
     );
   }
 
-  const [width, height] = getExportSize(orientation, preset);
+  const [width, height] = getMp4ExportSize(orientation, preset);
   const fps = Math.max(playbackFps, 1);
   const frameDurationS = 1 / fps;
   const total = frames.length;

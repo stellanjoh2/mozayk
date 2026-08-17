@@ -41,6 +41,7 @@ function sampleProject(): MzkProject {
     frames: [sampleFrame("a"), sampleFrame("b")],
     activeIndex: 1,
     exportPreset: "1440p",
+    mp4Preset: "2160p",
     gifPreset: "720p",
     gifFrameDelayCs: 5,
     playbackFps: 24,
@@ -57,6 +58,7 @@ function run(): void {
   assert(parsed.frames.length === 2, "frame count survives round-trip");
   assert(parsed.activeIndex === 1, "active index survives round-trip");
   assert(parsed.exportPreset === "1440p", "export preset survives round-trip");
+  assert(parsed.mp4Preset === "1080p", "portrait mp4 preset is clamped to 1080p");
   assert(parsed.gifPreset === "720p", "gif preset survives round-trip");
   assert(parsed.gifFrameDelayCs === 5, "gif delay survives round-trip");
   assert(parsed.playbackFps === 24, "playback fps survives round-trip");
@@ -100,6 +102,7 @@ function run(): void {
     ],
     activeIndex: 0,
     exportPreset: "1080p",
+    mp4Preset: "1080p",
     gifPreset: "480p",
     gifFrameDelayCs: 7,
     playbackFps: 15,
@@ -130,6 +133,10 @@ function run(): void {
   assert(
     legacyParsed?.playbackFps === 15,
     "legacy playback fps is derived from gif delay",
+  );
+  assert(
+    legacyParsed?.mp4Preset === "1080p",
+    "legacy portrait mp4 preset is clamped to 1080p",
   );
 
   console.log("mzkFormat.test.ts: all passed");

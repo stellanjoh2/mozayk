@@ -295,6 +295,10 @@ function mergeColorGrid(
 
   for (const { row, col } of scanOrder) {
     if (visited[row][col]) continue;
+    if (grid[row][col] < 0) {
+      visited[row][col] = true;
+      continue;
+    }
 
     const maxSpan = options?.maxSpanForCell?.(rng) ?? Number.POSITIVE_INFINITY;
     const { width, height, colorIdx } = growMergedBlock(
@@ -428,6 +432,29 @@ function paletteRgbForIndexing(palette: string[]): ImageRgb[] {
   return palette.map((hex) => hexToRgb(hex));
 }
 
+/**
+ * Classify photo pixels with the original import clusters, then paint those
+ * slots with the current display palette so custom colours survive relayout.
+ */
+export function colorsForImportIndexing(
+  displayPalette: string[],
+  importRgb: ImageRgb[],
+): { indexRgb: ImageRgb[]; colors: string[] } {
+  const fallback = displayPalette.length > 0 ? displayPalette : ["#000000"];
+  if (importRgb.length === 0) {
+    return {
+      indexRgb: paletteRgbForIndexing(fallback),
+      colors: fallback,
+    };
+  }
+  return {
+    indexRgb: importRgb,
+    colors: importRgb.map(
+      (_, i) => fallback[Math.min(i, fallback.length - 1)],
+    ),
+  };
+}
+
 export function gridExtentsFromBlocks(blocks: MosaicBlock[]): {
   columns: number;
   rows: number;
@@ -462,6 +489,25 @@ export function rasterizeBlockColorGrid(
   return grid;
 }
 
+/** True when both grids share an aspect — safe to resample without stretching. */
+export function sameGridAspect(
+  oldColumns: number,
+  oldRows: number,
+  newColumns: number,
+  newRows: number,
+): boolean {
+  if (oldColumns <= 0 || oldRows <= 0 || newColumns <= 0 || newRows <= 0) {
+    return false;
+  }
+  return oldColumns * newRows === oldRows * newColumns;
+}
+
+function emptyColorGrid(columns: number, rows: number): string[][] {
+  return Array.from({ length: Math.max(0, rows) }, () =>
+    Array<string>(Math.max(0, columns)).fill(""),
+  );
+}
+
 /** Nearest-neighbour upscale/downscale of a cell colour grid. */
 export function resampleColorGrid(
   grid: string[][],
@@ -471,9 +517,7 @@ export function resampleColorGrid(
   const oldRows = grid.length;
   const oldColumns = grid[0]?.length ?? 0;
   if (oldRows === 0 || oldColumns === 0 || newColumns <= 0 || newRows <= 0) {
-    return Array.from({ length: Math.max(0, newRows) }, () =>
-      Array<string>(Math.max(0, newColumns)).fill(""),
-    );
+    return emptyColorGrid(newColumns, newRows);
   }
 
   return Array.from({ length: newRows }, (_, row) =>
@@ -491,6 +535,93 @@ export function resampleColorGrid(
   );
 }
 
+/**
+ * Cover-crop a cell colour grid into a new size. Same-ratio targets resample;
+ * ratio changes crop the centre so colours stay put instead of stretching.
+ */
+export function coverCropColorGrid(
+  grid: string[][],
+  newColumns: number,
+  newRows: number,
+): string[][] {
+  const oldRows = grid.length;
+  const oldColumns = grid[0]?.length ?? 0;
+  if (oldRows === 0 || oldColumns === 0 || newColumns <= 0 || newRows <= 0) {
+    return emptyColorGrid(newColumns, newRows);
+  }
+
+  const { sx, sy, sw, sh } = coverCropRect(
+    oldColumns,
+    oldRows,
+    newColumns,
+    newRows,
+  );
+
+  return Array.from({ length: newRows }, (_, row) =>
+    Array.from({ length: newColumns }, (_, col) => {
+      const srcCol = Math.min(
+        oldColumns - 1,
+        Math.max(0, Math.floor(sx + ((col + 0.5) / newColumns) * sw)),
+      );
+      const srcRow = Math.min(
+        oldRows - 1,
+        Math.max(0, Math.floor(sy + ((row + 0.5) / newRows) * sh)),
+      );
+      return grid[srcRow][srcCol];
+    }),
+  );
+}
+
+/** Cover-crop mosaic tiles into a new grid. Same tiles, clipped — no remesh. */
+export function coverCropBlocks(
+  blocks: MosaicBlock[],
+  oldColumns: number,
+  oldRows: number,
+  newColumns: number,
+  newRows: number,
+): MosaicBlock[] {
+  if (oldColumns <= 0 || oldRows <= 0 || newColumns <= 0 || newRows <= 0) {
+    return [];
+  }
+  if (oldColumns === newColumns && oldRows === newRows) {
+    return blocks.map((block) => ({ ...block }));
+  }
+
+  const rect = coverCropRect(oldColumns, oldRows, newColumns, newRows);
+  const sx = Math.round(rect.sx);
+  const sy = Math.round(rect.sy);
+  const sw = Math.max(1, Math.round(rect.sw));
+  const sh = Math.max(1, Math.round(rect.sh));
+
+  const cropped: MosaicBlock[] = [];
+  for (const block of blocks) {
+    const srcX0 = Math.max(block.col, sx);
+    const srcY0 = Math.max(block.row, sy);
+    const srcX1 = Math.min(block.col + block.width, sx + sw);
+    const srcY1 = Math.min(block.row + block.height, sy + sh);
+    if (srcX1 - srcX0 < 1 || srcY1 - srcY0 < 1) continue;
+
+    const col = Math.round(((srcX0 - sx) * newColumns) / sw);
+    const row = Math.round(((srcY0 - sy) * newRows) / sh);
+    const colEnd = Math.round(((srcX1 - sx) * newColumns) / sw);
+    const rowEnd = Math.round(((srcY1 - sy) * newRows) / sh);
+    const nextCol = Math.max(0, col);
+    const nextRow = Math.max(0, row);
+    const width = Math.min(newColumns, colEnd) - nextCol;
+    const height = Math.min(newRows, rowEnd) - nextRow;
+    if (width < 1 || height < 1) continue;
+
+    cropped.push({
+      ...block,
+      col: nextCol,
+      row: nextRow,
+      width,
+      height,
+    });
+  }
+  return cropped;
+}
+
 function colorGridToIndexedGrid(
   colorGrid: string[][],
   palette: string[],
@@ -498,7 +629,7 @@ function colorGridToIndexedGrid(
   return colorGrid.map((row) =>
     row.map((color) => {
       const index = palette.indexOf(color);
-      return index >= 0 ? index : 0;
+      return index >= 0 ? index : -1;
     }),
   );
 }
@@ -522,7 +653,7 @@ export function buildMergedLayoutFromColorGrid(
   return buildMergedLayoutFromIndexedGrid(
     colorGridToIndexedGrid(colorGrid, palette),
     palette,
-    settings,
+    { ...settings, fillAmount: 100 },
     rng,
   );
 }
@@ -533,19 +664,19 @@ export function buildMergedLayoutFromImage(
   orientation: Orientation,
   settings: FrameSettings,
   palette: string[],
-  _paletteRgb: ImageRgb[],
+  paletteRgb: ImageRgb[],
   rng: Rng = Math.random,
 ): MosaicBlock[] {
   const { columns, rows } = getGridCounts(orientation, settings.density);
   const sampled = sampleImageGrid(image, columns, rows);
-  const indexPalette = paletteRgbForIndexing(palette);
+  const { indexRgb, colors } = colorsForImportIndexing(palette, paletteRgb);
   const indexedGrid = sampled.map((line) =>
-    line.map((pixel) => nearestPaletteIndex(pixel, indexPalette)),
+    line.map((pixel) => nearestPaletteIndex(pixel, indexRgb)),
   );
 
   return buildBlocksFromIndexedGrid(
     indexedGrid,
-    palette,
+    colors,
     settings,
     rng,
     true,
@@ -703,9 +834,12 @@ export function importImageToMosaicWithPalette(
     line.map((pixel) => nearestPaletteIndex(pixel, palette.paletteRgb)),
   );
 
+  // Import always fills the canvas. A leftover procedural Fill Amount
+  // must not punch holes — the slider is reset to 100 after import.
+  const layoutSettings = { ...settings, fillAmount: 100 };
   const blocks = mergeRegions
-    ? buildBlocksFromIndexedGrid(indexedGrid, palette.colors, settings)
-    : blocksFromCells(indexedGrid, palette.colors, settings);
+    ? buildBlocksFromIndexedGrid(indexedGrid, palette.colors, layoutSettings)
+    : blocksFromCells(indexedGrid, palette.colors, layoutSettings);
 
   const dataUrl = sourceDataUrl(image);
   cacheSourceImage(dataUrl, image);

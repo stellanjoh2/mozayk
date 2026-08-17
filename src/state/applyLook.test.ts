@@ -2,6 +2,7 @@ import {
   applyLookToAllFrames,
   applyLookToFrame,
   applyPalettePresetToFrame,
+  cloneFrameLook,
   createDefaultSettings,
 } from "./frameUtils";
 import type { Frame, MosaicBlock } from "../types";
@@ -84,6 +85,18 @@ function run(): void {
   assert(
     look.blocks[0].color === "#111111" && look.imageSource?.dataUrl === "data:image/png;base64,look",
     "look frame is not mutated",
+  );
+
+  const clipboardLook = cloneFrameLook(look);
+  const pasted = applyLookToFrame(other, clipboardLook, "landscape");
+  assert(
+    pasted.imageSource?.dataUrl === other.imageSource?.dataUrl,
+    "clipboard look keeps the destination picture",
+  );
+  assert(pasted.settings.hueShift === 40, "clipboard look copies hue");
+  assert(
+    pasted.textureOverlay?.dataUrl === "data:image/png;base64,tex",
+    "clipboard look copies texture overlay",
   );
 
   const frames = [look, other, importedFrame("third", otherColors)];

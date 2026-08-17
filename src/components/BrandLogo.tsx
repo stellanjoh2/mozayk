@@ -4,7 +4,7 @@ import { playUiSound } from "../ui/sounds";
 
 /**
  * Must match --logo-fill-1/2/3/4 in App.css :root
- * (secondary / other / warm / white — not UI --brand or brand-green).
+ * (blue / purple / orange / white — not UI --brand, --chrome, or --brand-green).
  * The wordmark paints from these tokens — never from hardcoded hex.
  */
 const LOGO_FILL_TOKENS = [

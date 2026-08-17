@@ -45,7 +45,7 @@ export function ColorSwatch({
           setOpen(true);
         }}
       >
-        {hex.toUpperCase()}
+        <span className="color-swatch__hex">{hex.toUpperCase()}</span>
       </button>
       {onToggleLock || onRemove ? (
         <div className="color-swatch__actions">

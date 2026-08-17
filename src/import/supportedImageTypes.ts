@@ -80,7 +80,7 @@ export function unsupportedImageMessage(label: string): string {
     label === "MKV" ||
     label === "AVI"
   ) {
-    return `${label} clips use Upload Video. This button is for still images.`;
+    return `${label} clips use Import Video. This button is for still images.`;
   }
   return `${label} isn't supported. Use JPEG, PNG, WebP, GIF, or AVIF instead.`;
 }

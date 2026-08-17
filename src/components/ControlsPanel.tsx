@@ -10,6 +10,9 @@ import {
   MAX_COLORS,
   MAX_FRAMES,
   clampGifFrameDelayCs,
+  clampMp4ExportPreset,
+  getMp4ExportPresets,
+  getMp4ExportSize,
   gifDurationSeconds,
   gifFpsFromDelayCs,
   type ExportPreset,
@@ -67,9 +70,20 @@ import type { PalettePreset } from "../presets/palettePresets";
 import { HeadlineToggle, SliderRow, ToggleRow } from "./ControlRow";
 import { HintLabel } from "./HintLabel";
 import {
+  getNormalCursor,
+  setNormalCursor,
+} from "../ui/cursors";
+import {
   getNormalHoverEffects,
   setNormalHoverEffects,
 } from "../ui/hover";
+import {
+  CHROME_THEME_LABELS,
+  CHROME_THEMES,
+  getChromeTheme,
+  setChromeTheme,
+  type ChromeTheme,
+} from "../ui/theme";
 import {
   getUiSoundsEnabled,
   getUiSoundsVolume,
@@ -84,6 +98,7 @@ type ControlsPanelProps = {
   frame: Frame;
   orientation: Orientation;
   exportPreset: ExportPreset;
+  mp4Preset: ExportPreset;
   gifPreset: GifExportPreset;
   gifFrameDelayCs: number;
   playbackFps: number;
@@ -105,6 +120,7 @@ type ControlsPanelProps = {
   onColorAmountChange: (index: number, amount: number) => void;
   onOrientationChange: (orientation: Orientation) => void;
   onExportPresetChange: (preset: ExportPreset) => void;
+  onMp4PresetChange: (preset: ExportPreset) => void;
   onExportPngFrame: () => void;
   onExportPngTransparent: () => void;
   onExportPngSequence: () => void;
@@ -135,6 +151,7 @@ export function ControlsPanel({
   frame,
   orientation,
   exportPreset,
+  mp4Preset,
   gifPreset,
   gifFrameDelayCs,
   playbackFps,
@@ -156,6 +173,7 @@ export function ControlsPanel({
   onColorAmountChange,
   onOrientationChange,
   onExportPresetChange,
+  onMp4PresetChange,
   onExportPngFrame,
   onExportPngTransparent,
   onExportPngSequence,
@@ -192,6 +210,8 @@ export function ControlsPanel({
   const [soundsOn, setSoundsOn] = useState(getUiSoundsEnabled);
   const [soundVolume, setSoundVolume] = useState(getUiSoundsVolume);
   const [normalHover, setNormalHover] = useState(getNormalHoverEffects);
+  const [normalCursor, setNormalCursorOn] = useState(getNormalCursor);
+  const [chromeTheme, setChromeThemeOn] = useState(getChromeTheme);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [themesOpen, setThemesOpen] = useState(false);
   const [themesAnimating, setThemesAnimating] = useState(false);
@@ -210,6 +230,11 @@ export function ControlsPanel({
   const selectOrientation = (next: Orientation) => {
     if (next === orientation) return;
     onOrientationChange(next);
+  };
+  const selectChromeTheme = (next: ChromeTheme) => {
+    if (next === chromeTheme) return;
+    setChromeTheme(next);
+    setChromeThemeOn(next);
   };
   const selectPanelTab = (tab: PanelTab) => {
     if (tab === panelTab) return;
@@ -417,7 +442,7 @@ export function ControlsPanel({
             disabled={importingImage}
             onClick={() => fileInputRef.current?.click()}
           >
-            {importingImage && !importingLabel ? "Importing…" : "Upload Image"}
+            {importingImage && !importingLabel ? "Importing…" : "Import Image"}
           </button>
           <button
             type="button"
@@ -425,7 +450,7 @@ export function ControlsPanel({
             title="MP4 or MOV, up to 5 seconds"
             onClick={() => videoInputRef.current?.click()}
           >
-            {importingLabel ?? "Upload Video"}
+            {importingLabel ?? "Import Video"}
           </button>
         </div>
         {frame.imageSource ? (
@@ -1342,11 +1367,40 @@ export function ControlsPanel({
 
       <section className="panel-section">
         <h2>MP4</h2>
-        <Mp4ExportMeta frameCount={frameCount} playbackFps={playbackFps} />
+        <label className="control-row">
+          <span className="control-row__label">
+            <HintLabel
+              hint={
+                orientation === "portrait"
+                  ? "9:16 MP4 exports at 1080×1920 only"
+                  : "Offline render size · independent of PNG export"
+              }
+            >
+              Resolution
+            </HintLabel>
+          </span>
+          <select
+            value={clampMp4ExportPreset(orientation, mp4Preset)}
+            disabled={orientation === "portrait"}
+            onChange={(e) => onMp4PresetChange(e.target.value as ExportPreset)}
+          >
+            {getMp4ExportPresets(orientation).map((key) => (
+              <option key={key} value={key}>
+                {EXPORT_PRESETS[key].label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <Mp4ExportMeta
+          frameCount={frameCount}
+          playbackFps={playbackFps}
+          orientation={orientation}
+          mp4Preset={mp4Preset}
+        />
         <button
           type="button"
           className="panel-btn has-hint"
-          data-hint="Offline render at PNG resolution · H.264 via WebCodecs"
+          data-hint="Offline render · H.264 via WebCodecs"
           onClick={onExportMp4}
         >
           Export MP4
@@ -1495,6 +1549,34 @@ export function ControlsPanel({
             setNormalHover(next);
           }}
         />
+        <ToggleRow
+          label="Normal Cursor"
+          hint="System pointer · no pixel set"
+          checked={normalCursor}
+          onChange={(next) => {
+            setNormalCursor(next);
+            setNormalCursorOn(next);
+          }}
+        />
+        <div className="control-row">
+          <span className="control-row__label">
+            <HintLabel hint="Dark and light keep orange · purple uses the logo colour">
+              Theme
+            </HintLabel>
+          </span>
+          <div className="button-row button-row--3 button-row--choice">
+            {CHROME_THEMES.map((id) => (
+              <button
+                key={id}
+                type="button"
+                className={chromeTheme === id ? "is-active" : ""}
+                onClick={() => selectChromeTheme(id)}
+              >
+                {CHROME_THEME_LABELS[id]}
+              </button>
+            ))}
+          </div>
+        </div>
       </section>
 
       <section className="panel-section">
@@ -1596,16 +1678,21 @@ export function ControlsPanel({
 function Mp4ExportMeta({
   frameCount,
   playbackFps,
+  orientation,
+  mp4Preset,
 }: {
   frameCount: number;
   playbackFps: number;
+  orientation: Orientation;
+  mp4Preset: ExportPreset;
 }) {
   const durationS = frameCount / Math.max(playbackFps, 1);
+  const [width, height] = getMp4ExportSize(orientation, mp4Preset);
 
   return (
     <p className="export-group__meta">
-      {frameCount} {frameCount === 1 ? "frame" : "frames"} · {durationS.toFixed(2)}s ·{" "}
-      {playbackFps} fps · exact timing for import/export
+      {width}×{height} · {frameCount} {frameCount === 1 ? "frame" : "frames"} ·{" "}
+      {durationS.toFixed(2)}s · {playbackFps} fps
     </p>
   );
 }

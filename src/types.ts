@@ -154,6 +154,13 @@ export type BackgroundImageData = {
   name: string;
 };
 
+export type OrientationLayout = {
+  orientation: Orientation;
+  blocks: MosaicBlock[];
+  colors: string[];
+  derived?: Partial<Record<Orientation, MosaicBlock[]>>;
+};
+
 export type Frame = {
   id: string;
   settings: FrameSettings;
@@ -164,6 +171,8 @@ export type Frame = {
   textureOverlay?: TextureOverlayData;
   /** Local background photo. Not pasted with settings. */
   backgroundImage?: BackgroundImageData;
+  /** Mosaic from before the current ratio-toggle session. */
+  orientationLayout?: OrientationLayout;
 };
 
 export type GridDimensions = {

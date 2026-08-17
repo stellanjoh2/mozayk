@@ -3,6 +3,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { createPortal } from "react-dom";
@@ -27,6 +28,7 @@ import {
 } from "../config";
 import type { Frame, Orientation } from "../types";
 import { playUiSound } from "../ui/sounds";
+import { FrameContextMenu } from "./FrameContextMenu";
 import { PhaseOrb } from "./PhaseOrb";
 
 const STAGE_PADDING = 24;
@@ -57,8 +59,6 @@ function computeFitScale(
   if (availW <= 0 || availH <= 0) return 1;
   return Math.min(availW / canvasWidth, availH / canvasHeight);
 }
-
-const MAGNIFY_CURSOR = `url("${import.meta.env.BASE_URL}icon-magnify.svg") 80 80, zoom-in`;
 
 type CanvasViewProps = {
   frame: Frame;
@@ -280,13 +280,18 @@ export function CanvasView({
       <div className="canvas-stage__frame">
         <canvas
           ref={canvasRef}
-          className="mosaic-canvas"
+          className={[
+            "mosaic-canvas",
+            showMagnifyCursor ? "is-zoom-in" : "",
+            canInspect && isInspecting ? "is-zoom-out" : "",
+          ]
+            .filter(Boolean)
+            .join(" ")}
           width={width}
           height={height}
           style={{
             width: displayWidth,
             height: displayHeight,
-            cursor: showMagnifyCursor ? MAGNIFY_CURSOR : undefined,
           }}
           onClick={canInspect ? onToggleInspect : undefined}
           aria-label={
@@ -308,8 +313,10 @@ type ThumbnailProps = {
   orientation: Orientation;
   active: boolean;
   hidden?: boolean;
+  dropFlashToken?: number;
   onSelect?: () => void;
   onPointerDown?: (event: ReactPointerEvent<HTMLButtonElement>) => void;
+  onContextMenu?: (event: ReactMouseEvent<HTMLButtonElement>) => void;
 };
 
 function FrameThumbnail({
@@ -317,8 +324,10 @@ function FrameThumbnail({
   orientation,
   active,
   hidden = false,
+  dropFlashToken,
   onSelect,
   onPointerDown,
+  onContextMenu,
 }: ThumbnailProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const skippedClickRef = useRef(false);
@@ -463,9 +472,20 @@ function FrameThumbnail({
         skippedClickRef.current = false;
         onPointerDown?.(event);
       }}
+      onContextMenu={(event) => {
+        event.preventDefault();
+        onContextMenu?.(event);
+      }}
       aria-label={`Frame preview${active ? ", selected" : ""}`}
     >
       <canvas ref={canvasRef} width={renderW} height={renderH} />
+      {dropFlashToken != null ? (
+        <span
+          key={dropFlashToken}
+          className="timeline-thumb__drop-flash"
+          aria-hidden
+        />
+      ) : null}
     </button>
   );
 }
@@ -484,6 +504,92 @@ type PendingDrag = {
 function insertIndexToTarget(fromIndex: number, insertIndex: number): number {
   if (insertIndex <= fromIndex) return insertIndex;
   return insertIndex - 1;
+}
+
+const MIN_TIMELINE_SCROLL_THUMB = 24;
+
+function timelineThumbLayout(
+  scrollLeft: number,
+  clientWidth: number,
+  scrollWidth: number,
+  trackWidth: number,
+): { thumbWidth: number; thumbLeft: number } {
+  if (scrollWidth <= 0 || trackWidth <= 0) {
+    return { thumbWidth: 0, thumbLeft: 0 };
+  }
+  const thumbWidth = Math.min(
+    trackWidth,
+    Math.max(
+      MIN_TIMELINE_SCROLL_THUMB,
+      (clientWidth / scrollWidth) * trackWidth,
+    ),
+  );
+  const maxScroll = scrollWidth - clientWidth;
+  const maxThumbLeft = trackWidth - thumbWidth;
+  const thumbLeft =
+    maxScroll <= 0 || maxThumbLeft <= 0
+      ? 0
+      : (scrollLeft / maxScroll) * maxThumbLeft;
+  return {
+    thumbWidth: Math.round(thumbWidth),
+    thumbLeft: Math.round(thumbLeft),
+  };
+}
+
+function scrollTimelineByTrackDelta(
+  scroller: HTMLElement,
+  trackWidth: number,
+  startScrollLeft: number,
+  deltaX: number,
+): void {
+  const { clientWidth, scrollWidth } = scroller;
+  const { thumbWidth } = timelineThumbLayout(
+    0,
+    clientWidth,
+    scrollWidth,
+    trackWidth,
+  );
+  const maxThumbLeft = trackWidth - thumbWidth;
+  const maxScroll = scrollWidth - clientWidth;
+  if (maxThumbLeft <= 0 || maxScroll <= 0) return;
+  scroller.scrollLeft = startScrollLeft + (deltaX / maxThumbLeft) * maxScroll;
+}
+
+function scrollTimelineToTrackX(
+  scroller: HTMLElement,
+  track: HTMLElement,
+  clientX: number,
+): void {
+  const trackWidth = track.getBoundingClientRect().width;
+  const { thumbWidth } = timelineThumbLayout(
+    0,
+    scroller.clientWidth,
+    scroller.scrollWidth,
+    trackWidth,
+  );
+  const maxThumbLeft = trackWidth - thumbWidth;
+  const maxScroll = scroller.scrollWidth - scroller.clientWidth;
+  if (maxThumbLeft <= 0 || maxScroll <= 0) return;
+  const x = clientX - track.getBoundingClientRect().left - thumbWidth / 2;
+  const ratio = Math.min(1, Math.max(0, x / maxThumbLeft));
+  scroller.scrollLeft = ratio * maxScroll;
+}
+
+/** Instantly keep the playhead on-screen; jumps a page when it leaves the view. */
+function keepTimelineThumbVisible(
+  scroller: HTMLElement,
+  thumb: HTMLElement,
+): void {
+  const scrollerRect = scroller.getBoundingClientRect();
+  const thumbRect = thumb.getBoundingClientRect();
+  const margin = 8;
+  if (
+    thumbRect.left >= scrollerRect.left + margin &&
+    thumbRect.right <= scrollerRect.right - margin
+  ) {
+    return;
+  }
+  scroller.scrollLeft += thumbRect.left - scrollerRect.left - margin;
 }
 
 type StripVisualItem =
@@ -521,22 +627,23 @@ function buildVisualStripItems(
 }
 
 function getInsertIndex(strip: HTMLElement, clientX: number): number {
+  const inner = (strip.querySelector(".timeline__strip") ?? strip) as HTMLElement;
+  const x = clientX - inner.getBoundingClientRect().left;
   const slots = Array.from(
-    strip.querySelectorAll<HTMLElement>("[data-timeline-slot]"),
+    inner.querySelectorAll<HTMLElement>("[data-timeline-slot]"),
   );
   if (slots.length === 0) return 0;
 
   for (const slot of slots) {
-    const rect = slot.getBoundingClientRect();
-    const mid = (rect.left + rect.right) / 2;
+    const mid = slot.offsetLeft + slot.offsetWidth / 2;
 
     if (slot.dataset.insertIndex !== undefined) {
-      if (clientX < mid) return Number(slot.dataset.insertIndex);
+      if (x < mid) return Number(slot.dataset.insertIndex);
       continue;
     }
 
     const frameIndex = Number(slot.dataset.frameIndex);
-    if (clientX < mid) return frameIndex;
+    if (x < mid) return frameIndex;
   }
 
   const lastSlot = slots[slots.length - 1];
@@ -556,8 +663,11 @@ type TimelineProps = {
   onSelect: (index: number) => void;
   onReorder: (fromIndex: number, toIndex: number) => void;
   onAdd: () => void;
-  onDuplicateCurrent: () => void;
-  onRemove: () => void;
+  onDuplicate: (index: number) => void;
+  onRemove: (index: number) => void;
+  onCopyStyle: (index: number) => void;
+  onPasteStyle: (index: number) => void;
+  canPasteStyle: boolean;
   canAddFrame: boolean;
   onTogglePlay: () => void;
 };
@@ -572,16 +682,28 @@ export function Timeline({
   onSelect,
   onReorder,
   onAdd,
-  onDuplicateCurrent,
+  onDuplicate,
   onRemove,
+  onCopyStyle,
+  onPasteStyle,
+  canPasteStyle,
   canAddFrame,
   onTogglePlay,
 }: TimelineProps) {
   const stripRef = useRef<HTMLDivElement>(null);
+  const scrollbarDragRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startScrollLeft: number;
+  } | null>(null);
   const pendingDragRef = useRef<PendingDrag | null>(null);
   const insertIndexRef = useRef<number | null>(null);
   const draggedRef = useRef(false);
   const pendingFlipRef = useRef<ReturnType<typeof Flip.getState> | null>(null);
+  const pendingDragFlipRef = useRef<ReturnType<typeof Flip.getState> | null>(
+    null,
+  );
+  const dragFlipTweenRef = useRef<gsap.core.Timeline | null>(null);
   const pendingAddRef = useRef(false);
   const addingRef = useRef(false);
   const removeTlRef = useRef<gsap.core.Timeline | null>(null);
@@ -591,27 +713,129 @@ export function Timeline({
   const [pointer, setPointer] = useState<{ x: number; y: number } | null>(null);
   const [ghostOffset, setGhostOffset] = useState({ x: 0, y: 0 });
   const [removing, setRemoving] = useState(false);
+  const [dropFlash, setDropFlash] = useState<{
+    index: number;
+    token: number;
+  } | null>(null);
+  const dropFlashTokenRef = useRef(0);
+  const [menu, setMenu] = useState<{
+    index: number;
+    x: number;
+    y: number;
+  } | null>(null);
+  const [scrollbar, setScrollbar] = useState({
+    overflow: false,
+    thumbWidth: 0,
+    thumbLeft: 0,
+  });
   const [thumbW, thumbH] = getThumbnailSize(orientation);
 
   useGSAP(() => {
     return () => {
       removeTlRef.current?.kill();
+      dragFlipTweenRef.current?.kill();
       pendingFlipRef.current = null;
+      pendingDragFlipRef.current = null;
     };
   }, { scope: stripRef });
 
   useEffect(() => {
-    if (removing || addingRef.current) return;
+    if (dragIndex === null) return;
+    setMenu(null);
+  }, [dragIndex]);
+
+  useEffect(() => {
+    if (!dropFlash) return;
+    const token = dropFlash.token;
+    const timer = window.setTimeout(() => {
+      setDropFlash((prev) => (prev?.token === token ? null : prev));
+    }, 500);
+    return () => window.clearTimeout(timer);
+  }, [dropFlash]);
+
+  useEffect(() => {
+    if (removing || addingRef.current || menu) return;
     const strip = stripRef.current;
     if (!strip) return;
-    const active = strip.querySelector(".timeline-thumb.is-active");
-    active?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
-  }, [activeIndex, frames.length, removing]);
+    const active = strip.querySelector(
+      ".timeline-thumb.is-active",
+    ) as HTMLElement | null;
+    if (!active) return;
+
+    if (playing) {
+      keepTimelineThumbVisible(strip, active);
+      return;
+    }
+
+    active.scrollIntoView({
+      behavior: "smooth",
+      inline: "center",
+      block: "nearest",
+    });
+  }, [activeIndex, frames.length, removing, playing, menu]);
+
+  useLayoutEffect(() => {
+    const scroller = stripRef.current;
+    if (!scroller) return;
+
+    const updateScrollbar = () => {
+      const overflow = scroller.scrollWidth - scroller.clientWidth > 1;
+      const next = overflow
+        ? {
+            overflow: true,
+            ...timelineThumbLayout(
+              scroller.scrollLeft,
+              scroller.clientWidth,
+              scroller.scrollWidth,
+              scroller.clientWidth,
+            ),
+          }
+        : { overflow: false, thumbWidth: 0, thumbLeft: 0 };
+      setScrollbar((prev) =>
+        prev.overflow === next.overflow &&
+        prev.thumbWidth === next.thumbWidth &&
+        prev.thumbLeft === next.thumbLeft
+          ? prev
+          : next,
+      );
+    };
+
+    updateScrollbar();
+    scroller.addEventListener("scroll", updateScrollbar, { passive: true });
+    const observer = new ResizeObserver(updateScrollbar);
+    observer.observe(scroller);
+    const inner = scroller.firstElementChild;
+    if (inner) observer.observe(inner);
+
+    return () => {
+      scroller.removeEventListener("scroll", updateScrollbar);
+      observer.disconnect();
+    };
+  }, [frames.length, thumbW]);
 
   useLayoutEffect(() => {
     if (!trackPointer) return;
 
     const updateInsertIndex = (next: number | null) => {
+      if (next === insertIndexRef.current) return;
+
+      const strip = stripRef.current;
+      const reduceMotion = window.matchMedia(
+        "(prefers-reduced-motion: reduce)",
+      ).matches;
+      if (
+        strip &&
+        !reduceMotion &&
+        insertIndexRef.current !== null &&
+        next !== null
+      ) {
+        pendingDragFlipRef.current = Flip.getState(
+          strip.querySelectorAll(".timeline-strip-item"),
+        );
+      } else {
+        pendingDragFlipRef.current = null;
+      }
+
       insertIndexRef.current = next;
       setInsertIndex(next);
     };
@@ -621,15 +845,22 @@ export function Timeline({
       pendingDragRef.current = null;
       setTrackPointer(false);
 
-      if (
-        commit &&
-        pending &&
-        draggedRef.current &&
-        insertIndexRef.current !== null
-      ) {
-        const target = insertIndexToTarget(pending.index, insertIndexRef.current);
-        if (target !== pending.index) {
-          onReorder(pending.index, target);
+      if (commit && draggedRef.current) {
+        playUiSound("drop");
+        let flashIndex = pending?.index ?? null;
+        if (pending && insertIndexRef.current !== null) {
+          const target = insertIndexToTarget(pending.index, insertIndexRef.current);
+          flashIndex = target;
+          if (target !== pending.index) {
+            onReorder(pending.index, target);
+          }
+        }
+        if (flashIndex !== null) {
+          dropFlashTokenRef.current += 1;
+          setDropFlash({
+            index: flashIndex,
+            token: dropFlashTokenRef.current,
+          });
         }
       }
 
@@ -689,6 +920,36 @@ export function Timeline({
       window.removeEventListener("pointercancel", handlePointerCancel);
     };
   }, [onReorder, trackPointer]);
+
+  useLayoutEffect(() => {
+    if (insertIndex === null) {
+      pendingDragFlipRef.current = null;
+      dragFlipTweenRef.current?.kill();
+      dragFlipTweenRef.current = null;
+      const items = stripRef.current?.querySelectorAll(".timeline-strip-item");
+      if (items?.length) gsap.set(items, { clearProps: "transform" });
+      return;
+    }
+
+    const state = pendingDragFlipRef.current;
+    if (!state) return;
+
+    const items = stripRef.current?.querySelectorAll(".timeline-strip-item");
+    dragFlipTweenRef.current?.kill();
+    if (items?.length) gsap.set(items, { clearProps: "transform" });
+
+    const tween = Flip.from(state, {
+      duration: 0.22,
+      ease: "power2.out",
+      absolute: false,
+      scale: false,
+      simple: true,
+    });
+    dragFlipTweenRef.current = tween;
+    return () => {
+      tween.kill();
+    };
+  }, [insertIndex]);
 
   useLayoutEffect(() => {
     const state = pendingFlipRef.current;
@@ -785,19 +1046,19 @@ export function Timeline({
     captureStripThen(onAdd);
   };
 
-  const handleDuplicateClick = () => {
+  const handleDuplicateClick = (index: number) => {
     if (removing || !canAddFrame || dragIndex !== null) return;
-    captureStripThen(onDuplicateCurrent);
+    captureStripThen(() => onDuplicate(index));
   };
 
-  const handleRemoveClick = () => {
+  const handleRemoveClick = (index: number) => {
     if (removing || frames.length <= 1 || dragIndex !== null) return;
 
     playUiSound("delete");
 
     const strip = stripRef.current;
     const item = strip?.querySelector(
-      `[data-frame-index="${activeIndex}"]`,
+      `[data-frame-index="${index}"]`,
     ) as HTMLElement | null;
     const thumb = item?.querySelector(".timeline-thumb") as HTMLElement | null;
     const reduceMotion = window.matchMedia(
@@ -805,7 +1066,7 @@ export function Timeline({
     ).matches;
 
     if (!strip || !item || !thumb || reduceMotion) {
-      onRemove();
+      onRemove(index);
       return;
     }
 
@@ -817,7 +1078,7 @@ export function Timeline({
         pendingFlipRef.current = Flip.getState(
           strip.querySelectorAll(".timeline-strip-item"),
         );
-        onRemove();
+        onRemove(index);
       },
     });
     removeTlRef.current.to(thumb, {
@@ -844,6 +1105,49 @@ export function Timeline({
     draggedRef.current = false;
     setTrackPointer(true);
     event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handleScrollbarPointerDown = (
+    event: ReactPointerEvent<HTMLDivElement>,
+  ) => {
+    if (event.button !== 0) return;
+    const scroller = stripRef.current;
+    const track = event.currentTarget;
+    if (!scroller) return;
+
+    if (event.target === track) {
+      scrollTimelineToTrackX(scroller, track, event.clientX);
+    }
+
+    scrollbarDragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startScrollLeft: scroller.scrollLeft,
+    };
+    event.preventDefault();
+    track.setPointerCapture(event.pointerId);
+  };
+
+  const handleScrollbarPointerMove = (
+    event: ReactPointerEvent<HTMLDivElement>,
+  ) => {
+    const drag = scrollbarDragRef.current;
+    const scroller = stripRef.current;
+    if (!drag || drag.pointerId !== event.pointerId || !scroller) return;
+    scrollTimelineByTrackDelta(
+      scroller,
+      event.currentTarget.getBoundingClientRect().width,
+      drag.startScrollLeft,
+      event.clientX - drag.startX,
+    );
+  };
+
+  const handleScrollbarPointerUp = (
+    event: ReactPointerEvent<HTMLDivElement>,
+  ) => {
+    const drag = scrollbarDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    scrollbarDragRef.current = null;
   };
 
   const draggedFrame = dragIndex !== null ? frames[dragIndex] : null;
@@ -912,7 +1216,7 @@ export function Timeline({
         <button
           type="button"
           className="timeline__btn"
-          onClick={handleRemoveClick}
+          onClick={() => handleRemoveClick(activeIndex)}
           disabled={frames.length <= 1 || removing}
           aria-label="Remove frame"
           title="Remove frame"
@@ -924,7 +1228,7 @@ export function Timeline({
         <button
           type="button"
           className="timeline__btn"
-          onClick={handleDuplicateClick}
+          onClick={() => handleDuplicateClick(activeIndex)}
           disabled={!canAddFrame || removing}
           aria-label="Duplicate current"
           title="Duplicate current"
@@ -1007,8 +1311,21 @@ export function Timeline({
                     frame={frame}
                     orientation={orientation}
                     active={index === activeIndex}
+                    dropFlashToken={
+                      dropFlash?.index === index ? dropFlash.token : undefined
+                    }
                     onSelect={() => onSelect(index)}
                     onPointerDown={(event) => handleThumbPointerDown(index, event)}
+                    onContextMenu={(event) => {
+                      if (removing || dragIndex !== null) return;
+                      onSelect(index);
+                      playUiSound("push");
+                      setMenu({
+                        index,
+                        x: event.clientX,
+                        y: event.clientY,
+                      });
+                    }}
                   />
                 </div>
               </div>
@@ -1016,6 +1333,27 @@ export function Timeline({
           })}
         </div>
       </div>
+      {scrollbar.overflow ? (
+        <div
+          className="timeline__scrollbar"
+          role="scrollbar"
+          aria-orientation="horizontal"
+          aria-label="Timeline frames"
+          onPointerDown={handleScrollbarPointerDown}
+          onPointerMove={handleScrollbarPointerMove}
+          onPointerUp={handleScrollbarPointerUp}
+          onPointerCancel={handleScrollbarPointerUp}
+          onLostPointerCapture={handleScrollbarPointerUp}
+        >
+          <div
+            className="timeline__scrollbar-thumb"
+            style={{
+              width: scrollbar.thumbWidth,
+              left: scrollbar.thumbLeft,
+            }}
+          />
+        </div>
+      ) : null}
       {draggedFrame && pointer && dragIndex !== null
         ? createPortal(
             <div
@@ -1035,6 +1373,39 @@ export function Timeline({
             document.body,
           )
         : null}
+      {menu ? (
+        <FrameContextMenu
+          key={`${menu.index}-${menu.x}-${menu.y}`}
+          x={menu.x}
+          y={menu.y}
+          canPaste={canPasteStyle}
+          canDuplicate={canAddFrame}
+          canDelete={frames.length > 1}
+          onCopyStyle={() => {
+            const index = menu.index;
+            setMenu(null);
+            playUiSound("ok");
+            onCopyStyle(index);
+          }}
+          onPasteStyle={() => {
+            const index = menu.index;
+            setMenu(null);
+            playUiSound("ok");
+            onPasteStyle(index);
+          }}
+          onDuplicate={() => {
+            const index = menu.index;
+            setMenu(null);
+            handleDuplicateClick(index);
+          }}
+          onDelete={() => {
+            const index = menu.index;
+            setMenu(null);
+            handleRemoveClick(index);
+          }}
+          onClose={() => setMenu(null)}
+        />
+      ) : null}
     </footer>
   );
 }

@@ -1,20 +1,31 @@
 :root {
-  /* Brand — change these hex values to retheme UI accents.
-     --brand is UI primary (white) so chrome stays quiet behind the artwork.
-     The logotype paints from --logo-fill-1/2/3/4 (three chromatics + white),
-     not from --brand. --brand-green is toggles only — not used in the logo.
+  /* Brand palette — change these hex values if the logo or brand changes. */
+  --brand-blue: #2e1ebc;
+  --brand-purple: #cf41f2;
+  --brand-orange: #ff5300;
+  --brand-green: #41f24b;
+
+  /* Logo paints from these four slots (three chromatics + white).
      Header idle remaps --logo-fill-4 to --panel so white tiles vanish until hover. */
+  --logo-fill-1: var(--brand-blue);
+  --logo-fill-2: var(--brand-purple);
+  --logo-fill-3: var(--brand-orange);
+  --logo-fill-4: #ffffff;
+
+  /* Chrome accent — UI highlight. Themes remap this; logo slots stay put.
+     --brand is the quiet primary (white on dark) so chrome stays behind the artwork.
+     --brand-green is toggles only. */
+  --chrome: var(--brand-orange);
+  --ui-chevron: conic-gradient(
+    from 225deg at 50% 50%,
+    var(--chrome) 0 90deg,
+    transparent 90deg
+  );
+
   --brand: #ffffff;
   --brand-rgb: 255, 255, 255;
-  --brand-secondary: #2e1ebc;
-  --brand-other: #cf41f2;
-  --brand-warm: #ff5300;
-  --brand-green: #41f24b;
-  --logo-fill-1: var(--brand-secondary);
-  --logo-fill-2: var(--brand-other);
-  --logo-fill-3: var(--brand-warm);
-  --logo-fill-4: #ffffff;
   --on-brand: #111111;
+  --ink: #ffffff;
 
   /* Surfaces */
   --bg: #0f0f0f;
@@ -24,13 +35,35 @@
   /* Type */
   --text: rgba(255, 255, 255, 0.92);
   --muted: rgba(255, 255, 255, 0.45);
+  --font-ui:
+    "Bitcount Grid Single Variable",
+    "Bitcount Grid Single",
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    monospace;
 
   /* Interactive accents (derived from brand) */
   --accent: var(--brand);
   --accent-dim: rgba(var(--brand-rgb), 0.12);
   --accent-hover: rgba(var(--brand-rgb), 0.2);
 
-  --panel-label-size: 14px;
+  /* Fills that follow --text so the light theme flips them. */
+  --fill-faint: color-mix(in srgb, var(--text) 6%, transparent);
+  --fill-mid: color-mix(in srgb, var(--text) 12%, transparent);
+  --fill-strong: color-mix(in srgb, var(--text) 22%, transparent);
+  --fill-stronger: color-mix(in srgb, var(--text) 38%, transparent);
+  --glass: rgba(15, 15, 15, 0.53);
+  --glass-foot: rgba(15, 15, 15, 0.22);
+  --timeline-bg: rgba(0, 0, 0, 0.25);
+  --thumb-border: #555555;
+  --scrollbar-thumb: color-mix(in srgb, var(--text) 18%, transparent);
+  --scrollbar-thumb-hover: color-mix(in srgb, var(--text) 28%, transparent);
+  --scrollbar-track: color-mix(in srgb, var(--text) 10%, transparent);
+
+  --panel-label-size: 15px;
   --control-height: 52px;
   --icon-btn-size: 58px;
   --control-radius: 0;
@@ -39,10 +72,77 @@
   --settings-inner-gap: 0;
   --settings-row-gap: 24px;
   --ui-ease: cubic-bezier(0.32, 0.08, 0.24, 1);
+  color-scheme: dark;
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+  --brand: #111111;
+  --brand-rgb: 17, 17, 17;
+  --on-brand: #ffffff;
+  --ink: #111111;
+  --logo-fill-4: #111111;
+  --bg: #e8e8e8;
+  --panel: #ffffff;
+  --panel-border: rgba(0, 0, 0, 0.1);
+  --text: rgba(17, 17, 17, 0.92);
+  --muted: rgba(17, 17, 17, 0.45);
+  --glass: rgba(255, 255, 255, 0.72);
+  --glass-foot: rgba(255, 255, 255, 0.55);
+  --timeline-bg: rgba(255, 255, 255, 0.62);
+  --thumb-border: #c8c8c8;
+}
+
+html[data-theme="purple"] {
+  --chrome: var(--brand-purple);
 }
 
 * {
   box-sizing: border-box;
+  cursor: inherit;
+}
+
+:root {
+  --cursor-default: url("../cursors/default.svg") 3 3, default;
+  --cursor-pointer: url("../cursors/pointer.svg") 3 3, pointer;
+  --cursor-grab: url("../cursors/grab.svg") 13 19, grab;
+  --cursor-grabbing: url("../cursors/grabbing.svg") 13 13, grabbing;
+  --cursor-not-allowed: url("../cursors/not-allowed.svg") 13 13, not-allowed;
+  --cursor-text: url("../cursors/text.svg") 13 13, text;
+  --cursor-crosshair: url("../cursors/crosshair.svg") 13 13, crosshair;
+  --cursor-zoom-in: url("../cursors/zoom-in.svg") 13 13, zoom-in;
+  --cursor-zoom-out: url("../cursors/zoom-out.svg") 13 13, zoom-out;
+}
+
+html[data-theme="light"] {
+  --cursor-default: url("../cursors/default-light.svg") 3 3, default;
+  --cursor-pointer: url("../cursors/pointer-light.svg") 3 3, pointer;
+  --cursor-grab: url("../cursors/grab-light.svg") 13 19, grab;
+  --cursor-grabbing: url("../cursors/grabbing-light.svg") 13 13, grabbing;
+  --cursor-not-allowed: url("../cursors/not-allowed-light.svg") 13 13, not-allowed;
+  --cursor-text: url("../cursors/text-light.svg") 13 13, text;
+  --cursor-crosshair: url("../cursors/crosshair-light.svg") 13 13, crosshair;
+  --cursor-zoom-in: url("../cursors/zoom-in-light.svg") 13 13, zoom-in;
+  --cursor-zoom-out: url("../cursors/zoom-out-light.svg") 13 13, zoom-out;
+}
+
+html.normal-cursor {
+  --cursor-default: default;
+  --cursor-pointer: pointer;
+  --cursor-grab: grab;
+  --cursor-grabbing: grabbing;
+  --cursor-not-allowed: not-allowed;
+  --cursor-text: text;
+  --cursor-crosshair: crosshair;
+  --cursor-zoom-in: zoom-in;
+  --cursor-zoom-out: zoom-out;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
 }
 
 html,
@@ -51,24 +151,55 @@ body,
   height: 100%;
   min-height: 100dvh;
   margin: 0;
+  cursor: var(--cursor-default);
+}
+
+button,
+label,
+select,
+summary,
+input {
+  cursor: inherit;
+}
+
+a,
+.panel-credit__author {
+  cursor: var(--cursor-pointer);
+}
+
+button:disabled,
+input:disabled,
+select:disabled {
+  cursor: var(--cursor-not-allowed);
+}
+
+input[type="text"],
+input[type="number"],
+textarea {
+  cursor: var(--cursor-text);
+}
+
+body:has(.timeline__strip.is-dragging),
+body:has(.timeline__strip.is-dragging) * {
+  cursor: var(--cursor-grabbing);
+}
+
+.mosaic-canvas.is-zoom-in {
+  cursor: var(--cursor-zoom-in);
+}
+
+.mosaic-canvas.is-zoom-out {
+  cursor: var(--cursor-zoom-out);
 }
 
 body {
-  font-family:
-    "SUSE Mono Variable",
-    "SUSE Mono",
-    ui-monospace,
-    SFMono-Regular,
-    Menlo,
-    Monaco,
-    Consolas,
-    monospace;
+  font-family: var(--font-ui);
   background: var(--bg);
   color: var(--text);
 }
 
 ::selection {
-  background: var(--brand-secondary);
+  background: var(--brand-blue);
   color: #ffffff;
 }
 
@@ -77,6 +208,7 @@ body {
   grid-template-columns: 400px 1fr;
   height: 100%;
   min-height: 100dvh;
+  background: var(--bg);
 }
 
 .app-chrome {
@@ -170,7 +302,7 @@ body {
 
 .mosaic-canvas {
   display: block;
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.22);
   transition: box-shadow 0.4s var(--ui-ease);
 }
 
@@ -183,7 +315,7 @@ body {
   border-radius: 4px;
   background: color-mix(in srgb, var(--accent) 22%, transparent);
   color: var(--text);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.02em;
   text-transform: uppercase;
   pointer-events: none;
@@ -207,6 +339,7 @@ body {
   .panel-btn:hover:not(:disabled)::before,
   .button-row button:hover:not(:disabled)::before,
   .timeline__controls button:hover:not(:disabled)::before,
+  .frame-context-menu__item:hover:not(:disabled)::before,
   .color-swatch__lock:hover::before,
   .color-swatch__remove:hover::before,
   .palette-panel__close:hover::before {
@@ -221,13 +354,19 @@ body {
 
   .timeline-thumb:hover:not(.is-active) {
     animation: none;
-    border-color: #ffffff;
+    border-color: var(--ink);
+  }
+
+  .color-swatch:hover:not(:disabled) .color-swatch__hex {
+    animation: none;
+    opacity: 1;
   }
 }
 
 html.normal-hover .panel-btn:hover:not(:disabled)::before,
 html.normal-hover .button-row button:hover:not(:disabled)::before,
 html.normal-hover .timeline__controls button:hover:not(:disabled)::before,
+html.normal-hover .frame-context-menu__item:hover:not(:disabled)::before,
 html.normal-hover .color-swatch__lock:hover::before,
 html.normal-hover .color-swatch__remove:hover::before,
 html.normal-hover .palette-panel__close:hover::before {
@@ -250,7 +389,12 @@ html.normal-hover .palette-panel__tab:hover:not(.is-active) {
 
 html.normal-hover .timeline-thumb:hover:not(.is-active) {
   animation: none;
-  border-color: #ffffff;
+  border-color: var(--ink);
+}
+
+html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
+  animation: none;
+  opacity: 1;
 }
 
 .controls-panel {
@@ -291,13 +435,13 @@ html.normal-hover .timeline-thumb:hover:not(.is-active) {
   background: none;
   color: var(--muted);
   font: inherit;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 400;
   letter-spacing: 0.06em;
   line-height: 1;
   text-transform: uppercase;
   padding: 16px 0 14px;
-  cursor: pointer;
+  cursor: var(--cursor-default);
   position: relative;
 }
 
@@ -318,8 +462,8 @@ html.normal-hover .timeline-thumb:hover:not(.is-active) {
 }
 
 .controls-panel__tab.is-active {
-  color: var(--brand-warm);
-  cursor: default;
+  color: var(--chrome);
+  cursor: var(--cursor-default);
 }
 
 .controls-panel__tab-line {
@@ -328,7 +472,7 @@ html.normal-hover .timeline-thumb:hover:not(.is-active) {
   bottom: -1px;
   width: calc((100% - 40px) / 3);
   height: 2px;
-  background: var(--brand-warm);
+  background: var(--chrome);
   pointer-events: none;
 }
 
@@ -341,7 +485,7 @@ html.normal-hover .timeline-thumb:hover:not(.is-active) {
   display: block;
   width: 100%;
   height: auto;
-  cursor: pointer;
+  cursor: var(--cursor-default);
 }
 
 .controls-panel__logo:not(:hover):not(:focus-visible) {
@@ -363,7 +507,7 @@ html.normal-hover .timeline-thumb:hover:not(.is-active) {
 
 .panel-section h2 {
   margin: 0 0 24px;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 400;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -389,7 +533,7 @@ html.normal-hover .timeline-thumb:hover:not(.is-active) {
 .panel-hint {
   margin: 0;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.45;
 }
 
@@ -406,14 +550,14 @@ html.normal-hover .timeline-thumb:hover:not(.is-active) {
   grid-template-columns: 112px 1fr;
   gap: 12px;
   align-items: baseline;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.4;
 }
 
 .shortcut-list__keys {
   margin: 0;
-  color: var(--brand-warm);
-  font-size: 12px;
+  color: var(--chrome);
+  font-size: 13px;
   letter-spacing: 0.02em;
 }
 
@@ -422,10 +566,10 @@ html.normal-hover .timeline-thumb:hover:not(.is-active) {
   min-width: 1.5em;
   padding: 2px 6px;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--fill-faint);
   border: 1px solid var(--panel-border);
   font: inherit;
-  font-size: 11px;
+  font-size: 12px;
   text-align: center;
   text-transform: uppercase;
 }
@@ -440,7 +584,7 @@ html.normal-hover .timeline-thumb:hover:not(.is-active) {
   padding-top: 32px;
   border-top: 1px solid var(--panel-border);
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.45;
   text-align: center;
 }
@@ -465,17 +609,17 @@ html.normal-hover .timeline-thumb:hover:not(.is-active) {
   font: inherit;
   font-size: inherit;
   line-height: inherit;
-  color: var(--brand-warm);
+  color: var(--chrome);
   background: none;
-  cursor: pointer;
+  cursor: var(--cursor-pointer);
   text-decoration: underline;
-  text-decoration-color: color-mix(in srgb, var(--brand-warm) 45%, transparent);
+  text-decoration-color: color-mix(in srgb, var(--chrome) 45%, transparent);
   text-underline-offset: 2px;
   transition: color 0.1s linear;
 }
 
 .panel-credit__author:hover {
-  color: color-mix(in srgb, var(--brand-warm) 82%, white);
+  color: color-mix(in srgb, var(--chrome) 82%, white);
 }
 
 .panel-credit svg {
@@ -506,34 +650,35 @@ html.normal-hover .timeline-thumb:hover:not(.is-active) {
 @keyframes hover-border-blink {
   0%,
   50% {
-    border-color: #ffffff;
+    border-color: var(--ink);
   }
   50.001%,
   100% {
-    border-color: #555555;
+    border-color: var(--thumb-border);
   }
 }
 
 .panel-btn,
 .button-row button,
-.timeline__controls button {
+.timeline__controls button,
+.frame-context-menu__item {
   --hover-plate-on: var(--accent-hover);
-  --hover-plate-off: rgba(255, 255, 255, 0.04);
+  --hover-plate-off: var(--fill-faint);
   position: relative;
   isolation: isolate;
   appearance: none;
   border: none;
   background: var(--hover-plate-off);
-  color: var(--brand-warm);
+  color: var(--chrome);
   border-radius: var(--control-radius);
   box-sizing: border-box;
   min-height: var(--control-height);
   padding: 10px 12px;
   font: inherit;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.2;
   text-transform: uppercase;
-  cursor: pointer;
+  cursor: var(--cursor-default);
   transition:
     background 0.1s linear,
     color 0.1s linear;
@@ -542,6 +687,7 @@ html.normal-hover .timeline-thumb:hover:not(.is-active) {
 .panel-btn::before,
 .button-row button::before,
 .timeline__controls button::before,
+.frame-context-menu__item::before,
 .color-swatch__lock::before,
 .color-swatch__remove::before {
   content: "";
@@ -562,6 +708,7 @@ html.normal-hover .timeline-thumb:hover:not(.is-active) {
 .panel-btn:hover:not(:disabled)::before,
 .button-row button:hover:not(:disabled)::before,
 .timeline__controls button:hover:not(:disabled)::before,
+.frame-context-menu__item:hover:not(:disabled)::before,
 .color-swatch__lock:hover::before,
 .color-swatch__remove:hover::before,
 .palette-panel__close:hover::before {
@@ -570,7 +717,8 @@ html.normal-hover .timeline-thumb:hover:not(.is-active) {
 
 .panel-btn:active:not(:disabled),
 .button-row button:active:not(:disabled):not(.is-active),
-.timeline__controls button:active:not(:disabled):not(.is-active) {
+.timeline__controls button:active:not(:disabled):not(.is-active),
+.frame-context-menu__item:active:not(:disabled) {
   background: var(--brand);
   color: var(--on-brand);
   transition:
@@ -580,16 +728,18 @@ html.normal-hover .timeline-thumb:hover:not(.is-active) {
 
 .panel-btn:active:not(:disabled)::before,
 .button-row button:active:not(:disabled):not(.is-active)::before,
-.timeline__controls button:active:not(:disabled):not(.is-active)::before {
+.timeline__controls button:active:not(:disabled):not(.is-active)::before,
+.frame-context-menu__item:active:not(:disabled)::before {
   animation: none;
   opacity: 0;
   transition: none;
 }
 
 .button-row button:disabled,
-.panel-btn:disabled {
+.panel-btn:disabled,
+.frame-context-menu__item:disabled {
   opacity: 0.35;
-  cursor: not-allowed;
+  cursor: var(--cursor-not-allowed);
 }
 
 .export-group {
@@ -604,7 +754,7 @@ html.normal-hover .timeline-thumb:hover:not(.is-active) {
 
 .export-group__title {
   margin: 0 0 20px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -618,13 +768,13 @@ html.normal-hover .timeline-thumb:hover:not(.is-active) {
 
 .export-group__meta {
   margin: -4px 0 20px;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.45;
   color: var(--muted);
 }
 
 .export-group__meta.is-warn {
-  color: var(--brand-warm);
+  color: var(--chrome);
 }
 
 .app-toast {
@@ -635,9 +785,9 @@ html.normal-hover .timeline-thumb:hover:not(.is-active) {
   transform: translateX(-50%);
   padding: 10px 16px;
   border-radius: 6px;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text);
-  background: rgba(21, 21, 21, 0.94);
+  background: color-mix(in srgb, var(--panel) 94%, transparent);
   border: 1px solid var(--panel-border);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
   pointer-events: none;
@@ -658,21 +808,21 @@ html.normal-hover .timeline-thumb:hover:not(.is-active) {
   width: min(100%, 360px);
   padding: 20px;
   border-radius: 10px;
-  background: var(--panel-bg);
+  background: var(--panel);
   border: 1px solid var(--panel-border);
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
 }
 
 .import-error-dialog__title {
   margin: 0 0 10px;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--text);
 }
 
 .import-error-dialog__message {
   margin: 0 0 16px;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.5;
   color: var(--muted);
 }
@@ -734,15 +884,16 @@ html.normal-hover .timeline-thumb:hover:not(.is-active) {
 
 .reset-canvas-dialog__title {
   margin: 0 0 10px;
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
   color: var(--text);
   text-transform: uppercase;
 }
 
 .reset-canvas-dialog__message {
   margin: 0 0 16px;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.5;
   color: var(--muted);
 }
@@ -786,7 +937,7 @@ html.normal-hover .timeline-thumb:hover:not(.is-active) {
 .video-import-dialog__fps-label {
   display: block;
   margin-bottom: 8px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -799,7 +950,7 @@ html.normal-hover .timeline-thumb:hover:not(.is-active) {
 
 .video-import-dialog__fps-note {
   margin: 0;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.4;
   color: var(--muted);
 }
@@ -854,10 +1005,10 @@ html.normal-hover .timeline-thumb:hover:not(.is-active) {
 
 .about-overlay__content p {
   margin: 0 0 1.15em;
-  font-size: 28px;
+  font-size: 34px;
   line-height: 1.35;
   font-weight: 400;
-  color: var(--text);
+  color: #ffffff;
 }
 
 .about-overlay__content p:last-child {
@@ -882,7 +1033,7 @@ html.normal-hover .timeline-thumb:hover:not(.is-active) {
   }
 
   .about-overlay__content p {
-    font-size: 24px;
+    font-size: 30px;
   }
 }
 
@@ -900,7 +1051,7 @@ html.normal-hover .timeline-thumb:hover:not(.is-active) {
 
 .timeline__controls button:disabled {
   opacity: 0.35;
-  cursor: not-allowed;
+  cursor: var(--cursor-not-allowed);
 }
 
 .button-row {
@@ -915,7 +1066,7 @@ html.normal-hover .timeline-thumb:hover:not(.is-active) {
 }
 
 .button-row--choice button.is-active {
-  cursor: default;
+  cursor: var(--cursor-default);
 }
 
 .button-row--choice button.is-active:hover::before {
@@ -951,9 +1102,9 @@ html.normal-hover .button-row--choice button.is-active:hover::before {
 .button-row button.is-active,
 .timeline__controls button.is-active {
   --hover-plate-on: var(--brand);
-  --hover-plate-off: var(--brand-warm);
-  background: var(--brand-warm);
-  color: var(--panel);
+  --hover-plate-off: var(--chrome);
+  background: var(--chrome);
+  color: var(--on-brand);
   transition:
     background 0s,
     color 0s;
@@ -990,8 +1141,8 @@ html.normal-hover .button-row--choice button.is-active:hover::before {
   --origin: 0;
   --pos: calc(var(--val) * 1%);
   --orig: calc(var(--origin) * 1%);
-  --fill: var(--brand-warm);
-  --empty: rgba(255, 255, 255, 0.12);
+  --fill: var(--chrome);
+  --empty: var(--fill-mid);
   --thumb: 14px;
   --track: 4px;
   -webkit-appearance: none;
@@ -1011,7 +1162,7 @@ html.normal-hover .button-row--choice button.is-active:hover::before {
   background-repeat: no-repeat;
   background-size: 100% var(--track);
   background-position: center;
-  cursor: pointer;
+  cursor: var(--cursor-default);
 }
 
 .control-row input[type="range"]:focus-visible {
@@ -1044,9 +1195,9 @@ html.normal-hover .button-row--choice button.is-active:hover::before {
   margin-top: 0;
   border: none;
   border-radius: 50%;
-  background: #fff;
+  background: var(--brand);
   box-shadow: 0 0 0 3px var(--panel);
-  cursor: pointer;
+  cursor: var(--cursor-default);
 }
 
 .control-row input[type="range"]::-moz-range-thumb {
@@ -1055,9 +1206,9 @@ html.normal-hover .button-row--choice button.is-active:hover::before {
   height: 14px;
   border: none;
   border-radius: 50%;
-  background: #fff;
+  background: var(--brand);
   box-shadow: 0 0 0 3px var(--panel);
-  cursor: pointer;
+  cursor: var(--cursor-default);
 }
 
 .control-row input[type="range"]:active::-webkit-slider-thumb {
@@ -1080,7 +1231,7 @@ html.normal-hover .button-row--choice button.is-active:hover::before {
 }
 
 .color-swatch:disabled {
-  cursor: not-allowed;
+  cursor: var(--cursor-not-allowed);
 }
 
 .control-row__label--solo {
@@ -1089,7 +1240,7 @@ html.normal-hover .button-row--choice button.is-active:hover::before {
 
 .has-hint {
   position: relative;
-  cursor: help;
+  cursor: var(--cursor-default);
 }
 
 .has-hint::after {
@@ -1102,10 +1253,10 @@ html.normal-hover .button-row--choice button.is-active:hover::before {
   max-width: 240px;
   padding: 8px 10px;
   border-radius: 4px;
-  background: #1b1b1b;
+  background: var(--panel);
   border: 1px solid var(--panel-border);
   color: var(--text);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.45;
   font-weight: 400;
   white-space: normal;
@@ -1133,18 +1284,22 @@ html.normal-hover .button-row--choice button.is-active:hover::before {
   width: 100%;
   box-sizing: border-box;
   min-height: var(--control-height);
-  background-color: rgba(255, 255, 255, 0.04);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='none' stroke='%23ff5300' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' d='M3 4.5 6 7.5 9 4.5'/%3E%3C/svg%3E");
+  background-color: var(--fill-faint);
+  background-image: var(--ui-chevron);
   background-repeat: no-repeat;
-  background-position: right 10px center;
-  background-size: 12px;
+  background-position: right 12px center;
+  background-size: 8px 8px;
   border: 1px solid var(--panel-border);
-  color: var(--brand-warm);
+  color: var(--chrome);
   border-radius: var(--control-radius);
   padding: 8px 32px 8px 10px;
   font: inherit;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.2;
+}
+
+.control-row .button-row {
+  margin-bottom: 0;
 }
 
 .control-row select::-ms-expand {
@@ -1191,7 +1346,7 @@ html.normal-hover .button-row--choice button.is-active:hover::before {
 /* Switch adapted from nikk7007/smooth-fox-6 (MIT), scaled down, square. */
 .ui-switch {
   --ui-switch-on: var(--brand-green);
-  font-size: 10px;
+  font-size: 11px;
   position: relative;
   display: inline-block;
   flex-shrink: 0;
@@ -1207,14 +1362,14 @@ html.normal-hover .button-row--choice button.is-active:hover::before {
   height: 100%;
   margin: 0;
   opacity: 0;
-  cursor: pointer;
+  cursor: var(--cursor-default);
 }
 
 .ui-switch__track {
   position: absolute;
   inset: 0;
-  background-color: var(--brand-warm);
-  border: 1px solid var(--brand-warm);
+  background-color: var(--chrome);
+  border: 1px solid var(--chrome);
   border-radius: 0;
   transition: 0.4s;
   pointer-events: none;
@@ -1239,7 +1394,7 @@ html.normal-hover .button-row--choice button.is-active:hover::before {
   width: 1.4em;
   left: 0.27em;
   top: 0.25em;
-  background: var(--brand);
+  background: var(--ink);
   opacity: 0;
   border-radius: 0;
   pointer-events: none;
@@ -1315,7 +1470,7 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
   display: flex;
   flex-direction: column;
   width: 100%;
-  background: rgba(15, 15, 15, 0.53);
+  background: var(--glass);
   backdrop-filter: blur(36px);
   -webkit-backdrop-filter: blur(36px);
   box-shadow: 8px 0 32px rgba(0, 0, 0, 0.28);
@@ -1365,13 +1520,13 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
   background: none;
   color: var(--muted);
   font: inherit;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 400;
   letter-spacing: 0.06em;
   line-height: 1;
   text-transform: uppercase;
   padding: 16px 0 14px;
-  cursor: pointer;
+  cursor: var(--cursor-default);
   position: relative;
 }
 
@@ -1392,8 +1547,8 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
 }
 
 .palette-panel__tab.is-active {
-  color: var(--brand-warm);
-  cursor: default;
+  color: var(--chrome);
+  cursor: var(--cursor-default);
 }
 
 .palette-panel__tab-line {
@@ -1402,13 +1557,13 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
   bottom: -1px;
   width: calc((100% - 40px) / 3);
   height: 2px;
-  background: var(--brand-warm);
+  background: var(--chrome);
   pointer-events: none;
 }
 
 .palette-panel__title {
   margin: 0;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 400;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -1417,7 +1572,7 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
 
 .palette-panel__close {
   --hover-plate-on: var(--accent-hover);
-  --hover-plate-off: rgba(255, 255, 255, 0.06);
+  --hover-plate-off: var(--fill-faint);
   position: relative;
   isolation: isolate;
   display: flex;
@@ -1429,8 +1584,8 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
   border: none;
   border-radius: 0;
   background: var(--hover-plate-off);
-  color: var(--brand-warm);
-  cursor: pointer;
+  color: var(--chrome);
+  cursor: var(--cursor-default);
   padding: 0;
 }
 
@@ -1459,7 +1614,7 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
   flex-shrink: 0;
   padding: 0 20px 24px;
   border-top: 1px solid var(--panel-border);
-  background: rgba(15, 15, 15, 0.22);
+  background: var(--glass-foot);
 }
 
 .palette-panel__foot .panel-btn {
@@ -1481,7 +1636,7 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
   padding: 0;
   border: 0;
   background: transparent;
-  cursor: pointer;
+  cursor: var(--cursor-default);
   text-align: left;
 }
 
@@ -1512,7 +1667,7 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
 }
 
 .palette-gallery__label {
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.2;
   letter-spacing: 0.04em;
   text-align: left;
@@ -1526,7 +1681,7 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
 }
 
 .palette-gallery__item.is-active .palette-gallery__swatch::after {
-  box-shadow: inset 0 0 0 2px var(--brand-warm);
+  box-shadow: inset 0 0 0 2px var(--chrome);
 }
 
 .palette-gallery__item.is-active .palette-gallery__label {
@@ -1535,7 +1690,7 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
 }
 
 .palette-gallery__item:focus-visible .palette-gallery__swatch::after {
-  box-shadow: inset 0 0 0 2px var(--brand-secondary);
+  box-shadow: inset 0 0 0 2px var(--brand-blue);
 }
 
 .color-list {
@@ -1576,18 +1731,18 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
   justify-content: center;
   width: 100%;
   height: var(--control-height);
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  border: 2px solid transparent;
   border-radius: 0;
-  cursor: pointer;
+  cursor: var(--cursor-default);
   padding: 0 40px;
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
-.color-swatch:hover {
-  border-color: rgba(255, 255, 255, 0.38);
+.color-swatch:hover:not(:disabled) .color-swatch__hex {
+  animation: hover-plate-blink 0.125s linear infinite;
 }
 
 .color-row.is-adding,
@@ -1646,7 +1801,7 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
   border: none;
   border-radius: 0;
   background: var(--hover-plate-off);
-  cursor: pointer;
+  cursor: var(--cursor-default);
   padding: 0;
 }
 
@@ -1675,7 +1830,7 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
 
 .color-swatch__remove {
   color: rgba(255, 255, 255, 0.92);
-  font-size: 18px;
+  font-size: 19px;
   line-height: 1;
 }
 
@@ -1686,7 +1841,7 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
 .timeline {
   position: relative;
   border-top: 1px solid var(--panel-border);
-  background: rgba(0, 0, 0, 0.25);
+  background: var(--timeline-bg);
   padding: 16px 16px 12px;
 }
 
@@ -1700,8 +1855,8 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
 .timeline__frame-index {
   margin: 0;
   justify-self: start;
-  color: var(--brand-warm);
-  font-size: 15px;
+  color: var(--chrome);
+  font-size: 16px;
   font-weight: 400;
   letter-spacing: 0.04em;
   line-height: var(--icon-btn-size);
@@ -1727,7 +1882,7 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
   grid-template-columns: repeat(5, var(--phase-orb-dot));
   grid-template-rows: repeat(5, var(--phase-orb-dot));
   gap: var(--phase-orb-gap);
-  color: var(--brand-warm);
+  color: var(--chrome);
 }
 
 .phase-orb__dot {
@@ -1770,7 +1925,7 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
   grid-template-columns: repeat(5, var(--crt-glide-dot));
   grid-template-rows: repeat(5, var(--crt-glide-dot));
   gap: var(--crt-glide-gap);
-  color: var(--brand-warm);
+  color: var(--chrome);
 }
 
 .timeline__controls {
@@ -1807,21 +1962,21 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0 36px 0 14px;
-  background-color: rgba(255, 255, 255, 0.04);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='none' stroke='%23ff5300' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' d='M3 4.5 6 7.5 9 4.5'/%3E%3C/svg%3E");
+  background-color: var(--fill-faint);
+  background-image: var(--ui-chevron);
   background-repeat: no-repeat;
-  background-position: right 12px center;
-  background-size: 14px;
+  background-position: right 14px center;
+  background-size: 9px 9px;
   border: 1px solid var(--panel-border);
   border-radius: var(--control-radius);
-  color: var(--brand-warm);
+  color: var(--chrome);
   font: inherit;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 400;
   letter-spacing: 0.04em;
   line-height: calc(var(--icon-btn-size) - 2px);
   text-transform: uppercase;
-  cursor: pointer;
+  cursor: var(--cursor-default);
 }
 
 .timeline__fps::-ms-expand {
@@ -1834,37 +1989,46 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
 }
 
 .timeline__fps option {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 400;
   letter-spacing: 0;
 }
 
 .timeline__scroll {
-  overflow-x: scroll;
+  overflow-x: auto;
   overflow-y: hidden;
-  padding-bottom: 10px;
-  scrollbar-gutter: stable both-edges;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.28) rgba(255, 255, 255, 0.1);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .timeline__scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.timeline__scrollbar {
+  position: relative;
   height: 10px;
-  -webkit-appearance: none;
+  margin-top: 8px;
+  cursor: var(--cursor-default);
+  touch-action: none;
+  user-select: none;
 }
 
-.timeline__scroll::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 0;
+.timeline__scrollbar::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 3px;
+  height: 4px;
+  background: var(--scrollbar-track);
 }
 
-.timeline__scroll::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.28);
-  border-radius: 0;
-}
-
-.timeline__scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.38);
+.timeline__scrollbar-thumb {
+  position: absolute;
+  top: 3px;
+  height: 4px;
+  background: var(--brand-orange);
 }
 
 .timeline__strip {
@@ -1878,8 +2042,13 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
 }
 
 .timeline__strip.is-dragging {
-  cursor: grabbing;
+  cursor: var(--cursor-grabbing);
   user-select: none;
+}
+
+.timeline__strip.is-dragging .timeline-strip-item {
+  position: relative;
+  z-index: 1;
 }
 
 .timeline-strip-item {
@@ -1909,6 +2078,13 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
   border-radius: 1px;
   background: var(--accent);
   box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 50%, transparent);
+  animation: hover-plate-blink 0.125s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .timeline-insert-line {
+    animation: none;
+  }
 }
 
 .timeline-drag-ghost {
@@ -1923,9 +2099,9 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
 }
 
 .timeline-drag-ghost .timeline-thumb {
-  cursor: grabbing;
+  cursor: var(--cursor-grabbing);
   transform: scale(1.05);
-  border-color: rgba(255, 255, 255, 0.35);
+  border-color: var(--fill-stronger);
 }
 
 .timeline-thumb {
@@ -1933,10 +2109,10 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
   position: relative;
   flex: 0 0 auto;
   padding: 0;
-  border: 2px solid #555555;
+  border: 2px solid var(--thumb-border);
   border-radius: 0;
   background: transparent;
-  cursor: grab;
+  cursor: var(--cursor-grab);
   overflow: hidden;
   opacity: 0.5;
   touch-action: none;
@@ -1947,7 +2123,7 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
 }
 
 .timeline-thumb:active {
-  cursor: grabbing;
+  cursor: var(--cursor-grabbing);
 }
 
 .timeline-thumb:hover:not(.is-active) {
@@ -1956,7 +2132,7 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
 }
 
 .timeline-thumb.is-active {
-  border-color: #ff5300;
+  border-color: var(--chrome);
   opacity: 1;
   transition:
     opacity 0.2s cubic-bezier(0.22, 1, 0.36, 1),
@@ -1996,6 +2172,24 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
   background: var(--brand-green);
 }
 
+.timeline-thumb__drop-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: #fff;
+  animation: timeline-drop-flash 0.5s linear forwards;
+}
+
+@keyframes timeline-drop-flash {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
 @keyframes timeline-flood {
   0%,
   24.9% {
@@ -2020,13 +2214,57 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
 }
 
 .timeline__strip.is-dragging .timeline-thumb:not(.is-hidden) {
-  cursor: grabbing;
+  cursor: var(--cursor-grabbing);
 }
 
 .timeline-thumb canvas {
   display: block;
   width: 100%;
   height: 100%;
+}
+
+.frame-context-menu {
+  position: fixed;
+  z-index: 220;
+  display: flex;
+  flex-direction: column;
+  min-width: 228px;
+  height: 0;
+  overflow: hidden;
+  background: var(--glass);
+  backdrop-filter: blur(36px);
+  -webkit-backdrop-filter: blur(36px);
+  border: 1px solid var(--panel-border);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+  user-select: none;
+}
+
+.frame-context-menu__item {
+  width: 100%;
+  min-height: 40px;
+  margin: 0;
+  padding: 10px 14px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.frame-context-menu__item:focus-visible {
+  outline: 1px solid var(--chrome);
+  outline-offset: -1px;
+}
+
+.frame-context-menu__rule {
+  flex: 0 0 1px;
+  height: 1px;
+  margin: 4px 10px;
+  background: var(--panel-border);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .frame-context-menu {
+    height: auto;
+  }
 }
 
 /* Color picker (ported from rfrct, monochrome accents) */
@@ -2039,8 +2277,8 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
   width: 296px;
   padding: var(--rfrct-picker-pad);
   border-radius: 8px;
-  background: rgb(21, 21, 21);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
   overflow: hidden;
 }
@@ -2065,7 +2303,7 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
   height: 22px;
   border: none;
   background: transparent;
-  cursor: pointer;
+  cursor: var(--cursor-default);
   color: var(--muted);
 }
 
@@ -2094,7 +2332,7 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
   aspect-ratio: 1;
   border-radius: 0;
   overflow: hidden;
-  cursor: crosshair;
+  cursor: var(--cursor-crosshair);
   touch-action: none;
 }
 
@@ -2123,7 +2361,7 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
   position: relative;
   height: 12px;
   border-radius: 999px;
-  cursor: pointer;
+  cursor: var(--cursor-default);
   touch-action: none;
 }
 
@@ -2163,9 +2401,9 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
   height: var(--rfrct-picker-control-h);
   border: none;
   border-radius: var(--control-radius);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--fill-faint);
   color: var(--muted);
-  cursor: pointer;
+  cursor: var(--cursor-default);
 }
 
 .rfrct-color-picker__hex,
@@ -2173,12 +2411,17 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
 .rfrct-color-picker__scale-trigger {
   width: 100%;
   height: var(--rfrct-picker-control-h);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--panel-border);
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--fill-faint);
   color: var(--text);
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
+}
+
+.rfrct-color-picker__hex,
+.rfrct-color-picker__channel {
+  cursor: var(--cursor-text);
 }
 
 .rfrct-color-picker__scale-combo {
@@ -2186,7 +2429,7 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
 }
 
 .rfrct-color-picker__scale-trigger {
-  cursor: pointer;
+  cursor: var(--cursor-default);
 }
 
 .rfrct-color-picker__scale-list {
@@ -2196,8 +2439,8 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
   margin: 0;
   padding: 4px 0;
   list-style: none;
-  background: rgb(21, 21, 21);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
   border-radius: 4px;
   min-width: 58px;
   z-index: 1;
@@ -2211,20 +2454,20 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
   color: var(--text);
   padding: 6px 10px;
   text-align: center;
-  cursor: pointer;
+  cursor: var(--cursor-default);
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .rfrct-color-picker__scale-option:hover,
 .rfrct-color-picker__scale-option.is-selected {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--fill-faint);
 }
 
 .rfrct-color-picker__recent-rule {
   height: 1px;
   margin: 0 0 10px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--fill-faint);
 }
 
 .rfrct-color-picker__recent-swatches {
@@ -2236,9 +2479,9 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
 .rfrct-color-picker__recent-swatch {
   aspect-ratio: 1;
   width: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--fill-strong);
   border-radius: 0;
-  cursor: pointer;
+  cursor: var(--cursor-default);
   padding: 0;
 }
 
@@ -2286,13 +2529,13 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
     justify-content: center;
     gap: clamp(56px, 10vh, 88px);
     padding: clamp(32px, 6vw, 56px);
-    background: rgba(15, 15, 15, 0.38);
+    background: var(--glass);
     user-select: none;
   }
 
   .mobile-gate__logo {
     width: min(78vw, 280px);
-    cursor: pointer;
+    cursor: var(--cursor-default);
     pointer-events: auto;
   }
 
@@ -2313,7 +2556,7 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
     margin: 0;
     max-width: 22em;
     text-align: center;
-    font-size: 13px;
+    font-size: 14px;
     line-height: 1.45;
     font-weight: 500;
     letter-spacing: 0.04em;
@@ -2329,7 +2572,7 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
 
   .mobile-gate__copy {
     max-width: 26em;
-    font-size: 15px;
+    font-size: 16px;
     letter-spacing: 0.035em;
   }
 }

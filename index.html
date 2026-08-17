@@ -5,6 +5,16 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>mozayk</title>
+    <script>
+      try {
+        var t = localStorage.getItem("mozayk-chrome-theme");
+        if (t === "pink") t = "purple";
+        if (t !== "dark" && t !== "light" && t !== "purple") {
+          t = localStorage.getItem("mozayk-light-theme") === "1" ? "light" : "dark";
+        }
+        document.documentElement.setAttribute("data-theme", t);
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

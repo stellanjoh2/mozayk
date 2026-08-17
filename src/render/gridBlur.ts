@@ -71,15 +71,39 @@ function context2d(
   height: number,
 ): CanvasRenderingContext2D | null {
   if (width <= 0 || height <= 0) return null;
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  if (canvas.width !== width || canvas.height !== height) return null;
-  return canvas.getContext("2d");
+  try {
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    if (canvas.width !== width || canvas.height !== height) return null;
+    return canvas.getContext("2d");
+  } catch {
+    return null;
+  }
 }
 
 /** Keep padded blur buffers within common GPU texture limits. */
 const MAX_FILTER_EDGE = 8192;
+
+/**
+ * CSS `blur()` on 4K canvases can kill the GPU process (uncaught).
+ * Blur at 1080p, then scale back up.
+ */
+export const MAX_BLUR_EDGE = 1920;
+
+/** Working bitmap for a CSS blur pass — never larger than MAX_BLUR_EDGE. */
+export function gridBlurWorkingSize(
+  width: number,
+  height: number,
+): { width: number; height: number } {
+  const edge = Math.max(width, height);
+  if (edge <= MAX_BLUR_EDGE) return { width, height };
+  const scale = MAX_BLUR_EDGE / edge;
+  return {
+    width: Math.max(1, Math.round(width * scale)),
+    height: Math.max(1, Math.round(height * scale)),
+  };
+}
 
 /**
  * CSS `blur()` treats pixels outside the *source* bitmap as transparent.
@@ -117,28 +141,42 @@ function blurredCopy(
   radius: number,
   opaqueBackdrop: boolean,
 ): HTMLCanvasElement | null {
+  const work = gridBlurWorkingSize(width, height);
+  const workW = work.width;
+  const workH = work.height;
+  const radiusPx = radius * (workW / width);
+
+  let blurSource: CanvasImageSource = source;
+  if (workW !== width || workH !== height) {
+    const scaled = context2d(workW, workH);
+    if (!scaled) return null;
+    scaled.imageSmoothingEnabled = true;
+    scaled.drawImage(source, 0, 0, workW, workH);
+    blurSource = scaled.canvas;
+  }
+
   const maxPad = Math.max(
     0,
     Math.min(
-      Math.floor((MAX_FILTER_EDGE - width) / 2),
-      Math.floor((MAX_FILTER_EDGE - height) / 2),
+      Math.floor((MAX_FILTER_EDGE - workW) / 2),
+      Math.floor((MAX_FILTER_EDGE - workH) / 2),
     ),
   );
   // Gaussian kernel is ~3σ; +1px so the crop stays inside opaque samples.
-  const pad = Math.min(Math.ceil(radius * 3) + 1, maxPad);
+  const pad = Math.min(Math.ceil(radiusPx * 3) + 1, maxPad);
 
-  const paddedW = width + pad * 2;
-  const paddedH = height + pad * 2;
+  const paddedW = workW + pad * 2;
+  const paddedH = workH + pad * 2;
   const padded = context2d(paddedW, paddedH);
   if (!padded) return null;
 
-  if (pad > 0) clampExtend(padded, source, pad, width, height);
-  else padded.drawImage(source, 0, 0);
+  if (pad > 0) clampExtend(padded, blurSource, pad, workW, workH);
+  else padded.drawImage(blurSource, 0, 0);
 
   const blurred = context2d(paddedW, paddedH);
   if (!blurred) return null;
   try {
-    blurred.filter = `blur(${radius}px)`;
+    blurred.filter = `blur(${radiusPx}px)`;
     blurred.drawImage(padded.canvas, 0, 0);
     blurred.filter = "none";
   } catch {
@@ -147,12 +185,15 @@ function blurredCopy(
 
   const out = context2d(width, height);
   if (!out) return null;
+  if (workW !== width || workH !== height) {
+    out.imageSmoothingEnabled = true;
+  }
   out.drawImage(
     blurred.canvas,
     pad,
     pad,
-    width,
-    height,
+    workW,
+    workH,
     0,
     0,
     width,
@@ -257,24 +298,33 @@ export function applyGridBlur(
 
     const chaos = clampInt(settings.gridBlurChaos, 0, 100, 50);
     if (chaos > 0) {
-      const sharp = context2d(width, height);
+      const work = gridBlurWorkingSize(width, height);
+      const sharp = context2d(work.width, work.height);
       if (!sharp) return;
-      sharp.drawImage(ctx.canvas, 0, 0);
+      sharp.imageSmoothingEnabled = true;
+      sharp.drawImage(ctx.canvas, 0, 0, work.width, work.height);
 
-      const mask = context2d(width, height);
+      const workGrid = getGridDimensions(
+        orientation,
+        density,
+        work.width,
+        work.height,
+      );
+      const mask = context2d(work.width, work.height);
       if (!mask) return;
-      drawSharpMask(mask, grid, chaos);
+      drawSharpMask(mask, workGrid, chaos);
 
       // Feather patch edges so restored sharp tiles don't cut hard seams
       // through an otherwise blurred field (esp. high chaos + high amount).
       // Skip on mild blur — hard mask is fine and saves a full-canvas pass.
+      const scale = work.width / width;
       const feather = Math.min(
-        Math.max(radius * 0.12, 1.5),
-        grid.cellSize * 0.35,
+        Math.max(radius * scale * 0.12, 1.5 * scale),
+        workGrid.cellSize * 0.35,
       );
       const softMask =
         radius >= 2 && chaos >= 15
-          ? blurredCopy(mask.canvas, width, height, feather, false)
+          ? blurredCopy(mask.canvas, work.width, work.height, feather, false)
           : null;
       sharp.globalCompositeOperation = "destination-in";
       sharp.drawImage(softMask ?? mask.canvas, 0, 0);
@@ -282,7 +332,8 @@ export function applyGridBlur(
       ctx.clearRect(0, 0, width, height);
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(blurred, 0, 0);
-      ctx.drawImage(sharp.canvas, 0, 0);
+      ctx.imageSmoothingEnabled = work.width !== width;
+      ctx.drawImage(sharp.canvas, 0, 0, width, height);
       ctx.imageSmoothingEnabled = true;
       if (opaqueBackdrop) {
         ctx.globalCompositeOperation = "destination-over";

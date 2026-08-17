@@ -46,7 +46,7 @@ export function unsupportedVideoMessage(label: string): string {
     return `${label} isn't supported. Convert the clip to MP4 or MOV and try again.`;
   }
   if (label === "GIF") {
-    return "Animated GIFs use Upload Image. Video import is for MP4 and MOV clips.";
+    return "Animated GIFs use Import Image. Video import is for MP4 and MOV clips.";
   }
   return `${label} isn't supported. Use an MP4 or MOV clip (up to 5 seconds).`;
 }

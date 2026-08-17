@@ -16,6 +16,26 @@ export function cloneFrameForHistory(frame: Frame): Frame {
     imageSource: frame.imageSource,
     textureOverlay: frame.textureOverlay,
     backgroundImage: frame.backgroundImage,
+    orientationLayout: frame.orientationLayout
+      ? {
+          orientation: frame.orientationLayout.orientation,
+          blocks: frame.orientationLayout.blocks.map((block) => ({ ...block })),
+          colors: [...frame.orientationLayout.colors],
+          derived: frame.orientationLayout.derived
+            ? {
+                landscape: frame.orientationLayout.derived.landscape?.map(
+                  (block) => ({ ...block }),
+                ),
+                portrait: frame.orientationLayout.derived.portrait?.map(
+                  (block) => ({ ...block }),
+                ),
+                square: frame.orientationLayout.derived.square?.map((block) => ({
+                  ...block,
+                })),
+              }
+            : undefined,
+        }
+      : undefined,
   };
 }
 

@@ -23,9 +23,11 @@ import {
 import {
   buildMergedLayoutFromColorGrid,
   buildMergedLayoutFromImage,
+  coverCropBlocks,
+  coverCropColorGrid,
   gridExtentsFromBlocks,
   rasterizeBlockColorGrid,
-  resampleColorGrid,
+  sameGridAspect,
 } from "../import/imageImport";
 import type { ImageImportResult } from "../import/imageImport";
 import { getCachedSourceImage } from "../import/imageSource";
@@ -37,10 +39,49 @@ import type {
   FrameSettings,
   MosaicBlock,
   Orientation,
+  OrientationLayout,
 } from "../types";
 
 function createId(): string {
   return crypto.randomUUID();
+}
+
+function dropOrientationLayout(frame: Frame): Frame {
+  if (!frame.orientationLayout) return frame;
+  const { orientationLayout: _dropped, ...rest } = frame;
+  return rest;
+}
+
+function captureOrientationLayout(
+  frame: Frame,
+  orientation: Orientation,
+): OrientationLayout {
+  return (
+    frame.orientationLayout ?? {
+      orientation,
+      blocks: cloneBlocks(frame.blocks),
+      colors: [...frame.settings.colors],
+    }
+  );
+}
+
+function cloneBlocks(blocks: MosaicBlock[]): MosaicBlock[] {
+  return blocks.map((block) => ({ ...block }));
+}
+
+function withDerivedLayout(
+  source: OrientationLayout,
+  orientation: Orientation,
+  blocks: MosaicBlock[],
+): OrientationLayout {
+  if (orientation === source.orientation) return source;
+  return {
+    ...source,
+    derived: {
+      ...source.derived,
+      [orientation]: cloneBlocks(blocks),
+    },
+  };
 }
 
 export function createDefaultShapePalette(): FrameSettings["shapes"] {
@@ -239,6 +280,21 @@ function shapeSettingsChanged(from: FrameSettings, to: FrameSettings): boolean {
   );
 }
 
+/** Snapshot of a frame's look for copy/paste style. Picture and mosaic stay on the destination. */
+export function cloneFrameLook(frame: Frame): Frame {
+  return {
+    id: "look",
+    settings: structuredClone(frame.settings),
+    blocks: [],
+    textureOverlay: frame.textureOverlay
+      ? structuredClone(frame.textureOverlay)
+      : undefined,
+    backgroundImage: frame.backgroundImage
+      ? structuredClone(frame.backgroundImage)
+      : undefined,
+  };
+}
+
 /** Copy style from `look` onto `frame`. Keeps this frame's picture and mosaic motion. */
 export function applyLookToFrame(
   frame: Frame,
@@ -313,10 +369,14 @@ export function applyPastedSettings(
       settings.layoutSource === "imported" && !frame.imageSource
         ? { ...settings, layoutSource: "procedural" as const }
         : settings;
-    return { ...frame, settings: nextSettings, blocks: restored };
+    return {
+      ...dropOrientationLayout(frame),
+      settings: nextSettings,
+      blocks: restored,
+    };
   }
 
-  const nextFrame = { ...frame, settings };
+  const nextFrame = { ...dropOrientationLayout(frame), settings };
   if (nextFrame.imageSource) {
     return relayoutImportedFrame(nextFrame, orientation);
   }
@@ -330,6 +390,51 @@ export function applyPastedSettings(
   return { ...nextFrame, blocks };
 }
 
+/** Keep the current mosaic colours; scale or cover-crop into the new grid. */
+function relayoutFromExistingColorGrid(
+  frame: Frame,
+  orientation: Orientation,
+  rng: () => number,
+): Frame | null {
+  const oldExtents = gridExtentsFromBlocks(frame.blocks);
+  if (
+    frame.blocks.length === 0 ||
+    oldExtents.columns <= 0 ||
+    oldExtents.rows <= 0
+  ) {
+    return null;
+  }
+
+  const displayPalette = [...frame.settings.colors];
+  const settings = clampSettingsForOrientation(
+    {
+      ...frame.settings,
+      colors: displayPalette,
+      colorAmounts: colorAmountsForSettings({
+        ...frame.settings,
+        colors: displayPalette,
+      }),
+    },
+    orientation,
+  );
+
+  const { columns, rows } = getGridCounts(orientation, settings.density);
+  const colorGrid = rasterizeBlockColorGrid(
+    frame.blocks,
+    oldExtents.columns,
+    oldExtents.rows,
+    "",
+  );
+  const resampled = coverCropColorGrid(colorGrid, columns, rows);
+  const blocks = buildMergedLayoutFromColorGrid(
+    resampled,
+    displayPalette,
+    settings,
+    rng,
+  );
+  return { ...frame, settings, blocks };
+}
+
 export function relayoutImportedFrame(
   frame: Frame,
   orientation: Orientation,
@@ -337,11 +442,7 @@ export function relayoutImportedFrame(
 ): Frame {
   if (!frame.imageSource) return frame;
 
-  const image = getCachedSourceImage(frame.imageSource.dataUrl);
-  if (!image) return frame;
-
   const displayPalette = [...frame.settings.colors];
-
   const settings = clampSettingsForOrientation(
     {
       ...frame.settings,
@@ -357,28 +458,31 @@ export function relayoutImportedFrame(
 
   const { columns, rows } = getGridCounts(orientation, settings.density);
   const oldExtents = gridExtentsFromBlocks(frame.blocks);
-  const densityChanged =
+  const gridSizeChanged =
     oldExtents.columns > 0 &&
     oldExtents.rows > 0 &&
     (oldExtents.columns !== columns || oldExtents.rows !== rows);
+  const aspectUnchanged = sameGridAspect(
+    oldExtents.columns,
+    oldExtents.rows,
+    columns,
+    rows,
+  );
 
-  let blocks: MosaicBlock[];
-  if (frame.blocks.length > 0 && densityChanged) {
-    const colorGrid = rasterizeBlockColorGrid(
-      frame.blocks,
-      oldExtents.columns,
-      oldExtents.rows,
-      settings.background,
-    );
-    const resampled = resampleColorGrid(colorGrid, columns, rows);
-    blocks = buildMergedLayoutFromColorGrid(
-      resampled,
-      displayPalette,
-      settings,
+  // Same-ratio density changes keep the current mosaic (scale).
+  // Ratio changes recrop the photo when it is available; otherwise cover-crop.
+  if (gridSizeChanged && aspectUnchanged) {
+    const kept = relayoutFromExistingColorGrid(
+      { ...frame, settings },
+      orientation,
       rng,
     );
-  } else {
-    blocks = buildMergedLayoutFromImage(
+    if (kept) return dropOrientationLayout({ ...kept, settings });
+  }
+
+  const image = getCachedSourceImage(frame.imageSource.dataUrl);
+  if (image) {
+    const blocks = buildMergedLayoutFromImage(
       image,
       orientation,
       settings,
@@ -386,50 +490,111 @@ export function relayoutImportedFrame(
       frame.imageSource.paletteRgb,
       rng,
     );
+    return dropOrientationLayout({ ...frame, settings, blocks });
   }
 
-  return { ...frame, settings, blocks };
+  if (gridSizeChanged) {
+    const kept = relayoutFromExistingColorGrid(
+      { ...frame, settings },
+      orientation,
+      rng,
+    );
+    if (kept) return dropOrientationLayout({ ...kept, settings });
+  }
+
+  return dropOrientationLayout({ ...frame, settings });
+}
+
+/** Refit an existing mosaic to a new canvas ratio without reshuffling colours. */
+export function relayoutFrameToOrientation(
+  frame: Frame,
+  from: Orientation,
+  to: Orientation,
+  _rng?: () => number,
+): Frame {
+  if (from === to) return frame;
+
+  const source = captureOrientationLayout(frame, from);
+  const settings = clampSettingsForOrientation(frame.settings, to);
+  const layoutBlocks =
+    to === source.orientation
+      ? source.blocks
+      : (source.derived?.[to] ?? null);
+  if (layoutBlocks !== null) {
+    return {
+      ...frame,
+      settings,
+      blocks: remapBlockColors(layoutBlocks, source.colors, settings.colors),
+      orientationLayout: source,
+    };
+  }
+
+  const sourceBlocks = remapBlockColors(
+    source.blocks,
+    source.colors,
+    settings.colors,
+  );
+
+  const derivedBlocks =
+    !frame.imageSource && canTransposeOrientation(source.orientation, to)
+      ? transposeBlocks(sourceBlocks)
+      : coverCropBlocks(
+          sourceBlocks,
+          getGridCounts(source.orientation, settings.density).columns,
+          getGridCounts(source.orientation, settings.density).rows,
+          getGridCounts(to, settings.density).columns,
+          getGridCounts(to, settings.density).rows,
+        );
+
+  return {
+    ...frame,
+    settings,
+    blocks: derivedBlocks,
+    orientationLayout: withDerivedLayout(source, to, derivedBlocks),
+  };
 }
 
 export function regenerateFrameLayout(
   frame: Frame,
   orientation: Orientation,
 ): Frame {
-  if (frame.imageSource) {
-    return relayoutImportedFrame(frame, orientation);
+  const base = dropOrientationLayout(frame);
+  if (base.imageSource) {
+    return relayoutImportedFrame(base, orientation);
   }
 
-  const clamped = clampSettingsForOrientation(frame.settings, orientation);
-  const settings = { ...clamped, colors: [...frame.settings.colors] };
+  const clamped = clampSettingsForOrientation(base.settings, orientation);
+  const settings = { ...clamped, colors: [...base.settings.colors] };
   const blocks = carryOverBlockColors(
     generateLayout(orientation, settings),
     settings.colors,
     colorAmountsForSettings(settings),
   );
-  return { ...frame, settings, blocks };
+  return { ...base, settings, blocks };
 }
 
 export function randomizeFrameLayout(
   frame: Frame,
   orientation: Orientation,
 ): Frame {
-  if (frame.imageSource) {
-    const randomized = randomizeLayoutSettings(frame.settings, orientation);
+  const base = dropOrientationLayout(frame);
+  if (base.imageSource) {
+    const randomized = randomizeLayoutSettings(base.settings, orientation);
     return relayoutImportedFrame(
-      { ...frame, settings: randomized },
+      { ...base, settings: randomized },
       orientation,
     );
   }
 
-  const randomized = randomizeLayoutSettings(frame.settings, orientation);
+  const randomized = randomizeLayoutSettings(base.settings, orientation);
   const clamped = clampSettingsForOrientation(randomized, orientation);
-  const settings = { ...clamped, colors: [...frame.settings.colors] };
+  const settings = { ...clamped, colors: [...base.settings.colors] };
   const blocks = carryOverBlockColors(
     generateLayout(orientation, settings),
     settings.colors,
     colorAmountsForSettings(settings),
   );
-  return { ...frame, settings, blocks };
+  return { ...base, settings, blocks };
 }
 
 export function randomizeFrameCurrentColors(frame: Frame): Frame {
@@ -625,8 +790,9 @@ export function applyImageImport(
   frame: Frame,
   result: ImageImportResult,
 ): Frame {
+  const base = dropOrientationLayout(frame);
   return {
-    ...frame,
+    ...base,
     settings: {
       ...frame.settings,
       colors: result.colors,
@@ -636,7 +802,7 @@ export function applyImageImport(
       randomWidth: false,
       randomHeight: false,
       minCellSize: defaultMinCellSize(),
-      maxCellSize: defaultMaxCellSize(frame.settings.density),
+      maxCellSize: defaultMaxCellSize(base.settings.density),
       layoutSource: "imported",
     },
     blocks: result.blocks,

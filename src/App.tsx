@@ -5,6 +5,7 @@ import {
   MAX_VIDEO_DURATION_S,
   PLAYBACK_FPS_DEFAULT,
   clampGifFrameDelayCs,
+  clampMp4ExportPreset,
   gifFrameDelayCsForPlaybackFps,
   getPreviewSize,
   playbackDelayMs,
@@ -34,6 +35,8 @@ import {
   applyDensityChange,
   applyImageImport,
   applyLookToAllFrames,
+  applyLookToFrame,
+  cloneFrameLook,
   applyPastedSettings,
   clampSettingsForOrientation,
   colorAmountsForSettings,
@@ -44,7 +47,7 @@ import {
   createDefaultShapePalette,
   duplicateFrame,
   regenerateFrameLayout,
-  relayoutImportedFrame,
+  relayoutFrameToOrientation,
   reorderFrames,
   randomizeFrameCurrentColors,
   randomizeFrameNewColors,
@@ -156,6 +159,7 @@ export default function App() {
   const [playing, setPlaying] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [exportPreset, setExportPreset] = useState<ExportPreset>("1080p");
+  const [mp4Preset, setMp4Preset] = useState<ExportPreset>("1080p");
   const [gifPreset, setGifPreset] = useState<GifExportPreset>("480p");
   const [gifFrameDelayCs, setGifFrameDelayCs] = useState(GIF_FRAME_DELAY_CS_DEFAULT);
   const [playbackFps, setPlaybackFps] = useState(PLAYBACK_FPS_DEFAULT);
@@ -182,6 +186,7 @@ export default function App() {
   >(() => getPreviewSize("landscape"));
   const [toast, setToast] = useState<string | null>(null);
   const layoutRegenTimer = useRef<number | null>(null);
+  const shapeRerollTimer = useRef<number | null>(null);
   const appRef = useRef<HTMLDivElement>(null);
   const activeIndexRef = useRef(activeIndex);
   const orientationRef = useRef(orientation);
@@ -191,6 +196,8 @@ export default function App() {
   const applyingHistoryRef = useRef(false);
   const undoCoalesceArmedRef = useRef(false);
   const undoCoalesceTimer = useRef<number | null>(null);
+  const styleLookRef = useRef<Frame | null>(null);
+  const [canPasteStyle, setCanPasteStyle] = useState(false);
 
   activeIndexRef.current = activeIndex;
   orientationRef.current = orientation;
@@ -275,6 +282,10 @@ export default function App() {
       window.clearTimeout(layoutRegenTimer.current);
       layoutRegenTimer.current = null;
     }
+    if (shapeRerollTimer.current) {
+      window.clearTimeout(shapeRerollTimer.current);
+      shapeRerollTimer.current = null;
+    }
     resetUndoCoalesce();
     applyingHistoryRef.current = true;
     orientationRef.current = snapshot.orientation;
@@ -353,10 +364,26 @@ export default function App() {
     }, LAYOUT_REGEN_MS);
   }, [regenerateLayout]);
 
+  const scheduleShapeReroll = useCallback(() => {
+    if (shapeRerollTimer.current) {
+      window.clearTimeout(shapeRerollTimer.current);
+    }
+    shapeRerollTimer.current = window.setTimeout(() => {
+      shapeRerollTimer.current = null;
+      updateActiveFrame((frame) => ({
+        ...frame,
+        blocks: rerollShapes(frame.blocks, frame.settings),
+      }));
+    }, LAYOUT_REGEN_MS);
+  }, [updateActiveFrame]);
+
   useEffect(
     () => () => {
       if (layoutRegenTimer.current) {
         window.clearTimeout(layoutRegenTimer.current);
+      }
+      if (shapeRerollTimer.current) {
+        window.clearTimeout(shapeRerollTimer.current);
       }
       if (undoCoalesceTimer.current) {
         window.clearTimeout(undoCoalesceTimer.current);
@@ -445,7 +472,11 @@ export default function App() {
         const nextSettings = mergeSettings(frame, patch);
 
         let blocks = frame.blocks;
-        if (rerollsShape && !needsLayout) {
+        if (rerollsShape && !needsLayout && !("shapeMix" in patch)) {
+          if (shapeRerollTimer.current) {
+            window.clearTimeout(shapeRerollTimer.current);
+            shapeRerollTimer.current = null;
+          }
           blocks = rerollShapes(blocks, nextSettings);
         }
 
@@ -454,9 +485,17 @@ export default function App() {
 
       if (needsLayout) {
         scheduleLayoutRegen();
+      } else if ("shapeMix" in patch) {
+        scheduleShapeReroll();
       }
     },
-    [mergeSettings, pushUndoCheckpoint, scheduleLayoutRegen, updateActiveFrame],
+    [
+      mergeSettings,
+      pushUndoCheckpoint,
+      scheduleLayoutRegen,
+      scheduleShapeReroll,
+      updateActiveFrame,
+    ],
   );
 
   const handleOrientationChange = useCallback(
@@ -465,14 +504,11 @@ export default function App() {
       pushUndoCheckpoint();
       setOrientation(next);
       orientationRef.current = next;
+      setMp4Preset((preset) => clampMp4ExportPreset(next, preset));
       setFrames((prev) =>
-        prev.map((frame) => {
-          if (frame.imageSource) return relayoutImportedFrame(frame, next);
-          if (orientation === "square" || next === "square") {
-            return regenerateFrameLayout(frame, next);
-          }
-          return transposeFrameBlocks(frame, orientation, next);
-        }),
+        prev.map((frame) =>
+          relayoutFrameToOrientation(frame, orientation, next),
+        ),
       );
     },
     [orientation, pushUndoCheckpoint],
@@ -490,12 +526,12 @@ export default function App() {
     });
   }, [pushUndoCheckpoint]);
 
-  const handleDuplicateCurrent = useCallback(() => {
+  const handleDuplicateCurrent = useCallback((index: number) => {
     if (framesRef.current.length >= MAX_FRAMES) return;
     pushUndoCheckpoint();
     setFrames((prev) => {
       if (prev.length >= MAX_FRAMES) return prev;
-      const sourceIndex = activeIndexRef.current;
+      const sourceIndex = Math.min(Math.max(0, index), prev.length - 1);
       const source = prev[sourceIndex] ?? prev[0];
       const copy = duplicateFrame(source);
       const insertAt = sourceIndex + 1;
@@ -505,13 +541,13 @@ export default function App() {
     });
   }, [pushUndoCheckpoint]);
 
-  const handleRemoveFrame = useCallback(() => {
+  const handleRemoveFrame = useCallback((index: number) => {
     if (framesRef.current.length <= 1) return;
     pushUndoCheckpoint();
-    const removeIndex = activeIndexRef.current;
     setFrames((prev) => {
       if (prev.length <= 1) return prev;
-      const next = prev.filter((_, index) => index !== removeIndex);
+      const removeIndex = Math.min(Math.max(0, index), prev.length - 1);
+      const next = prev.filter((_, frameIndex) => frameIndex !== removeIndex);
       setActiveIndex(Math.min(removeIndex, next.length - 1));
       return next;
     });
@@ -566,6 +602,35 @@ export default function App() {
     );
     setToast("Look applied to all frames");
   }, [pushUndoCheckpoint]);
+
+  const handleCopyStyle = useCallback((index: number) => {
+    const frame = framesRef.current[index];
+    if (!frame) return;
+    styleLookRef.current = cloneFrameLook(frame);
+    setCanPasteStyle(true);
+    setToast("Style copied");
+  }, []);
+
+  const handlePasteStyle = useCallback(
+    (index: number) => {
+      const look = styleLookRef.current;
+      if (!look) {
+        setToast("Nothing to paste");
+        return;
+      }
+      pushUndoCheckpoint();
+      setFrames((prev) => {
+        const target = prev[index];
+        if (!target) return prev;
+        const next = [...prev];
+        next[index] = applyLookToFrame(target, look, orientationRef.current);
+        return next;
+      });
+      setActiveIndex(index);
+      setToast("Style pasted");
+    },
+    [pushUndoCheckpoint],
+  );
 
   const runExport = useCallback(async (task: () => Promise<void> | void) => {
     try {
@@ -636,6 +701,10 @@ export default function App() {
         if (layoutRegenTimer.current) {
           window.clearTimeout(layoutRegenTimer.current);
           layoutRegenTimer.current = null;
+        }
+        if (shapeRerollTimer.current) {
+          window.clearTimeout(shapeRerollTimer.current);
+          shapeRerollTimer.current = null;
         }
         pushUndoCheckpoint();
         setOrientation(result.orientation);
@@ -792,6 +861,10 @@ export default function App() {
       window.clearTimeout(layoutRegenTimer.current);
       layoutRegenTimer.current = null;
     }
+    if (shapeRerollTimer.current) {
+      window.clearTimeout(shapeRerollTimer.current);
+      shapeRerollTimer.current = null;
+    }
 
     const { orientation: defaultOrientation, frames: defaultFrames } =
       createDefaultCanvas();
@@ -802,6 +875,7 @@ export default function App() {
     setActiveIndex(0);
     setPlaying(false);
     setExportPreset("1080p");
+    setMp4Preset("1080p");
     setGifPreset("480p");
     setGifFrameDelayCs(GIF_FRAME_DELAY_CS_DEFAULT);
     setPlaybackFps(PLAYBACK_FPS_DEFAULT);
@@ -821,6 +895,7 @@ export default function App() {
       frames: framesRef.current,
       activeIndex: activeIndexRef.current,
       exportPreset,
+      mp4Preset,
       gifPreset,
       gifFrameDelayCs,
       playbackFps,
@@ -830,7 +905,7 @@ export default function App() {
       defaultMzkFileName(),
     );
     setToast("Project saved");
-  }, [exportPreset, gifPreset, gifFrameDelayCs, playbackFps]);
+  }, [exportPreset, mp4Preset, gifPreset, gifFrameDelayCs, playbackFps]);
 
   const handleLoadProject = useCallback(
     async (file: File) => {
@@ -856,6 +931,10 @@ export default function App() {
           window.clearTimeout(layoutRegenTimer.current);
           layoutRegenTimer.current = null;
         }
+        if (shapeRerollTimer.current) {
+          window.clearTimeout(shapeRerollTimer.current);
+          shapeRerollTimer.current = null;
+        }
 
         setOrientation(project.orientation);
         orientationRef.current = project.orientation;
@@ -864,6 +943,9 @@ export default function App() {
         setActiveIndex(project.activeIndex);
         activeIndexRef.current = project.activeIndex;
         setExportPreset(project.exportPreset);
+        setMp4Preset(
+          clampMp4ExportPreset(project.orientation, project.mp4Preset),
+        );
         setGifPreset(project.gifPreset);
         setGifFrameDelayCs(project.gifFrameDelayCs);
         setPlaybackFps(project.playbackFps);
@@ -1055,6 +1137,7 @@ export default function App() {
         frame={activeFrame}
         orientation={orientation}
         exportPreset={exportPreset}
+        mp4Preset={mp4Preset}
         gifPreset={gifPreset}
         gifFrameDelayCs={gifFrameDelayCs}
         playbackFps={playbackFps}
@@ -1131,6 +1214,7 @@ export default function App() {
         }}
         onOrientationChange={handleOrientationChange}
         onExportPresetChange={setExportPreset}
+        onMp4PresetChange={setMp4Preset}
         onExportPngFrame={() =>
           void runExport(() =>
             exportCurrentFrame(
@@ -1163,7 +1247,7 @@ export default function App() {
               const bytes = await exportMp4(
                 frames,
                 orientation,
-                exportPreset,
+                mp4Preset,
                 playbackFps,
                 setExportingLabel,
               );
@@ -1238,8 +1322,11 @@ export default function App() {
           onSelect={setActiveIndex}
           onReorder={handleReorderFrames}
           onAdd={handleAddFrame}
-          onDuplicateCurrent={handleDuplicateCurrent}
+          onDuplicate={handleDuplicateCurrent}
           onRemove={handleRemoveFrame}
+          onCopyStyle={handleCopyStyle}
+          onPasteStyle={handlePasteStyle}
+          canPasteStyle={canPasteStyle}
           canAddFrame={frames.length < MAX_FRAMES}
           onTogglePlay={togglePlay}
         />

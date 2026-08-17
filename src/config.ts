@@ -76,6 +76,32 @@ export function getExportSize(
   return sizes.square;
 }
 
+/** Portrait MP4 is fixed at 1080×1920 (9:16). */
+export const MP4_PORTRAIT_EXPORT_SIZE: [number, number] = [1080, 1920];
+
+const MP4_EXPORT_PRESET_ORDER: ExportPreset[] = ["1080p", "1440p", "2160p"];
+
+export function getMp4ExportPresets(orientation: Orientation): ExportPreset[] {
+  if (orientation === "portrait") return ["1080p"];
+  return MP4_EXPORT_PRESET_ORDER;
+}
+
+export function clampMp4ExportPreset(
+  orientation: Orientation,
+  preset: ExportPreset,
+): ExportPreset {
+  if (orientation === "portrait") return "1080p";
+  return preset;
+}
+
+export function getMp4ExportSize(
+  orientation: Orientation,
+  preset: ExportPreset,
+): [number, number] {
+  if (orientation === "portrait") return MP4_PORTRAIT_EXPORT_SIZE;
+  return getExportSize(orientation, preset);
+}
+
 /** GIF export sizes — 16:9 that stay on the mosaic grid. */
 export type GifExportPreset = "480p" | "720p";
 

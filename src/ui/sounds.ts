@@ -6,11 +6,12 @@ const FILES = {
   slider: "sounds/uisound-slider.wav",
   sliderLeft: "sounds/uisound-slider.wav",
   hover: "sounds/uisound-hover.wav",
+  drop: "sounds/uisound-drop.wav",
+  // hoverBlink: "sounds/uisound-hoverblink.wav",
 } as const;
 
-/** Controls that already play a click/action cue — hover only on the rest. */
 const HOVER_SELECTOR =
-  ".button-row:not(.button-row--choice):not(.button-row--shape-icons) button, .color-swatch__lock, .timeline-thumb";
+  ".panel-btn, .button-row button, .timeline__controls button, .frame-context-menu__item, .color-swatch__lock, .color-swatch__remove, .controls-panel__tab, .palette-panel__tab, .palette-panel__close, .palette-gallery__item, .timeline-thumb, .ui-switch";
 
 export type UiSound = keyof typeof FILES;
 
@@ -25,6 +26,8 @@ const SOUND_GAIN: Partial<Record<UiSound, number>> = {
   slider: 0.7532,
   sliderLeft: 0.7532,
   hover: 0.9189 * 10 ** (5 / 20),
+  drop: 1.8205 * 10 ** (-5 / 20),
+  // hoverBlink: 5.8449 * 10 ** (-20 / 20),
 };
 
 /** Left-drag reuses the slider clip a half octave down. */
@@ -170,6 +173,12 @@ function startSound(name: UiSound, buf: AudioBuffer): void {
     if (isSliderSound(name)) {
       sliderUntil = performance.now() + Math.max((buf.duration / rate) * 1000, 30);
     }
+    if (name === "drop") {
+      hoverUntil = Math.max(
+        hoverUntil,
+        performance.now() + Math.max((buf.duration / rate) * 1000, 80),
+      );
+    }
   };
   if (ctx.state === "running") {
     play();
@@ -208,6 +217,9 @@ export function playUiSound(name: UiSound): void {
   if (isSliderSound(name)) {
     sliderUntil = Math.max(sliderUntil, performance.now() + 50);
   }
+  if (name === "drop") {
+    hoverUntil = Math.max(hoverUntil, performance.now() + 400);
+  }
   const ctx = unlockAudio();
   if (!ctx) return;
   const ready = import.meta.env.DEV ? undefined : decoded.get(name);
@@ -225,40 +237,43 @@ export function playUiSound(name: UiSound): void {
   });
 }
 
-function shouldPlayHover(btn: HTMLButtonElement): boolean {
-  if (btn.disabled) return false;
+function shouldPlayHover(el: HTMLElement): boolean {
+  if (el instanceof HTMLButtonElement && el.disabled) return false;
+  if (el.classList.contains("ui-switch")) {
+    const input = el.querySelector("input");
+    if (input instanceof HTMLInputElement && input.disabled) return false;
+  }
+  if (!el.classList.contains("is-active")) return true;
   if (
-    btn.classList.contains("controls-panel__tab") &&
-    btn.classList.contains("is-active")
+    el.classList.contains("controls-panel__tab") ||
+    el.classList.contains("palette-panel__tab") ||
+    el.classList.contains("timeline-thumb") ||
+    el.classList.contains("palette-gallery__item")
   ) {
     return false;
   }
-  if (
-    btn.classList.contains("palette-panel__tab") &&
-    btn.classList.contains("is-active")
-  ) {
-    return false;
-  }
-  if (
-    btn.classList.contains("timeline-thumb") &&
-    btn.classList.contains("is-active")
-  ) {
-    return false;
-  }
-  return true;
+  return !el.closest(".button-row--choice");
 }
 
 function onButtonHover(event: MouseEvent): void {
-  const el = event.target;
-  if (!(el instanceof Element)) return;
-  const btn = el.closest(HOVER_SELECTOR);
-  if (!(btn instanceof HTMLButtonElement) || !shouldPlayHover(btn)) return;
+  const target = event.target;
+  if (!(target instanceof Element)) return;
+  const el = target.closest(HOVER_SELECTOR);
+  if (!(el instanceof HTMLElement) || !shouldPlayHover(el)) return;
   const related = event.relatedTarget;
-  if (related instanceof Node && btn.contains(related)) return;
+  if (related instanceof Node && el.contains(related)) return;
   if (performance.now() < hoverUntil) return;
   hoverUntil = performance.now() + 80;
   playUiSound("hover");
 }
+
+// const BLINK_ANIMATIONS = new Set(["hover-plate-blink", "hover-border-blink"]);
+//
+// function onHoverBlink(event: Event): void {
+//   if (!(event instanceof AnimationEvent)) return;
+//   if (!BLINK_ANIMATIONS.has(event.animationName)) return;
+//   playUiSound("hoverBlink");
+// }
 
 function onPanelBtnClick(event: Event): void {
   const el = event.target;
@@ -275,7 +290,7 @@ function onPanelBtnClick(event: Event): void {
   }
 
   const choiceBtn = el.closest(
-    ".controls-panel__tab, .palette-panel__tab, .button-row--choice button, .palette-gallery__item",
+    ".controls-panel__tab, .palette-panel__tab, .button-row--choice button, .palette-gallery__item, .timeline-thumb",
   );
   if (
     choiceBtn instanceof HTMLButtonElement &&
@@ -341,11 +356,13 @@ export function initUiSounds(): void {
   document.addEventListener("keydown", onUnlockGesture, true);
   document.addEventListener("click", onPanelBtnClick, true);
   document.addEventListener("mouseover", onButtonHover, true);
+  // document.addEventListener("animationstart", onHoverBlink, true);
+  // document.addEventListener("animationiteration", onHoverBlink, true);
   document.addEventListener("pointerdown", onRangePointerDown, true);
   document.addEventListener("keydown", onRangeKeyDown, true);
   document.addEventListener("pointerup", onRangePointerUp);
   document.addEventListener("pointercancel", onRangePointerUp);
-  document.addEventListener("input", onRangeInput);
+  document.addEventListener("input", onRangeInput, true);
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible" && prefs.enabled) unlockAudio();
   });

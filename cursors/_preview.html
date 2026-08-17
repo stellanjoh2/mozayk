@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>mozayk cursors</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Bitcount+Grid+Single&display=swap" rel="stylesheet" />
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Bitcount Grid Single", ui-monospace, monospace;
+        background: #0f0f0f;
+        color: rgba(255,255,255,0.92);
+        padding: 32px;
+      }
+      h1 { font-size: 22px; font-weight: 400; letter-spacing: 0.06em; }
+      p { color: rgba(255,255,255,0.45); max-width: 52rem; }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 16px;
+        margin: 28px 0 48px;
+      }
+      .card {
+        appearance: none;
+        border: 1px solid rgba(255,255,255,0.1);
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        padding: 0 0 14px;
+        text-align: center;
+      }
+      .card span { font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; }
+      .stage {
+        display: grid;
+        place-items: center;
+        height: 168px;
+        margin-bottom: 12px;
+        background-image:
+          linear-gradient(#151515, #151515),
+          linear-gradient(#e8e8e8, #e8e8e8),
+          linear-gradient(45deg, #2e1ebc 25%, #cf41f2 25%, #cf41f2 50%, #ff5300 50%, #ff5300 75%, #41f24b 75%);
+        background-size: 33.34% 100%, 33.34% 100%, 33.34% 100%;
+        background-position: 0 0, 50% 0, 100% 0;
+        background-repeat: no-repeat;
+      }
+      .stage img { image-rendering: pixelated; }
+      .try {
+        height: 120px;
+        border: 1px dashed rgba(255,255,255,0.22);
+        display: grid;
+        place-items: center;
+        color: rgba(255,255,255,0.45);
+        margin-bottom: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>mozayk cursors</h1>
+    <p>Hover a tile to try that cursor. Each glyph sits on dark / light / brand so you can check contrast. Not wired into the app yet.</p>
+    <div class="grid">
+    <button class="card" style="cursor: url('default.svg') 3 3, auto">
+      <div class="stage">
+        <img src="default.svg" alt="default" width="128" height="128" />
+      </div>
+      <span>default</span>
+    </button>
+    <button class="card" style="cursor: url('pointer.svg') 3 3, auto">
+      <div class="stage">
+        <img src="pointer.svg" alt="pointer" width="128" height="128" />
+      </div>
+      <span>pointer</span>
+    </button>
+    <button class="card" style="cursor: url('grab.svg') 13 19, auto">
+      <div class="stage">
+        <img src="grab.svg" alt="grab" width="128" height="128" />
+      </div>
+      <span>grab</span>
+    </button>
+    <button class="card" style="cursor: url('grabbing.svg') 13 13, auto">
+      <div class="stage">
+        <img src="grabbing.svg" alt="grabbing" width="128" height="128" />
+      </div>
+      <span>grabbing</span>
+    </button>
+    <button class="card" style="cursor: url('not-allowed.svg') 13 13, auto">
+      <div class="stage">
+        <img src="not-allowed.svg" alt="not-allowed" width="128" height="128" />
+      </div>
+      <span>not-allowed</span>
+    </button>
+    <button class="card" style="cursor: url('text.svg') 13 13, auto">
+      <div class="stage">
+        <img src="text.svg" alt="text" width="128" height="128" />
+      </div>
+      <span>text</span>
+    </button>
+    <button class="card" style="cursor: url('crosshair.svg') 13 13, auto">
+      <div class="stage">
+        <img src="crosshair.svg" alt="crosshair" width="128" height="128" />
+      </div>
+      <span>crosshair</span>
+    </button>
+    <button class="card" style="cursor: url('zoom-in.svg') 13 13, auto">
+      <div class="stage">
+        <img src="zoom-in.svg" alt="zoom-in" width="128" height="128" />
+      </div>
+      <span>zoom-in</span>
+    </button>
+    <button class="card" style="cursor: url('zoom-out.svg') 13 13, auto">
+      <div class="stage">
+        <img src="zoom-out.svg" alt="zoom-out" width="128" height="128" />
+      </div>
+      <span>zoom-out</span>
+    </button>
+    </div>
+  </body>
+</html>

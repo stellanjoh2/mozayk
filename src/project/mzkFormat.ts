@@ -1,5 +1,6 @@
 import {
   clampGifFrameDelayCs,
+  clampMp4ExportPreset,
   gifFpsFromDelayCs,
   normalizePlaybackFps,
   PLAYBACK_FPS_DEFAULT,
@@ -24,6 +25,7 @@ export type MzkProject = {
   frames: Frame[];
   activeIndex: number;
   exportPreset: ExportPreset;
+  mp4Preset: ExportPreset;
   gifPreset: GifExportPreset;
   gifFrameDelayCs: number;
   playbackFps: number;
@@ -36,6 +38,7 @@ export type MzkProjectPayload = {
   frames: Frame[];
   activeIndex: number;
   exportPreset?: ExportPreset;
+  mp4Preset?: ExportPreset;
   gifPreset?: GifExportPreset;
   gifFrameDelayCs?: number;
   playbackFps?: number;
@@ -149,6 +152,7 @@ export function serializeMzkProject(project: MzkProject): string {
     frames: project.frames.map(cloneFrameForSave),
     activeIndex: project.activeIndex,
     exportPreset: project.exportPreset,
+    mp4Preset: project.mp4Preset,
     gifPreset: project.gifPreset,
     gifFrameDelayCs: project.gifFrameDelayCs,
     playbackFps: project.playbackFps,
@@ -198,6 +202,10 @@ export function parseMzkProject(raw: string): MzkProject | null {
     const exportPreset = isExportPreset(record.exportPreset)
       ? record.exportPreset
       : "1080p";
+    const mp4Preset = clampMp4ExportPreset(
+      record.orientation,
+      isExportPreset(record.mp4Preset) ? record.mp4Preset : exportPreset,
+    );
     const gifPreset = isGifExportPreset(record.gifPreset)
       ? record.gifPreset
       : "480p";
@@ -216,6 +224,7 @@ export function parseMzkProject(raw: string): MzkProject | null {
       frames,
       activeIndex,
       exportPreset,
+      mp4Preset,
       gifPreset,
       gifFrameDelayCs,
       playbackFps,

@@ -52,7 +52,6 @@ export function SliderRow({
             ["--origin"]: origin,
           } as React.CSSProperties
         }
-        onInput={(e) => onChange(Number(e.currentTarget.value))}
         onChange={(e) => onChange(Number(e.target.value))}
       />
     </label>

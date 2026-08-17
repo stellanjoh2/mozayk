@@ -143,7 +143,7 @@ export function PalettePanel({
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
-        playUiSound("delete");
+        playUiSound("close");
         onClose();
       }
     };
@@ -159,7 +159,7 @@ export function PalettePanel({
       if (target.closest(".palette-panel")) return;
       event.preventDefault();
       event.stopPropagation();
-      playUiSound("delete");
+      playUiSound("close");
       onClose();
     };
     document.addEventListener("pointerdown", onPointerDown, true);
@@ -193,7 +193,7 @@ export function PalettePanel({
           type="button"
           className="palette-panel__close"
           aria-label="Close"
-          data-ui-sound="delete"
+          data-ui-sound="close"
           onClick={onClose}
         >
           <PlusIcon />
@@ -259,7 +259,7 @@ export function PalettePanel({
         <button
           type="button"
           className="panel-btn"
-          data-ui-sound="delete"
+          data-ui-sound="close"
           onClick={onClose}
         >
           Close
