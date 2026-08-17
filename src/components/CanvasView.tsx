@@ -1159,11 +1159,6 @@ export function Timeline({
 
   return (
     <footer className="timeline">
-      {playing ? (
-        <div className="timeline__phase-orb" aria-hidden="true">
-          <PhaseOrb />
-        </div>
-      ) : null}
       <div className="timeline__toolbar">
         <p className="timeline__frame-index" aria-live="polite">
           Frame {activeIndex + 1}
@@ -1269,7 +1264,12 @@ export function Timeline({
             />
           </svg>
         </button>
-      </div>
+        </div>
+        {playing ? (
+          <div className="timeline__phase-orb" aria-hidden="true">
+            <PhaseOrb />
+          </div>
+        ) : null}
       </div>
       <div ref={stripRef} className="timeline__scroll">
         <div

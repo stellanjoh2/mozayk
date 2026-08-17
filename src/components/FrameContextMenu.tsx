@@ -43,7 +43,9 @@ export function FrameContextMenu({
       if (!el) return;
 
       el.style.height = "auto";
-      const width = el.offsetWidth;
+      const visual = el.getBoundingClientRect();
+      const width = visual.width;
+      const visualHeight = visual.height;
       const height = el.offsetHeight;
 
       let left = x;
@@ -53,8 +55,8 @@ export function FrameContextMenu({
       left = Math.max(MENU_GAP, left);
 
       let bottom = window.innerHeight - y + 4;
-      if (bottom + height > window.innerHeight - MENU_GAP) {
-        bottom = Math.max(MENU_GAP, window.innerHeight - MENU_GAP - height);
+      if (bottom + visualHeight > window.innerHeight - MENU_GAP) {
+        bottom = Math.max(MENU_GAP, window.innerHeight - MENU_GAP - visualHeight);
       }
       el.style.left = `${Math.round(left)}px`;
       el.style.bottom = `${Math.round(bottom)}px`;

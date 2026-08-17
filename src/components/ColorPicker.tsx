@@ -38,14 +38,16 @@ function clamp01(n: number) {
 
 function placePanel(
   anchor: DOMRect,
-  panelH: number,
+  panel: DOMRect,
 ): { left: number; top: number } {
   const gap = 8;
   const vw = window.innerWidth;
   const vh = window.innerHeight;
-  let left = anchor.left - PANEL_WIDTH - gap;
-  if (left < gap) left = Math.min(anchor.right + gap, vw - PANEL_WIDTH - gap);
-  left = Math.max(gap, Math.min(left, vw - PANEL_WIDTH - gap));
+  const panelW = panel.width || PANEL_WIDTH;
+  const panelH = panel.height || 360;
+  let left = anchor.left - panelW - gap;
+  if (left < gap) left = Math.min(anchor.right + gap, vw - panelW - gap);
+  left = Math.max(gap, Math.min(left, vw - panelW - gap));
   let top = anchor.top;
   if (top + panelH > vh - gap) top = Math.max(gap, vh - panelH - gap);
   top = Math.max(gap, top);
@@ -124,8 +126,8 @@ export function ColorPicker({
     const root = rootRef.current;
     if (!anchor || !root) return;
     const place = () => {
-      const h = root.getBoundingClientRect().height || 360;
-      setPos(placePanel(anchor.getBoundingClientRect(), h));
+      const rect = root.getBoundingClientRect();
+      setPos(placePanel(anchor.getBoundingClientRect(), rect));
     };
     place();
     const onScrollOrResize = () => place();
