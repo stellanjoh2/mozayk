@@ -1,15 +1,16 @@
 const FILES = {
   delete: "sounds/uisound-delete.wav",
-  ok: "sounds/uisound-ok.wav",
-  close: "sounds/uisound-close.wav",
+  ok: "sounds/uisound-close.wav",
+  close: "sounds/uisound-ok.wav",
   push: "sounds/uisound-push.wav",
   slider: "sounds/uisound-slider.wav",
   sliderLeft: "sounds/uisound-slider.wav",
   hover: "sounds/uisound-hover.wav",
 } as const;
 
+/** Controls that already play a click/action cue — hover only on the rest. */
 const HOVER_SELECTOR =
-  ".panel-btn, .button-row button, .timeline__controls button, .canvas-fullscreen-toggle, .color-swatch__lock, .color-swatch__remove, .controls-panel__tab, .timeline-thumb";
+  ".button-row:not(.button-row--choice):not(.button-row--shape-icons) button, .color-swatch__lock, .timeline-thumb";
 
 export type UiSound = keyof typeof FILES;
 
@@ -18,8 +19,8 @@ const SOUND_NAMES = Object.keys(FILES) as UiSound[];
 /** Per-cue gain matched to median RMS (−29 dBFS), peak-limited to −6 dBFS. */
 const SOUND_GAIN: Partial<Record<UiSound, number>> = {
   delete: 0.9958 * 10 ** (-10 / 20),
-  ok: 10 ** (-2 / 20),
-  close: 1.0,
+  ok: 1.0,
+  close: 10 ** (-2 / 20),
   push: 3.5818 * 10 ** (-10 / 20),
   slider: 0.7532,
   sliderLeft: 0.7532,
@@ -233,6 +234,12 @@ function shouldPlayHover(btn: HTMLButtonElement): boolean {
     return false;
   }
   if (
+    btn.classList.contains("palette-panel__tab") &&
+    btn.classList.contains("is-active")
+  ) {
+    return false;
+  }
+  if (
     btn.classList.contains("timeline-thumb") &&
     btn.classList.contains("is-active")
   ) {
@@ -256,7 +263,7 @@ function onButtonHover(event: MouseEvent): void {
 function onPanelBtnClick(event: Event): void {
   const el = event.target;
   if (!(el instanceof Element)) return;
-  const btn = el.closest(".panel-btn");
+  const btn = el.closest(".panel-btn, .palette-panel__close");
   if (btn instanceof HTMLButtonElement && !btn.disabled) {
     const cue = btn.dataset.uiSound;
     if (cue && cue in FILES) {
@@ -268,7 +275,7 @@ function onPanelBtnClick(event: Event): void {
   }
 
   const choiceBtn = el.closest(
-    ".controls-panel__tab, .button-row--choice button",
+    ".controls-panel__tab, .palette-panel__tab, .button-row--choice button, .palette-gallery__item",
   );
   if (
     choiceBtn instanceof HTMLButtonElement &&

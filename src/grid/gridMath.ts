@@ -111,6 +111,21 @@ export function triangleFillPoints(
   ];
 }
 
+/** ~1/3 of the square in cells, nudged so the plus centres on the lattice. */
+function crossArmCells(size: number): number {
+  let arm = Math.max(1, Math.round(size / 3));
+  if ((size - arm) % 2 !== 0) {
+    const target = size / 3;
+    const candidates = [arm - 1, arm + 1].filter((a) => a >= 1 && a <= size);
+    if (candidates.length > 0) {
+      arm = candidates.reduce((best, a) =>
+        Math.abs(a - target) < Math.abs(best - target) ? a : best,
+      );
+    }
+  }
+  return arm;
+}
+
 /**
  * Plus-shaped cross in the inscribed square of `block`, snapped to grid cells.
  * Arm thickness is ~1/3 of the square in cells so bar edges share neighbours'
@@ -123,9 +138,9 @@ export function crossFillRects(
   const size = Math.min(block.width, block.height);
   const col0 = block.col + Math.floor((block.width - size) / 2);
   const row0 = block.row + Math.floor((block.height - size) / 2);
-  const arm = Math.max(1, Math.round(size / 3));
-  const midCol = col0 + Math.floor((size - arm) / 2);
-  const midRow = row0 + Math.floor((size - arm) / 2);
+  const arm = crossArmCells(size);
+  const midCol = col0 + (size - arm) / 2;
+  const midRow = row0 + (size - arm) / 2;
 
   const x = gridEdge(col0, grid.columns, grid.width);
   const x2 = gridEdge(col0 + size, grid.columns, grid.width);

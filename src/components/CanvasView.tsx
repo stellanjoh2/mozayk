@@ -59,6 +59,8 @@ function computeFitScale(
   return Math.min(availW / canvasWidth, availH / canvasHeight);
 }
 
+const MAGNIFY_CURSOR = `url("${import.meta.env.BASE_URL}icon-magnify.svg") 80 80, zoom-in`;
+
 type CanvasViewProps = {
   frame: Frame;
   orientation: Orientation;
@@ -66,7 +68,6 @@ type CanvasViewProps = {
   isFullscreen?: boolean;
   isInspecting?: boolean;
   fillStage?: boolean;
-  onToggleFullscreen?: () => void;
   onToggleInspect?: () => void;
   /** Live mosaic backing store — GIF export downscales from this size. */
   onWorkingCanvasSize?: (width: number, height: number) => void;
@@ -79,7 +80,6 @@ export function CanvasView({
   isFullscreen = false,
   isInspecting = false,
   fillStage = false,
-  onToggleFullscreen,
   onToggleInspect,
   onWorkingCanvasSize,
 }: CanvasViewProps) {
@@ -263,6 +263,10 @@ export function CanvasView({
       ? Math.max(1, Math.round(stageSize.height) || height)
       : Math.max(1, Math.round(displayWidth * (height / width)));
 
+  const canInspect =
+    orientation === "portrait" && !isFullscreen && onToggleInspect != null;
+  const showMagnifyCursor = canInspect && !isInspecting;
+
   return (
     <div
       ref={stageRef}
@@ -280,7 +284,12 @@ export function CanvasView({
           className="mosaic-canvas"
           width={width}
           height={height}
-          style={{ width: displayWidth, height: displayHeight }}
+          style={{
+            width: displayWidth,
+            height: displayHeight,
+            cursor: showMagnifyCursor ? MAGNIFY_CURSOR : undefined,
+          }}
+          onClick={canInspect ? onToggleInspect : undefined}
           aria-label={
             viewOriginal && frame.imageSource
               ? "Original photo preview"
@@ -288,57 +297,8 @@ export function CanvasView({
           }
         />
       </div>
-      {onToggleFullscreen ||
-      onToggleInspect ||
-      (viewOriginal && frame.imageSource) ? (
-        <div className="canvas-stage-controls">
-          {onToggleInspect && !isFullscreen ? (
-            <button
-              type="button"
-              className="canvas-fullscreen-toggle canvas-inspect-toggle"
-              onClick={onToggleInspect}
-              aria-label={
-                isInspecting
-                  ? "Exit 100% inspect"
-                  : `Inspect at 100% (${nativeSize[0]}×${nativeSize[1]})`
-              }
-              aria-pressed={isInspecting}
-              title={`Inspect at 100% (${nativeSize[0]}×${nativeSize[1]})`}
-            >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <circle
-                  cx="10.5"
-                  cy="10.5"
-                  r="6.25"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                />
-                <path
-                  d="M15.2 15.2 21 21"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </button>
-          ) : null}
-          {onToggleFullscreen ? (
-            <button
-              type="button"
-              className="canvas-fullscreen-toggle"
-              onClick={onToggleFullscreen}
-              aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
-              aria-pressed={isFullscreen}
-            >
-              {isFullscreen ? "Exit" : "Full"}
-            </button>
-          ) : null}
-          {viewOriginal && frame.imageSource ? (
-            <span className="canvas-view-original-badge">Original</span>
-          ) : null}
-        </div>
+      {viewOriginal && frame.imageSource ? (
+        <span className="canvas-view-original-badge">Original</span>
       ) : null}
     </div>
   );

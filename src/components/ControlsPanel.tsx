@@ -62,6 +62,8 @@ import { isMzkFile, MZK_EXTENSION } from "../project/mzkFormat";
 import { BrandLogo } from "./BrandLogo";
 import { AboutOverlay } from "./AboutOverlay";
 import { ColorSwatch } from "./ColorSwatch";
+import { PalettePanel } from "./PalettePanel";
+import type { PalettePreset } from "../presets/palettePresets";
 import { HeadlineToggle, SliderRow, ToggleRow } from "./ControlRow";
 import { HintLabel } from "./HintLabel";
 import {
@@ -91,8 +93,10 @@ type ControlsPanelProps = {
   onApplyLookToAllFrames: () => void;
   onCopySettings: () => void;
   onPasteSettings: () => void;
+  onCopyPalette: () => void;
   onRandomizeCurrentColors: () => void;
   onRandomizeNewColors: () => void;
+  onApplyPalettePreset: (preset: PalettePreset) => void;
   onAddColor: () => void;
   onRemoveColor: (index: number) => void;
   onColorChange: (index: number, hex: string) => void;
@@ -139,8 +143,10 @@ export function ControlsPanel({
   onApplyLookToAllFrames,
   onCopySettings,
   onPasteSettings,
+  onCopyPalette,
   onRandomizeCurrentColors,
   onRandomizeNewColors,
+  onApplyPalettePreset,
   onAddColor,
   onRemoveColor,
   onColorChange,
@@ -185,6 +191,8 @@ export function ControlsPanel({
   const [soundVolume, setSoundVolume] = useState(getUiSoundsVolume);
   const [normalHover, setNormalHover] = useState(getNormalHoverEffects);
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [themesOpen, setThemesOpen] = useState(false);
+  const [themesAnimating, setThemesAnimating] = useState(false);
   const shapes = settings.shapes ?? {
     sphere: false,
     ring: false,
@@ -264,6 +272,13 @@ export function ControlsPanel({
   };
 
   return (
+    <>
+    <PalettePanel
+      open={themesOpen}
+      onClose={() => setThemesOpen(false)}
+      onApplyPreset={onApplyPalettePreset}
+      onAnimatingChange={setThemesAnimating}
+    />
     <aside ref={panelRef} className="controls-panel">
       <header className="controls-panel__head">
         <BrandLogo
@@ -449,7 +464,7 @@ export function ControlsPanel({
           Apply Look to All Frames
         </button>
         <p className="control-row__label control-row__label--solo">
-          <HintLabel hint="Blocks always on · toggle extras to mix in">Additional Shapes</HintLabel>
+          <HintLabel hint="Blocks always on · toggle extras to mix in">Add Shapes</HintLabel>
         </p>
         <div className="button-row button-row--4 button-row--shape-icons">
           <button
@@ -580,6 +595,18 @@ export function ControlsPanel({
 
       <section className="panel-section">
         <h2>Colour</h2>
+        <button
+          type="button"
+          className="panel-btn"
+          data-ui-sound="ok"
+          disabled={themesOpen || themesAnimating}
+          onClick={() => {
+            if (themesOpen || themesAnimating) return;
+            setThemesOpen(true);
+          }}
+        >
+          View Themes
+        </button>
         {settings.colors.length < MAX_COLORS ? (
           <button
             type="button"
@@ -617,6 +644,13 @@ export function ControlsPanel({
             </div>
           ))}
         </div>
+        <button
+          type="button"
+          className="panel-btn panel-btn--ghost"
+          onClick={onCopyPalette}
+        >
+          Copy Palette to Clipboard
+        </button>
         <button type="button" className="panel-btn" onClick={onRandomizeCurrentColors}>
           Randomize Current Colours
         </button>
@@ -674,6 +708,7 @@ export function ControlsPanel({
                 aria-label="Remove background image"
                 onClick={(e) => {
                   e.stopPropagation();
+                  playUiSound("close");
                   onBackgroundImageClear();
                 }}
               >
@@ -1202,7 +1237,7 @@ export function ControlsPanel({
         />
         <SliderRow
           label="Gap"
-          hint="0 = flush · 100 = 25% smaller"
+          hint="0 = flush · 100 = uniform cell inset"
           value={settings.shapeGap ?? 0}
           onChange={(shapeGap) => onSettingsChange({ shapeGap }, false)}
         />
@@ -1435,7 +1470,6 @@ export function ControlsPanel({
           onChange={(next) => {
             setUiSoundsEnabled(next);
             setSoundsOn(next);
-            playUiSound(next ? "ok" : "close");
           }}
         />
         <SliderRow
@@ -1459,6 +1493,66 @@ export function ControlsPanel({
             setNormalHover(next);
           }}
         />
+      </section>
+
+      <section className="panel-section">
+        <h2>Keyboard Shortcuts</h2>
+        <ul className="shortcut-list">
+          <li className="shortcut-list__row">
+            <p className="shortcut-list__keys">
+              <kbd>F</kbd>
+            </p>
+            <p className="shortcut-list__desc">Toggle fullscreen</p>
+          </li>
+          <li className="shortcut-list__row">
+            <p className="shortcut-list__keys">
+              <kbd>Space</kbd>
+            </p>
+            <p className="shortcut-list__desc">Play / stop</p>
+          </li>
+          <li className="shortcut-list__row">
+            <p className="shortcut-list__keys">
+              <kbd>←</kbd> <kbd>→</kbd>
+            </p>
+            <p className="shortcut-list__desc">Previous / next frame</p>
+          </li>
+          <li className="shortcut-list__row">
+            <p className="shortcut-list__keys">
+              <kbd>O</kbd>
+            </p>
+            <p className="shortcut-list__desc">Toggle original photo</p>
+          </li>
+          <li className="shortcut-list__row">
+            <p className="shortcut-list__keys">
+              <kbd>Esc</kbd>
+            </p>
+            <p className="shortcut-list__desc">Exit 100% inspect</p>
+          </li>
+          <li className="shortcut-list__row">
+            <p className="shortcut-list__keys">
+              <kbd>Q</kbd>
+            </p>
+            <p className="shortcut-list__desc">Randomize layout</p>
+          </li>
+          <li className="shortcut-list__row">
+            <p className="shortcut-list__keys">
+              <kbd>W</kbd>
+            </p>
+            <p className="shortcut-list__desc">Randomize all</p>
+          </li>
+          <li className="shortcut-list__row">
+            <p className="shortcut-list__keys">
+              <kbd>E</kbd>
+            </p>
+            <p className="shortcut-list__desc">Randomize current colours</p>
+          </li>
+          <li className="shortcut-list__row">
+            <p className="shortcut-list__keys">
+              <kbd>⌘/Ctrl</kbd>+<kbd>Z</kbd>
+            </p>
+            <p className="shortcut-list__desc">Undo</p>
+          </li>
+        </ul>
       </section>
       </>
       )}
@@ -1493,6 +1587,7 @@ export function ControlsPanel({
       </footer>
       <AboutOverlay open={aboutOpen} onClose={() => setAboutOpen(false)} />
     </aside>
+    </>
   );
 }
 

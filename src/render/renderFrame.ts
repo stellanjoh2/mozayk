@@ -24,7 +24,11 @@ import {
   type GridOverlayStyle,
 } from "./gridOverlay";
 import { largestRingRadius, ringInnerRadius } from "./ringGeometry";
-import { scaleCrossRects, scalePixelRect, shapeGapScale } from "./shapeGap";
+import {
+  insetCrossRects,
+  insetPixelRect,
+  shapeGapInsetPx,
+} from "./shapeGap";
 import { applyTextureOverlay } from "./textureOverlay";
 import {
   drawWireframeBlock,
@@ -74,14 +78,19 @@ function drawRing(
   cellSize: number,
   color: string,
   fillRadius: number,
-  gapScale: number,
+  gapInset: number,
 ): void {
   if (outerR <= 0) return;
 
-  const innerR =
-    ringInnerRadius(outerR, ringThickness, cellSize, fillRadius) * gapScale;
-  const r = outerR * gapScale;
+  const r = outerR - gapInset;
   if (r <= 0) return;
+  const innerBase = ringInnerRadius(
+    outerR,
+    ringThickness,
+    cellSize,
+    fillRadius,
+  );
+  const innerR = innerBase > 0 ? Math.max(0, innerBase - gapInset) : 0;
 
   ctx.fillStyle = color;
   ctx.beginPath();
@@ -104,8 +113,9 @@ function drawBlock(
   shapeGap: number,
 ): void {
   const raw = blockPixelRect(grid, block);
-  const rect = scalePixelRect(raw, shapeGap);
+  const rect = insetPixelRect(raw, shapeGap, grid.cellSize);
   const { x, y, width: drawW, height: drawH } = rect;
+  const gapInset = shapeGapInsetPx(shapeGap, grid.cellSize);
 
   if (block.shape === "ring") {
     drawRing(
@@ -117,7 +127,7 @@ function drawBlock(
       grid.cellSize,
       block.color,
       fillRadius,
-      shapeGapScale(shapeGap),
+      gapInset,
     );
     return;
   }
@@ -147,10 +157,11 @@ function drawBlock(
 
   if (block.shape === "cross") {
     const arms = crossFillRects(grid, block);
-    const { horizontal, vertical } = scaleCrossRects(
+    const { horizontal, vertical } = insetCrossRects(
       arms.horizontal,
       arms.vertical,
       shapeGap,
+      grid.cellSize,
     );
     ctx.fillStyle = block.color;
     ctx.fillRect(
@@ -164,7 +175,11 @@ function drawBlock(
   }
 
   ctx.fillStyle = block.color;
-  const radius = blockCornerRadiusPx(drawW, drawH, cornerRadius);
+  const radius = Math.min(
+    blockCornerRadiusPx(raw.width, raw.height, cornerRadius),
+    drawW / 2,
+    drawH / 2,
+  );
   if (radius > 0) {
     ctx.beginPath();
     ctx.roundRect(x, y, drawW, drawH, radius);

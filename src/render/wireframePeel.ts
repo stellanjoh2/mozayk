@@ -12,7 +12,7 @@ import type {
 } from "../types";
 import { blockCornerRadiusPx } from "./cornerRadius";
 import { resolveGridOverlayStroke } from "./gridOverlayParams";
-import { scaleCrossRects, scalePixelRect } from "./shapeGap";
+import { insetCrossRects, insetPixelRect } from "./shapeGap";
 
 export const WIREFRAME_PEEL_AMOUNT_DEFAULT = 50;
 export const WIREFRAME_PEEL_STROKE_DEFAULT = 1;
@@ -159,7 +159,8 @@ export function drawWireframeBlock(
 ): void {
   if (stroke <= 0) return;
 
-  const rect = scalePixelRect(blockPixelRect(grid, block), shapeGap);
+  const raw = blockPixelRect(grid, block);
+  const rect = insetPixelRect(raw, shapeGap, grid.cellSize);
   const { x, y, width: drawW, height: drawH } = rect;
   const color = block.color;
 
@@ -179,10 +180,11 @@ export function drawWireframeBlock(
 
   if (block.shape === "cross") {
     const arms = crossFillRects(grid, block);
-    const { horizontal, vertical } = scaleCrossRects(
+    const { horizontal, vertical } = insetCrossRects(
       arms.horizontal,
       arms.vertical,
       shapeGap,
+      grid.cellSize,
     );
     strokeInside(ctx, color, stroke, () =>
       addPlusPath(ctx, horizontal, vertical),
@@ -191,7 +193,11 @@ export function drawWireframeBlock(
   }
 
   if (drawW <= 0 || drawH <= 0) return;
-  const radius = blockCornerRadiusPx(drawW, drawH, cornerRadius);
+  const radius = Math.min(
+    blockCornerRadiusPx(raw.width, raw.height, cornerRadius),
+    drawW / 2,
+    drawH / 2,
+  );
   strokeInside(ctx, color, stroke, () =>
     addRectPath(ctx, x, y, drawW, drawH, radius),
   );
@@ -268,9 +274,11 @@ export function svgWireframeBlock(
 ): string {
   if (stroke <= 0) return "";
 
-  const { x, y, width: drawW, height: drawH } = scalePixelRect(
-    blockPixelRect(grid, block),
+  const raw = blockPixelRect(grid, block);
+  const { x, y, width: drawW, height: drawH } = insetPixelRect(
+    raw,
     shapeGap,
+    grid.cellSize,
   );
   const color = block.color;
 
@@ -299,10 +307,11 @@ export function svgWireframeBlock(
 
   if (block.shape === "cross") {
     const arms = crossFillRects(grid, block);
-    const { horizontal, vertical } = scaleCrossRects(
+    const { horizontal, vertical } = insetCrossRects(
       arms.horizontal,
       arms.vertical,
       shapeGap,
+      grid.cellSize,
     );
     return svgClippedStroke(
       clipId,
@@ -313,7 +322,11 @@ export function svgWireframeBlock(
   }
 
   if (drawW <= 0 || drawH <= 0) return "";
-  const radius = blockCornerRadiusPx(drawW, drawH, cornerRadius);
+  const radius = Math.min(
+    blockCornerRadiusPx(raw.width, raw.height, cornerRadius),
+    drawW / 2,
+    drawH / 2,
+  );
   return svgClippedStroke(
     clipId,
     svgRect(x, y, drawW, drawH, radius),

@@ -181,6 +181,20 @@ export function readRecentColors(): string[] {
   }
 }
 
+/** One normalized hex per line, for plain-text palette export. */
+export function formatPaletteForClipboard(colors: string[]): string {
+  return colors.map((color) => normalizeHex(color).toUpperCase()).join("\n");
+}
+
+export async function copyPaletteToClipboard(colors: string[]): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(formatPaletteForClipboard(colors));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function pushRecentColor(hex: string): string[] {
   const next = normalizeHex(hex);
   const prev = readRecentColors().filter((c) => c !== next);

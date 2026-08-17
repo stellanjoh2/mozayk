@@ -82,6 +82,32 @@ function run(): void {
     "empty frames are rejected",
   );
 
+  const emptyBlocksJson = serializeMzkProject({
+    orientation: "landscape",
+    frames: [
+      {
+        id: "empty-blocks",
+        settings: createDefaultSettings(),
+        blocks: [],
+        imageSource: {
+          dataUrl: "data:image/png;base64,abc",
+          palette: ["#ffffff"],
+          paletteRgb: [{ r: 255, g: 255, b: 255 }],
+        },
+      },
+    ],
+    activeIndex: 0,
+    exportPreset: "1080p",
+    gifPreset: "480p",
+    gifFrameDelayCs: 7,
+  });
+  const emptyBlocksParsed = parseMzkProject(emptyBlocksJson);
+  assert(emptyBlocksParsed !== null, "frames with empty blocks should parse");
+  assert(
+    emptyBlocksParsed?.frames[0].blocks.length === 0,
+    "empty block arrays survive round-trip",
+  );
+
   assert(isMzkFile(new File(["{}"], "scene.mzk")), ".mzk extension is accepted");
   assert(!isMzkFile(new File(["{}"], "scene.json")), ".json extension is rejected");
   assert(defaultMzkFileName() === "mozayk.mzk", "default filename uses .mzk");

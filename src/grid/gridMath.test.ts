@@ -188,8 +188,8 @@ function run(): void {
     vertical.y + vertical.height === squareOrigin.y + squareOrigin.height,
     "cross stem spans inscribed height",
   );
-  assert(horizontal.height === crossGrid.cellSize, "4-cell cross arm is 1 cell");
-  assert(vertical.width === crossGrid.cellSize, "4-cell cross stem is 1 cell");
+  assert(horizontal.height === crossGrid.cellSize * 2, "4-cell cross arm is 2 cells");
+  assert(vertical.width === crossGrid.cellSize * 2, "4-cell cross stem is 2 cells");
   assert(
     Number.isInteger(horizontal.y / crossGrid.cellSize),
     "cross bar sits on a row edge",
@@ -206,6 +206,25 @@ function run(): void {
     three.vertical.x === blockPixelRect(crossGrid, { col: 1, row: 0, width: 1, height: 1 }).x,
     "3-cell stem is centred on middle column",
   );
+
+  for (let size = 1; size <= 20; size++) {
+    const block = { col: 0, row: 0, width: size, height: size };
+    const { horizontal, vertical } = crossFillRects(crossGrid, block);
+    const sq = blockPixelRect(crossGrid, block);
+    const arm = Math.round(horizontal.height / crossGrid.cellSize);
+    const topArm = Math.round((horizontal.y - sq.y) / crossGrid.cellSize);
+    const bottomArm = Math.round(
+      (sq.y + sq.height - (horizontal.y + horizontal.height)) / crossGrid.cellSize,
+    );
+    const leftArm = Math.round((vertical.x - sq.x) / crossGrid.cellSize);
+    const rightArm = Math.round(
+      (sq.x + sq.width - (vertical.x + vertical.width)) / crossGrid.cellSize,
+    );
+    assert(
+      topArm === bottomArm && leftArm === rightArm,
+      `cross size ${size} is symmetric (${topArm}/${bottomArm}, ${leftArm}/${rightArm}, arm ${arm})`,
+    );
+  }
 
   const tall = { x: 0, y: 0, width: 20, height: 200 };
   const tallTri = triangleFillPoints(tall);

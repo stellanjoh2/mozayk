@@ -24,6 +24,7 @@ import { buildMergedLayoutFromImage } from "../import/imageImport";
 import type { ImageImportResult } from "../import/imageImport";
 import { getCachedSourceImage } from "../import/imageSource";
 import type { SettingsClipboard } from "./settingsClipboard";
+import type { PalettePreset } from "../presets/palettePresets";
 import type {
   Density,
   Frame,
@@ -423,6 +424,32 @@ export function randomizeFrameNewColors(frame: Frame): Frame {
     return { ...block, color: colors[index] };
   });
   return { ...frame, settings: { ...frame.settings, colors }, blocks };
+}
+
+export function applyPalettePresetToFrame(
+  frame: Frame,
+  preset: PalettePreset,
+): Frame {
+  const colors = preset.colors.slice(0, MAX_COLORS);
+  const colorAmounts =
+    preset.colorAmounts && preset.colorAmounts.length === colors.length
+      ? preset.colorAmounts
+      : equalColorAmounts(colors.length);
+  const colorsLocked = colors.map(() => false);
+  const settings: FrameSettings = {
+    ...frame.settings,
+    colors,
+    colorAmounts,
+    colorsLocked,
+  };
+  const blocks = randomizeColors(
+    frame.blocks,
+    colors,
+    colorAmounts,
+    Math.random,
+    colorsLocked,
+  );
+  return { ...frame, settings, blocks };
 }
 
 export function transposeFrameBlocks(

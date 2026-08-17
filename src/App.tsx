@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { copyPaletteToClipboard } from "./colorMath";
 import {
   GIF_FRAME_DELAY_CS_DEFAULT,
   MAX_VIDEO_DURATION_S,
@@ -44,6 +45,7 @@ import {
   reorderFrames,
   randomizeFrameCurrentColors,
   randomizeFrameNewColors,
+  applyPalettePresetToFrame,
   randomizeFrameLayout,
   removeColorFromFrame,
   transposeFrameBlocks,
@@ -90,15 +92,15 @@ import "./App.css";
 const LAYOUT_REGEN_MS = 280;
 /** Idle gap after which continuous edits (sliders) become a new undo step. */
 const UNDO_COALESCE_MS = 400;
-const PORTRAIT_MOBILE_MQ = "(max-width: 767px) and (orientation: portrait)";
+const MOBILE_GATE_MQ = "(max-width: 900px)";
 
-function usePortraitMobile(): boolean {
+function useMobileGate(): boolean {
   const [matches, setMatches] = useState(
-    () => window.matchMedia(PORTRAIT_MOBILE_MQ).matches,
+    () => window.matchMedia(MOBILE_GATE_MQ).matches,
   );
 
   useEffect(() => {
-    const mq = window.matchMedia(PORTRAIT_MOBILE_MQ);
+    const mq = window.matchMedia(MOBILE_GATE_MQ);
     const onChange = () => setMatches(mq.matches);
     mq.addEventListener("change", onChange);
     setMatches(mq.matches);
@@ -141,7 +143,7 @@ function isTextInputTarget(target: EventTarget | null): boolean {
 }
 
 export default function App() {
-  const isPortraitMobile = usePortraitMobile();
+  const isMobileGate = useMobileGate();
   const [orientation, setOrientation] = useState<Orientation>("landscape");
   const [frames, setFrames] = useState<Frame[]>(() => [
     createInitialFrame("landscape"),
@@ -200,11 +202,11 @@ export default function App() {
   );
 
   const activeFrame = frames[activeIndex] ?? frames[0];
-  const canvasOrientation = isPortraitMobile ? "portrait" : orientation;
+  const canvasOrientation = isMobileGate ? "portrait" : orientation;
   const canvasFrame = useMemo(() => {
-    if (!isPortraitMobile || orientation !== "landscape") return activeFrame;
+    if (!isMobileGate || orientation !== "landscape") return activeFrame;
     return transposeFrameBlocks(activeFrame, "landscape", "portrait");
-  }, [isPortraitMobile, orientation, activeFrame]);
+  }, [isMobileGate, orientation, activeFrame]);
 
   useEffect(() => {
     if (!activeFrame.imageSource) {
@@ -329,6 +331,11 @@ export default function App() {
     updateActiveFrame((frame) =>
       randomizeFrameLayout(frame, orientationRef.current),
     );
+  }, [pushUndoCheckpoint, updateActiveFrame]);
+
+  const randomizeCurrentColors = useCallback(() => {
+    pushUndoCheckpoint();
+    updateActiveFrame((frame) => randomizeFrameCurrentColors(frame));
   }, [pushUndoCheckpoint, updateActiveFrame]);
 
   const scheduleLayoutRegen = useCallback(() => {
@@ -526,6 +533,11 @@ export default function App() {
     );
     setToast("Settings copied");
   }, [activeFrame.blocks, activeFrame.settings]);
+
+  const handleCopyPalette = useCallback(async () => {
+    const copied = await copyPaletteToClipboard(activeFrame.settings.colors);
+    setToast(copied ? "Palette copied" : "Could not copy palette");
+  }, [activeFrame.settings.colors]);
 
   const handlePasteSettings = useCallback(async () => {
     const pasted = await readSettingsClipboard();
@@ -888,19 +900,16 @@ export default function App() {
 
   const toggleFullscreen = useCallback(() => {
     const app = appRef.current;
+    if (!app) return;
+
     if (getFullscreenElement() === app) {
       void exitAppFullscreen();
       return;
     }
-    if (isFullscreen) {
-      setIsFullscreen(false);
-      return;
-    }
+
     setInspecting(false);
-    setIsFullscreen(true);
-    if (!app) return;
-    void requestAppFullscreen(app).catch(() => {});
-  }, [isFullscreen]);
+    void requestAppFullscreen(app);
+  }, []);
 
   useEffect(() => {
     if (isFullscreen) setInspecting(false);
@@ -910,6 +919,7 @@ export default function App() {
     const syncFullscreen = () => {
       setIsFullscreen(getFullscreenElement() === appRef.current);
     };
+    syncFullscreen();
     document.addEventListener("fullscreenchange", syncFullscreen);
     document.addEventListener("webkitfullscreenchange", syncFullscreen);
     return () => {
@@ -966,22 +976,41 @@ export default function App() {
           event.preventDefault();
           setViewOriginal((current) => !current);
         }
+      } else if (!mod && event.code === "KeyQ") {
+        event.preventDefault();
+        randomizeLayout();
+      } else if (!mod && event.code === "KeyW") {
+        event.preventDefault();
+        randomizeAll();
+      } else if (!mod && event.code === "KeyE") {
+        event.preventDefault();
+        randomizeCurrentColors();
       }
     };
 
     document.addEventListener("keydown", onKeyDown, true);
     return () => document.removeEventListener("keydown", onKeyDown, true);
-  }, [toggleFullscreen, togglePlay, stepFrame, frames, undo, redo]);
+  }, [
+    toggleFullscreen,
+    togglePlay,
+    stepFrame,
+    frames,
+    undo,
+    redo,
+    randomizeLayout,
+    randomizeAll,
+    randomizeCurrentColors,
+  ]);
 
   return (
     <div
       ref={appRef}
-      className={["app", isFullscreen ? "is-fullscreen" : "", isPortraitMobile ? "is-portrait-mobile" : ""]
+      className={["app", isMobileGate ? "is-mobile-gate" : ""]
         .filter(Boolean)
         .join(" ")}
     >
-      {isPortraitMobile ? <MobileGate onRandomizeAll={randomizeAll} /> : null}
-      {toast && !isFullscreen && !isPortraitMobile ? (
+      {isMobileGate ? <MobileGate onRandomizeAll={randomizeAll} /> : null}
+      {toast && !isFullscreen && !isMobileGate ? (
         <div className="app-toast">{toast}</div>
       ) : null}
       {importingLabel || exportingLabel ? (
@@ -1022,7 +1051,8 @@ export default function App() {
           if (pending) void importVideoFile(pending.file);
         }}
       />
-      {!isFullscreen && !isPortraitMobile ? (
+      {!isFullscreen && !isMobileGate ? (
+      <div className="app-chrome">
       <ControlsPanel
         frame={activeFrame}
         orientation={orientation}
@@ -1036,13 +1066,15 @@ export default function App() {
         onApplyLookToAllFrames={handleApplyLookToAllFrames}
         onCopySettings={() => void handleCopySettings()}
         onPasteSettings={() => void handlePasteSettings()}
-        onRandomizeCurrentColors={() => {
-          pushUndoCheckpoint();
-          updateActiveFrame((frame) => randomizeFrameCurrentColors(frame));
-        }}
+        onCopyPalette={() => void handleCopyPalette()}
+        onRandomizeCurrentColors={randomizeCurrentColors}
         onRandomizeNewColors={() => {
           pushUndoCheckpoint();
           updateActiveFrame((frame) => randomizeFrameNewColors(frame));
+        }}
+        onApplyPalettePreset={(preset) => {
+          pushUndoCheckpoint();
+          updateActiveFrame((frame) => applyPalettePresetToFrame(frame, preset));
         }}
         onAddColor={() => {
           pushUndoCheckpoint();
@@ -1182,21 +1214,21 @@ export default function App() {
         onLoadProject={(file) => void handleLoadProject(file)}
         loadingProject={loadingProject}
       />
+      </div>
       ) : null}
 
-      <main className={["workspace", isFullscreen || isPortraitMobile ? "is-fullscreen" : ""].filter(Boolean).join(" ")}>
+      <main className={["workspace", isFullscreen || isMobileGate ? "is-fullscreen" : ""].filter(Boolean).join(" ")}>
         <CanvasView
           frame={canvasFrame}
           orientation={canvasOrientation}
           viewOriginal={viewOriginal}
-          isFullscreen={isFullscreen || isPortraitMobile}
+          isFullscreen={isFullscreen || isMobileGate}
           isInspecting={inspecting}
-          fillStage={isPortraitMobile}
-          onToggleFullscreen={isPortraitMobile ? undefined : toggleFullscreen}
-          onToggleInspect={isPortraitMobile ? undefined : toggleInspect}
+          fillStage={isMobileGate}
+          onToggleInspect={isMobileGate ? undefined : toggleInspect}
           onWorkingCanvasSize={handleWorkingCanvasSize}
         />
-        {!isFullscreen && !isPortraitMobile ? (
+        {!isFullscreen && !isMobileGate ? (
         <Timeline
           frames={frames}
           activeIndex={activeIndex}

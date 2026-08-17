@@ -16,7 +16,11 @@ import {
 import { blockCornerRadiusPx } from "./cornerRadius";
 import type { RenderOptions } from "./renderFrame";
 import { largestRingRadius, ringInnerRadius } from "./ringGeometry";
-import { scaleCrossRects, scalePixelRect, shapeGapScale } from "./shapeGap";
+import {
+  insetCrossRects,
+  insetPixelRect,
+  shapeGapInsetPx,
+} from "./shapeGap";
 import {
   peeledBlockSet,
   resolveWireframePeelStroke,
@@ -31,14 +35,19 @@ function svgRing(
   cellSize: number,
   color: string,
   fillRadius: number,
-  gapScale: number,
+  gapInset: number,
 ): string {
   if (outerR <= 0) return "";
 
-  const innerR =
-    ringInnerRadius(outerR, ringThickness, cellSize, fillRadius) * gapScale;
-  const r = outerR * gapScale;
+  const r = outerR - gapInset;
   if (r <= 0) return "";
+  const innerBase = ringInnerRadius(
+    outerR,
+    ringThickness,
+    cellSize,
+    fillRadius,
+  );
+  const innerR = innerBase > 0 ? Math.max(0, innerBase - gapInset) : 0;
 
   if (innerR <= 0) {
     return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${color}"/>`;
@@ -65,7 +74,12 @@ function svgBlock(
   shapeGap: number,
 ): string {
   const raw = blockPixelRect(grid, block);
-  const { x, y, width: drawW, height: drawH } = scalePixelRect(raw, shapeGap);
+  const { x, y, width: drawW, height: drawH } = insetPixelRect(
+    raw,
+    shapeGap,
+    grid.cellSize,
+  );
+  const gapInset = shapeGapInsetPx(shapeGap, grid.cellSize);
 
   if (block.shape === "ring") {
     return svgRing(
@@ -76,7 +90,7 @@ function svgBlock(
       grid.cellSize,
       block.color,
       fillRadius,
-      shapeGapScale(shapeGap),
+      gapInset,
     );
   }
 
@@ -96,10 +110,11 @@ function svgBlock(
 
   if (block.shape === "cross") {
     const arms = crossFillRects(grid, block);
-    const { horizontal, vertical } = scaleCrossRects(
+    const { horizontal, vertical } = insetCrossRects(
       arms.horizontal,
       arms.vertical,
       shapeGap,
+      grid.cellSize,
     );
     return [
       `<rect x="${horizontal.x}" y="${horizontal.y}" width="${horizontal.width}" height="${horizontal.height}" fill="${block.color}"/>`,
@@ -107,7 +122,11 @@ function svgBlock(
     ].join("");
   }
 
-  const radius = blockCornerRadiusPx(drawW, drawH, cornerRadius);
+  const radius = Math.min(
+    blockCornerRadiusPx(raw.width, raw.height, cornerRadius),
+    drawW / 2,
+    drawH / 2,
+  );
   const round = radius > 0 ? ` rx="${radius}" ry="${radius}"` : "";
   return `<rect x="${x}" y="${y}" width="${drawW}" height="${drawH}"${round} fill="${block.color}"/>`;
 }

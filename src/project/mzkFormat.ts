@@ -111,8 +111,11 @@ function parseFrame(value: unknown): Frame | null {
   );
   if (!settings) return null;
 
-  const blocks = parseBlocks(record.blocks);
-  if (!blocks || blocks.length === 0) return null;
+  const blocks =
+    Array.isArray(record.blocks) && record.blocks.length === 0
+      ? []
+      : parseBlocks(record.blocks);
+  if (!blocks) return null;
 
   const id =
     typeof record.id === "string" && record.id.length > 0

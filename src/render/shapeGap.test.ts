@@ -1,34 +1,45 @@
-import { scaleCrossRects, scalePixelRect, shapeGapScale } from "./shapeGap";
+import {
+  insetCrossRects,
+  insetPixelRect,
+  shapeGapInsetPx,
+} from "./shapeGap";
 
 function assert(condition: boolean, message: string): void {
   if (!condition) throw new Error(message);
 }
 
 function run(): void {
-  assert(shapeGapScale(0) === 1, "0 stays flush");
-  assert(shapeGapScale(undefined) === 1, "omitted stays flush");
-  assert(shapeGapScale(-10) === 1, "negative stays flush");
-  assert(shapeGapScale(100) === 0.75, "100 is 25% smaller");
-  assert(shapeGapScale(200) === 0.75, "over 100 still caps at 25%");
-  assert(shapeGapScale(50) === 0.875, "50 is half the max shrink");
+  assert(shapeGapInsetPx(0, 40) === 0, "0 stays flush");
+  assert(shapeGapInsetPx(undefined, 40) === 0, "omitted stays flush");
+  assert(shapeGapInsetPx(-10, 40) === 0, "negative stays flush");
+  assert(shapeGapInsetPx(100, 40) === 5, "100 is 12.5% of cell size");
+  assert(shapeGapInsetPx(200, 40) === 5, "over 100 still caps at max");
+  assert(shapeGapInsetPx(50, 40) === 2.5, "50 is half the max inset");
 
   const rect = { x: 10, y: 20, width: 40, height: 20 };
-  const flush = scalePixelRect(rect, 0);
+  const flush = insetPixelRect(rect, 0, 40);
   assert(flush.x === 10 && flush.width === 40, "0 keeps the same rect");
 
-  const pill = scalePixelRect(rect, 100);
-  assert(pill.width === 30, "100 shrinks width by 25%");
-  assert(pill.height === 15, "100 shrinks height by 25%");
-  assert(pill.x === 15, "100 insets x to stay centred");
-  assert(pill.y === 22.5, "100 insets y to stay centred");
+  const inset = insetPixelRect(rect, 100, 40);
+  assert(inset.width === 30, "100 insets width by 5px per side");
+  assert(inset.height === 10, "100 insets height by 5px per side");
+  assert(inset.x === 15, "100 shifts x by inset");
+  assert(inset.y === 25, "100 shifts y by inset");
+
+  const wide = { x: 0, y: 0, width: 100, height: 50 };
+  const wideInset = insetPixelRect(wide, 100, 50);
+  assert(wideInset.x === 6.25, "wide block gets equal x inset");
+  assert(wideInset.y === 6.25, "wide block gets equal y inset");
+  assert(wideInset.width === 87.5, "wide block loses inset on both sides");
+  assert(wideInset.height === 37.5, "wide block height inset matches x inset");
 
   const h = { x: 0, y: 10, width: 30, height: 10 };
   const v = { x: 10, y: 0, width: 10, height: 30 };
-  const cross = scaleCrossRects(h, v, 100);
-  assert(cross.horizontal.width === 22.5, "cross bar width scales");
-  assert(cross.vertical.height === 22.5, "cross stem height scales");
-  assert(cross.horizontal.x === 3.75, "cross shrinks around its centre");
-  assert(cross.vertical.x === 11.25, "cross arms stay joined");
+  const cross = insetCrossRects(h, v, 100, 40);
+  assert(cross.horizontal.width === 20, "cross bar width insets per side");
+  assert(cross.vertical.height === 20, "cross stem height insets per side");
+  assert(cross.horizontal.x === 5, "cross bar shifts by inset");
+  assert(cross.vertical.x === 15, "cross stem shifts by inset");
 }
 
 run();
