@@ -692,6 +692,19 @@ export default function App() {
     setActiveIndex((index) => activeIndexAfterReorder(index, fromIndex, toIndex));
   }, [pushUndoCheckpoint]);
 
+  const handleMoveBlock = useCallback(
+    (blockIndex: number, toCol: number, toRow: number) => {
+      pushUndoCheckpoint();
+      updateActiveFrame((frame) => ({
+        ...frame,
+        blocks: frame.blocks.map((block, index) =>
+          index === blockIndex ? { ...block, col: toCol, row: toRow } : block,
+        ),
+      }));
+    },
+    [pushUndoCheckpoint, updateActiveFrame],
+  );
+
   useEffect(() => {
     if (!toast) return;
     const timer = window.setTimeout(() => setToast(null), 2200);
@@ -1491,7 +1504,9 @@ export default function App() {
           isFullscreen={isFullscreen || isMobileGate}
           isInspecting={inspecting}
           fillStage={isMobileGate}
+          pieceEditingEnabled={!playing && !viewOriginal}
           onToggleInspect={isMobileGate ? undefined : toggleInspect}
+          onMoveBlock={handleMoveBlock}
           onWorkingCanvasSize={handleWorkingCanvasSize}
         />
         {!isFullscreen && !isMobileGate ? (

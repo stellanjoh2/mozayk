@@ -472,6 +472,31 @@ body {
   display: contents;
 }
 
+.mosaic-canvas-stack {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+}
+
+.mosaic-overlay {
+  position: absolute;
+  inset: 0;
+  display: block;
+  pointer-events: none;
+}
+
+.mosaic-canvas.is-piece-select {
+  cursor: pointer;
+}
+
+.mosaic-canvas.is-grab-piece {
+  cursor: grab;
+}
+
+.mosaic-canvas.is-grabbing-piece {
+  cursor: grabbing;
+}
+
 .canvas-stage.is-inspecting {
   padding: 0;
   place-items: stretch;
@@ -2935,10 +2960,20 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
     height: 100%;
   }
 
+  .mosaic-canvas-stack {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
   .mosaic-canvas {
     width: 100% !important;
     height: 100% !important;
     box-shadow: none;
+  }
+
+  .mosaic-overlay {
+    width: 100% !important;
+    height: 100% !important;
   }
 
   .mobile-gate {

@@ -149,11 +149,12 @@ function addPlusPath(
   ctx.closePath();
 }
 
-export function drawWireframeBlock(
+export function drawBlockInnerStroke(
   ctx: CanvasRenderingContext2D,
   block: MosaicBlock,
   grid: GridDimensions,
   stroke: number,
+  color: string,
   cornerRadius?: number,
   shapeGap?: number,
 ): void {
@@ -162,7 +163,6 @@ export function drawWireframeBlock(
   const raw = blockPixelRect(grid, block);
   const rect = insetPixelRect(raw, shapeGap, grid.cellSize);
   const { x, y, width: drawW, height: drawH } = rect;
-  const color = block.color;
 
   if (block.shape === "ring" || block.shape === "sphere") {
     const r = Math.min(drawW, drawH) / 2;
@@ -200,6 +200,25 @@ export function drawWireframeBlock(
   );
   strokeInside(ctx, color, stroke, () =>
     addRectPath(ctx, x, y, drawW, drawH, radius),
+  );
+}
+
+export function drawWireframeBlock(
+  ctx: CanvasRenderingContext2D,
+  block: MosaicBlock,
+  grid: GridDimensions,
+  stroke: number,
+  cornerRadius?: number,
+  shapeGap?: number,
+): void {
+  drawBlockInnerStroke(
+    ctx,
+    block,
+    grid,
+    stroke,
+    block.color,
+    cornerRadius,
+    shapeGap,
   );
 }
 

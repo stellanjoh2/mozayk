@@ -30,6 +30,7 @@ import {
   shapeGapInsetPx,
 } from "./shapeGap";
 import { applyTextureOverlay } from "./textureOverlay";
+import { dropBlinkOpacity } from "./pieceOverlay";
 import {
   drawWireframeBlock,
   peeledBlockSet,
@@ -52,6 +53,16 @@ export type RenderOptions = {
   omitColors?: ReadonlySet<string>;
   /** Clear alpha background instead of black/checkerboard. */
   transparentBackground?: boolean;
+  /** Pulse the selected block between 0.5 and 1.0 opacity. */
+  selectedBlockIndex?: number | null;
+  selectionPulseOpacity?: number;
+  /** White double-blink after a manual piece drop (0–1 over 250ms). */
+  dropBlinkBlockIndex?: number | null;
+  dropBlinkT?: number | null;
+  /** Lifted piece preview while dragging to a valid slot. */
+  dragPreview?: { blockIndex: number; col: number; row: number } | null;
+  /** Opacity pulse for the held drag preview (0.5–1.0). */
+  dragPreviewPulseOpacity?: number;
 };
 
 function drawCheckerboard(
@@ -304,9 +315,45 @@ export function renderMosaic(
   const fillRadius = largestRingRadius(blocks, grid);
   const peeled = peeledBlockSet(blocks, settings);
   const peelStroke = resolveWireframePeelStroke(settings.wireframePeelStroke);
-  for (const block of blocks) {
+  const {
+    selectedBlockIndex = null,
+    selectionPulseOpacity,
+    dropBlinkBlockIndex = null,
+    dropBlinkT = null,
+    dragPreview = null,
+    dragPreviewPulseOpacity,
+  } = options;
+  for (let index = 0; index < blocks.length; index++) {
+    const block = blocks[index];
     if (!block.color) continue;
     if (omitColors?.has(block.color)) continue;
+
+    const isBlinking =
+      dropBlinkBlockIndex === index &&
+      dropBlinkT != null &&
+      dropBlinkT < 1;
+    if (isBlinking) {
+      if (dropBlinkOpacity(dropBlinkT) <= 0) continue;
+      drawBlock(
+        ctx,
+        { ...block, color: "#ffffff" },
+        grid,
+        settings.ringThickness,
+        fillRadius,
+        settings.cornerRadius ?? 0,
+        settings.shapeGap ?? 0,
+      );
+      continue;
+    }
+
+    const isSelected =
+      selectedBlockIndex === index && selectionPulseOpacity != null;
+    const isDragSource = dragPreview?.blockIndex === index;
+    if (isSelected || isDragSource) {
+      ctx.save();
+      if (isSelected) ctx.globalAlpha = selectionPulseOpacity!;
+      else if (isDragSource) ctx.globalAlpha = 0.35;
+    }
     if (peeled.has(block)) {
       drawWireframeBlock(
         ctx,
@@ -316,17 +363,58 @@ export function renderMosaic(
         settings.cornerRadius,
         settings.shapeGap,
       );
-      continue;
+    } else {
+      drawBlock(
+        ctx,
+        block,
+        grid,
+        settings.ringThickness,
+        fillRadius,
+        settings.cornerRadius ?? 0,
+        settings.shapeGap ?? 0,
+      );
     }
-    drawBlock(
-      ctx,
-      block,
-      grid,
-      settings.ringThickness,
-      fillRadius,
-      settings.cornerRadius ?? 0,
-      settings.shapeGap ?? 0,
-    );
+    if (isSelected || isDragSource) {
+      ctx.restore();
+    }
+  }
+
+  if (dragPreview) {
+    const block = blocks[dragPreview.blockIndex];
+    if (block?.color && !omitColors?.has(block.color)) {
+      const previewBlock = {
+        ...block,
+        col: dragPreview.col,
+        row: dragPreview.row,
+      };
+      if (dragPreviewPulseOpacity != null) {
+        ctx.save();
+        ctx.globalAlpha = dragPreviewPulseOpacity;
+      }
+      if (peeled.has(block)) {
+        drawWireframeBlock(
+          ctx,
+          previewBlock,
+          grid,
+          peelStroke,
+          settings.cornerRadius,
+          settings.shapeGap,
+        );
+      } else {
+        drawBlock(
+          ctx,
+          previewBlock,
+          grid,
+          settings.ringThickness,
+          fillRadius,
+          settings.cornerRadius ?? 0,
+          settings.shapeGap ?? 0,
+        );
+      }
+      if (dragPreviewPulseOpacity != null) {
+        ctx.restore();
+      }
+    }
   }
 
   try {

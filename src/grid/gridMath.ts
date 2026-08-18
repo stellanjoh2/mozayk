@@ -171,3 +171,29 @@ export function maxGridSpan(density: Density, orientation: Orientation): number 
   const { columns, rows } = getGridCounts(orientation, density);
   return Math.max(columns, rows);
 }
+
+export function clientToCanvasPixel(
+  canvas: HTMLCanvasElement,
+  clientX: number,
+  clientY: number,
+): { x: number; y: number } {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  return {
+    x: (clientX - rect.left) * scaleX,
+    y: (clientY - rect.top) * scaleY,
+  };
+}
+
+export function pixelToGridCell(
+  grid: GridDimensions,
+  x: number,
+  y: number,
+): { col: number; row: number } | null {
+  if (x < 0 || y < 0 || x >= grid.width || y >= grid.height) return null;
+  const col = Math.floor(x / grid.cellSize);
+  const row = Math.floor(y / grid.cellSize);
+  if (col >= grid.columns || row >= grid.rows) return null;
+  return { col, row };
+}
