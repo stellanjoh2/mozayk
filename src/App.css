@@ -226,7 +226,6 @@ body {
   min-height: 0;
   height: 100%;
   overflow: visible;
-  isolation: isolate;
 }
 
 /* Tight windows / 13": 75% zoom, panel occupies 403px. */
@@ -1931,7 +1930,7 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
 .palette-panel {
   position: absolute;
   top: 0;
-  left: 100%;
+  left: 0;
   bottom: 0;
   z-index: 1;
   width: 100%;
@@ -1939,8 +1938,7 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
   backdrop-filter: blur(36px);
   -webkit-backdrop-filter: blur(36px);
   box-shadow: 8px 0 32px rgba(0, 0, 0, 0.28);
-  transform: translateX(-100%);
-  transition: transform 0.45s cubic-bezier(0.83, 0, 0.17, 1);
+  transition: left 0.45s cubic-bezier(0.83, 0, 0.17, 1);
   pointer-events: none;
 }
 
@@ -1953,7 +1951,7 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
 }
 
 .palette-panel.is-open {
-  transform: translateX(0);
+  left: 100%;
   pointer-events: auto;
 }
 

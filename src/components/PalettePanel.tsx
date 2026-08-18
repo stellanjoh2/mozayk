@@ -182,7 +182,7 @@ export function PalettePanel({
       onPointerDown={(event) => event.stopPropagation()}
       onTransitionEnd={(event) => {
         if (event.target !== event.currentTarget) return;
-        if (event.propertyName !== "transform") return;
+        if (event.propertyName !== "left") return;
         onAnimatingChange?.(false);
         if (!open) setMounted(false);
       }}
