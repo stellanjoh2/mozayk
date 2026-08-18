@@ -11,7 +11,7 @@ const FILES = {
 } as const;
 
 const HOVER_SELECTOR =
-  ".panel-btn, .button-row button, .timeline__controls button, .frame-context-menu__item, .ui-icon-btn, .controls-panel__tab, .palette-panel__tab, .palette-panel__close, .palette-gallery__item, .timeline-thumb, .ui-switch";
+  ".panel-btn, .button-row button, .timeline__controls button, .canvas-stage-control-btn, .frame-context-menu__item, .ui-icon-btn, .controls-panel__tab, .palette-panel__tab, .palette-panel__close, .palette-gallery__item, .timeline-thumb, .ui-switch";
 
 export type UiSound = keyof typeof FILES;
 

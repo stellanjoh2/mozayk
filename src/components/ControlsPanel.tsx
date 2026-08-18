@@ -83,11 +83,16 @@ import {
   setNormalHoverEffects,
 } from "../ui/hover";
 import {
-  CHROME_THEME_LABELS,
-  CHROME_THEMES,
-  getChromeTheme,
-  setChromeTheme,
-  type ChromeTheme,
+  CHROME_APPEARANCE_LABELS,
+  CHROME_APPEARANCES,
+  CHROME_COLOR_LABELS,
+  CHROME_COLORS,
+  getChromeAppearance,
+  getChromeColor,
+  setChromeAppearance,
+  setChromeColor,
+  type ChromeAppearance,
+  type ChromeColor,
 } from "../ui/theme";
 import {
   getUiSoundsEnabled,
@@ -98,6 +103,8 @@ import {
 } from "../ui/sounds";
 
 gsap.registerPlugin(useGSAP);
+
+const COLOR_LIST_SHIFT_MS = 450;
 
 type ControlsPanelProps = {
   frame: Frame;
@@ -216,7 +223,8 @@ export function ControlsPanel({
   const [soundVolume, setSoundVolume] = useState(getUiSoundsVolume);
   const [normalHover, setNormalHover] = useState(getNormalHoverEffects);
   const [normalCursor, setNormalCursorOn] = useState(getNormalCursor);
-  const [chromeTheme, setChromeThemeOn] = useState(getChromeTheme);
+  const [chromeAppearance, setChromeAppearanceOn] = useState(getChromeAppearance);
+  const [chromeColor, setChromeColorOn] = useState(getChromeColor);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [heavyBlurDialogOpen, setHeavyBlurDialogOpen] = useState(false);
   const [themesOpen, setThemesOpen] = useState(false);
@@ -237,10 +245,15 @@ export function ControlsPanel({
     if (next === orientation) return;
     onOrientationChange(next);
   };
-  const selectChromeTheme = (next: ChromeTheme) => {
-    if (next === chromeTheme) return;
-    setChromeTheme(next);
-    setChromeThemeOn(next);
+  const selectChromeAppearance = (next: ChromeAppearance) => {
+    if (next === chromeAppearance) return;
+    setChromeAppearance(next);
+    setChromeAppearanceOn(next);
+  };
+  const selectChromeColor = (next: ChromeColor) => {
+    if (next === chromeColor) return;
+    setChromeColor(next);
+    setChromeColorOn(next);
   };
   const selectPanelTab = (tab: PanelTab) => {
     if (tab === panelTab) return;
@@ -268,39 +281,75 @@ export function ControlsPanel({
   const widthMax = maxWidthSliderMax(settings.density, orientation);
   const heightMax = maxHeightSliderMax(settings.density, orientation);
   const pendingAddColorRef = useRef(false);
+  const colorRowKeysRef = useRef<string[]>([]);
+  const colorKeySeqRef = useRef(0);
   const [addingColorIndex, setAddingColorIndex] = useState<number | null>(null);
   const [removingColorIndex, setRemovingColorIndex] = useState<number | null>(
     null,
   );
 
-  useLayoutEffect(() => {
-    if (!pendingAddColorRef.current) return;
+  const colorCount = settings.colors.length;
+  const colorRowKeys = colorRowKeysRef.current;
+  if (colorRowKeys.length !== colorCount) {
+    if (pendingAddColorRef.current && colorCount === colorRowKeys.length + 1) {
+      colorRowKeysRef.current = [`c${colorKeySeqRef.current++}`, ...colorRowKeys];
+    } else if (
+      removingColorIndex !== null &&
+      colorCount === colorRowKeys.length - 1
+    ) {
+      const next = colorRowKeys.slice();
+      next.splice(removingColorIndex, 1);
+      colorRowKeysRef.current = next;
+    } else {
+      colorRowKeysRef.current = Array.from(
+        { length: colorCount },
+        () => `c${colorKeySeqRef.current++}`,
+      );
+    }
+  }
+  if (
+    pendingAddColorRef.current &&
+    colorRowKeysRef.current.length === colorCount
+  ) {
     pendingAddColorRef.current = false;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    setAddingColorIndex(0);
-    const timer = window.setTimeout(() => setAddingColorIndex(null), 250);
+  }
+
+  const colorListBusy =
+    addingColorIndex !== null || removingColorIndex !== null;
+
+  useLayoutEffect(() => {
+    if (addingColorIndex === null) return;
+    const timer = window.setTimeout(
+      () => setAddingColorIndex(null),
+      COLOR_LIST_SHIFT_MS,
+    );
     return () => window.clearTimeout(timer);
-  }, [settings.colors.length]);
+  }, [addingColorIndex]);
 
   const handleAddColor = () => {
-    if (settings.colors.length >= MAX_COLORS || removingColorIndex !== null) {
+    if (settings.colors.length >= MAX_COLORS || colorListBusy) {
       return;
     }
     pendingAddColorRef.current = true;
+    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setAddingColorIndex(0);
+    }
     onAddColor();
   };
 
   const handleRemoveColor = (index: number) => {
-    if (settings.colors.length <= 1 || removingColorIndex !== null) return;
+    if (settings.colors.length <= 1 || colorListBusy) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      colorRowKeysRef.current.splice(index, 1);
       onRemoveColor(index);
       return;
     }
     setRemovingColorIndex(index);
     window.setTimeout(() => {
+      colorRowKeysRef.current.splice(index, 1);
       onRemoveColor(index);
       setRemovingColorIndex(null);
-    }, 250);
+    }, COLOR_LIST_SHIFT_MS);
   };
 
   return (
@@ -665,27 +714,29 @@ export function ControlsPanel({
         <div className="color-list">
           {settings.colors.map((color, index) => (
             <div
-              key={`color-${index}`}
+              key={colorRowKeysRef.current[index] ?? `color-${index}`}
               className={`color-row${index === addingColorIndex ? " is-adding" : ""}${index === removingColorIndex ? " is-removing" : ""}`}
             >
-              <ColorSwatch
-                color={color}
-                locked={settings.colorsLocked?.[index] ?? false}
-                onChange={(hex) => onColorChange(index, hex)}
-                onToggleLock={() => onToggleColorLock(index)}
-                onRemove={
-                  settings.colors.length > 1
-                    ? () => handleRemoveColor(index)
-                    : undefined
-                }
-              />
-              <SliderRow
-                label="Amount"
-                hint="Share of canvas for this colour"
-                value={settings.colorAmounts?.[index] ?? Math.round(100 / settings.colors.length)}
-                min={1}
-                onChange={(amount) => onColorAmountChange(index, amount)}
-              />
+              <div className="color-row__inner">
+                <ColorSwatch
+                  color={color}
+                  locked={settings.colorsLocked?.[index] ?? false}
+                  onChange={(hex) => onColorChange(index, hex)}
+                  onToggleLock={() => onToggleColorLock(index)}
+                  onRemove={
+                    settings.colors.length > 1
+                      ? () => handleRemoveColor(index)
+                      : undefined
+                  }
+                />
+                <SliderRow
+                  label="Amount"
+                  hint="Share of canvas for this colour"
+                  value={settings.colorAmounts?.[index] ?? Math.round(100 / settings.colors.length)}
+                  min={1}
+                  onChange={(amount) => onColorAmountChange(index, amount)}
+                />
+              </div>
             </div>
           ))}
         </div>
@@ -1578,20 +1629,31 @@ export function ControlsPanel({
           }}
         />
         <div className="control-row">
-          <span className="control-row__label">
-            <HintLabel hint="Dark and light keep orange · purple uses the logo colour">
-              Theme
-            </HintLabel>
-          </span>
-          <div className="button-row button-row--3 button-row--choice">
-            {CHROME_THEMES.map((id) => (
+          <span className="control-row__label">Theme</span>
+          <div className="button-row button-row--choice">
+            {CHROME_APPEARANCES.map((id) => (
               <button
                 key={id}
                 type="button"
-                className={chromeTheme === id ? "is-active" : ""}
-                onClick={() => selectChromeTheme(id)}
+                className={chromeAppearance === id ? "is-active" : ""}
+                onClick={() => selectChromeAppearance(id)}
               >
-                {CHROME_THEME_LABELS[id]}
+                {CHROME_APPEARANCE_LABELS[id]}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="control-row">
+          <span className="control-row__label">Colour</span>
+          <div className="button-row button-row--choice">
+            {CHROME_COLORS.map((id) => (
+              <button
+                key={id}
+                type="button"
+                className={chromeColor === id ? "is-active" : ""}
+                onClick={() => selectChromeColor(id)}
+              >
+                {CHROME_COLOR_LABELS[id]}
               </button>
             ))}
           </div>

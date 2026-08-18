@@ -8,11 +8,17 @@
     <script>
       try {
         var t = localStorage.getItem("mozayk-chrome-theme");
-        if (t === "pink") t = "purple";
-        if (t !== "dark" && t !== "light" && t !== "purple") {
+        var c = localStorage.getItem("mozayk-chrome-color");
+        if (t === "pink" || t === "purple") {
+          if (!c) c = "purple";
+          t = "dark";
+        }
+        if (t !== "dark" && t !== "light") {
           t = localStorage.getItem("mozayk-light-theme") === "1" ? "light" : "dark";
         }
+        if (c !== "orange" && c !== "purple") c = "orange";
         document.documentElement.setAttribute("data-theme", t);
+        document.documentElement.setAttribute("data-chrome", c);
       } catch (e) {}
     </script>
   </head>

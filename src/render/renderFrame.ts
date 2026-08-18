@@ -30,7 +30,7 @@ import {
   shapeGapInsetPx,
 } from "./shapeGap";
 import { applyTextureOverlay } from "./textureOverlay";
-import { dropBlinkOpacity } from "./pieceOverlay";
+import { drawDensityGrid } from "./pieceOverlay";
 import {
   drawWireframeBlock,
   peeledBlockSet,
@@ -56,13 +56,17 @@ export type RenderOptions = {
   /** Pulse the selected block between 0.5 and 1.0 opacity. */
   selectedBlockIndex?: number | null;
   selectionPulseOpacity?: number;
-  /** White double-blink after a manual piece drop (0–1 over 250ms). */
-  dropBlinkBlockIndex?: number | null;
-  dropBlinkT?: number | null;
   /** Lifted piece preview while dragging to a valid slot. */
   dragPreview?: { blockIndex: number; col: number; row: number } | null;
   /** Opacity pulse for the held drag preview (0.5–1.0). */
   dragPreviewPulseOpacity?: number;
+  /** White fade after a piece snaps to a new slot (0–1 over 500ms). */
+  dropBlinkBlockIndex?: number | null;
+  dropBlinkT?: number | null;
+  /** Layout-density skeleton, drawn above background while grabbing a piece. */
+  showDensityGrid?: boolean;
+  /** Canvas backing pixels per CSS pixel — keeps skeleton stroke at 1px on screen. */
+  displayScale?: number;
 };
 
 function drawCheckerboard(
@@ -312,28 +316,53 @@ export function renderMosaic(
     );
   }
 
+  if (options.showDensityGrid) {
+    drawDensityGrid(ctx, grid, options.displayScale ?? 1);
+  }
+
   const fillRadius = largestRingRadius(blocks, grid);
   const peeled = peeledBlockSet(blocks, settings);
   const peelStroke = resolveWireframePeelStroke(settings.wireframePeelStroke);
   const {
     selectedBlockIndex = null,
     selectionPulseOpacity,
-    dropBlinkBlockIndex = null,
-    dropBlinkT = null,
     dragPreview = null,
     dragPreviewPulseOpacity,
+    dropBlinkBlockIndex = null,
+    dropBlinkT = null,
   } = options;
   for (let index = 0; index < blocks.length; index++) {
     const block = blocks[index];
     if (!block.color) continue;
     if (omitColors?.has(block.color)) continue;
 
-    const isBlinking =
+    const isDropBlink =
       dropBlinkBlockIndex === index &&
       dropBlinkT != null &&
       dropBlinkT < 1;
-    if (isBlinking) {
-      if (dropBlinkOpacity(dropBlinkT) <= 0) continue;
+    if (isDropBlink) {
+      if (peeled.has(block)) {
+        drawWireframeBlock(
+          ctx,
+          block,
+          grid,
+          peelStroke,
+          settings.cornerRadius,
+          settings.shapeGap,
+        );
+      } else {
+        drawBlock(
+          ctx,
+          block,
+          grid,
+          settings.ringThickness,
+          fillRadius,
+          settings.cornerRadius ?? 0,
+          settings.shapeGap ?? 0,
+        );
+      }
+      ctx.save();
+      ctx.globalAlpha = 1 - dropBlinkT;
       drawBlock(
         ctx,
         { ...block, color: "#ffffff" },
@@ -343,6 +372,7 @@ export function renderMosaic(
         settings.cornerRadius ?? 0,
         settings.shapeGap ?? 0,
       );
+      ctx.restore();
       continue;
     }
 

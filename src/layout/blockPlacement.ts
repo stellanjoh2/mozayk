@@ -62,6 +62,30 @@ export function hitTestBlock(
 
 export type GridSlot = { col: number; row: number };
 
+function slotKey(col: number, row: number): string {
+  return `${col},${row}`;
+}
+
+/** Same-size piece sitting on this slot — drop swaps the two. */
+export function swapPartnerIndex(
+  blocks: MosaicBlock[],
+  blockIndex: number,
+  toCol: number,
+  toRow: number,
+): number | null {
+  const moving = blocks[blockIndex];
+  if (!moving) return null;
+
+  for (let i = 0; i < blocks.length; i++) {
+    if (i === blockIndex) continue;
+    const other = blocks[i];
+    if (!other.color) continue;
+    if (other.width !== moving.width || other.height !== moving.height) continue;
+    if (other.col === toCol && other.row === toRow) return i;
+  }
+  return null;
+}
+
 export function findDropTargets(
   blocks: MosaicBlock[],
   blockIndex: number,
@@ -74,14 +98,32 @@ export function findDropTargets(
   const { width, height } = block;
   const occupied = buildOccupiedGrid(blocks, columns, rows, blockIndex);
   const targets: GridSlot[] = [];
+  const seen = new Set<string>();
+
+  const add = (col: number, row: number) => {
+    const key = slotKey(col, row);
+    if (seen.has(key)) return;
+    seen.add(key);
+    targets.push({ col, row });
+  };
 
   for (let row = 0; row <= rows - height; row++) {
     for (let col = 0; col <= columns - width; col++) {
       if (block.col === col && block.row === row) continue;
       if (canPlace(occupied, row, col, width, height, rows, columns)) {
-        targets.push({ col, row });
+        add(col, row);
       }
     }
+  }
+
+  // Imported stills/video fill the grid, so empty slots rarely exist.
+  // Same-size pieces are valid swap targets on a packed board.
+  for (let i = 0; i < blocks.length; i++) {
+    if (i === blockIndex) continue;
+    const other = blocks[i];
+    if (!other.color) continue;
+    if (other.width !== width || other.height !== height) continue;
+    add(other.col, other.row);
   }
 
   return targets;
@@ -98,6 +140,7 @@ export function canMoveBlock(
   const block = blocks[blockIndex];
   if (!block) return false;
   if (block.col === toCol && block.row === toRow) return false;
+  if (swapPartnerIndex(blocks, blockIndex, toCol, toRow) != null) return true;
 
   const occupied = buildOccupiedGrid(blocks, columns, rows, blockIndex);
   return canPlace(
@@ -120,6 +163,30 @@ export function moveBlock(
   return blocks.map((block, index) =>
     index === blockIndex ? { ...block, col: toCol, row: toRow } : block,
   );
+}
+
+export function relocateBlock(
+  blocks: MosaicBlock[],
+  blockIndex: number,
+  toCol: number,
+  toRow: number,
+): MosaicBlock[] {
+  const moving = blocks[blockIndex];
+  if (!moving) return blocks;
+  if (moving.col === toCol && moving.row === toRow) return blocks;
+
+  const swapIndex = swapPartnerIndex(blocks, blockIndex, toCol, toRow);
+  if (swapIndex != null) {
+    return blocks.map((block, index) => {
+      if (index === blockIndex) return { ...block, col: toCol, row: toRow };
+      if (index === swapIndex) {
+        return { ...block, col: moving.col, row: moving.row };
+      }
+      return block;
+    });
+  }
+
+  return moveBlock(blocks, blockIndex, toCol, toRow);
 }
 
 export function slotMatchesTarget(

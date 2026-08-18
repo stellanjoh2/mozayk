@@ -3,7 +3,9 @@ import {
   findDropTargets,
   hitTestBlock,
   moveBlock,
+  relocateBlock,
   slotMatchesTarget,
+  swapPartnerIndex,
   buildDropZoneLoops,
 } from "./blockPlacement";
 import type { MosaicBlock } from "../types";
@@ -46,6 +48,41 @@ function run(): void {
   assert(
     !slotMatchesTarget({ col: 2, row: 2 }, 1, 2, 2, 2),
     "outside slot rejected",
+  );
+
+  const packed: MosaicBlock[] = [
+    { col: 0, row: 0, width: 1, height: 1, shape: "block", color: "#111111" },
+    { col: 1, row: 0, width: 1, height: 1, shape: "block", color: "#222222" },
+    { col: 0, row: 1, width: 1, height: 1, shape: "block", color: "#333333" },
+    { col: 1, row: 1, width: 1, height: 1, shape: "block", color: "#444444" },
+  ];
+  const packedTargets = findDropTargets(packed, 0, 2, 2);
+  assert(packedTargets.length === 3, "packed same-size pieces are swap targets");
+  assert(
+    packedTargets.some((t) => t.col === 1 && t.row === 1),
+    "opposite packed cell is a swap target",
+  );
+  assert(
+    canMoveBlock(packed, 0, 1, 1, 2, 2),
+    "swap onto another 1×1 is allowed",
+  );
+  assert(swapPartnerIndex(packed, 0, 1, 1) === 3, "swap partner is the 1×1 at 1,1");
+
+  const swapped = relocateBlock(packed, 0, 1, 1);
+  assert(swapped[0].col === 1 && swapped[0].row === 1, "moved piece takes the slot");
+  assert(swapped[3].col === 0 && swapped[3].row === 0, "partner takes the old slot");
+  assert(swapped[1].col === 1 && swapped[1].row === 0, "other pieces stay put");
+
+  const uniquePacked: MosaicBlock[] = [
+    { col: 0, row: 0, width: 2, height: 2, shape: "block", color: "#aaaaaa" },
+    { col: 2, row: 0, width: 1, height: 1, shape: "block", color: "#bbbbbb" },
+    { col: 3, row: 0, width: 1, height: 1, shape: "block", color: "#cccccc" },
+    { col: 2, row: 1, width: 1, height: 1, shape: "block", color: "#dddddd" },
+    { col: 3, row: 1, width: 1, height: 1, shape: "block", color: "#eeeeee" },
+  ];
+  assert(
+    findDropTargets(uniquePacked, 0, 4, 2).length === 0,
+    "unique size on a packed board has nowhere to go",
   );
 
   const loops = buildDropZoneLoops(

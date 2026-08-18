@@ -31,6 +31,7 @@ import {
   patchNeedsLayoutRegen,
   rerollShapes,
 } from "./layout/generateLayout";
+import { relocateBlock } from "./layout/blockPlacement";
 import {
   addColorToSettings,
   applyDensityChange,
@@ -697,9 +698,7 @@ export default function App() {
       pushUndoCheckpoint();
       updateActiveFrame((frame) => ({
         ...frame,
-        blocks: frame.blocks.map((block, index) =>
-          index === blockIndex ? { ...block, col: toCol, row: toRow } : block,
-        ),
+        blocks: relocateBlock(frame.blocks, blockIndex, toCol, toRow),
       }));
     },
     [pushUndoCheckpoint, updateActiveFrame],
@@ -1186,6 +1185,10 @@ export default function App() {
   useEffect(() => {
     if (isFullscreen) setInspecting(false);
   }, [isFullscreen]);
+
+  useEffect(() => {
+    if (orientation !== "portrait") setInspecting(false);
+  }, [orientation]);
 
   useEffect(() => {
     const syncFullscreen = () => {

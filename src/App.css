@@ -12,10 +12,14 @@
   --logo-fill-3: var(--brand-orange);
   --logo-fill-4: #ffffff;
 
-  /* Chrome accent — UI highlight. Themes remap this; logo slots stay put.
+  /* Chrome accent — UI highlight. Colour setting remaps this; logo slots stay put.
      --brand is the quiet primary (white on dark) so chrome stays behind the artwork.
-     --brand-green is toggles only. */
+     --brand-green is toggles only.
+     Piece-edit guides (--piece-guide*) follow --chrome so new UI colours inherit. */
   --chrome: var(--brand-orange);
+  --piece-guide: var(--chrome);
+  --piece-guide-dropzone: color-mix(in srgb, var(--piece-guide) 75%, transparent);
+  --piece-guide-grid: color-mix(in srgb, var(--piece-guide) 25%, transparent);
   --ui-chevron: conic-gradient(
     from 225deg at 50% 50%,
     var(--chrome) 0 90deg,
@@ -77,6 +81,8 @@
   --settings-inner-gap: 8px;
   --settings-row-gap: 24px;
   --ui-ease: cubic-bezier(0.32, 0.08, 0.24, 1);
+  --panel-slide-duration: 0.45s;
+  --panel-slide-ease: cubic-bezier(0.83, 0, 0.17, 1);
   --ui-compact-zoom: 1;
   --ui-panel-width: 420px;
   color-scheme: dark;
@@ -100,7 +106,7 @@ html[data-theme="light"] {
   --thumb-border: #c8c8c8;
 }
 
-html[data-theme="purple"] {
+html[data-chrome="purple"] {
   --chrome: var(--brand-purple);
 }
 
@@ -485,15 +491,41 @@ body {
 }
 
 .mosaic-canvas.is-piece-select {
-  cursor: pointer;
+  cursor: var(--cursor-pointer);
+  touch-action: none;
 }
 
 .mosaic-canvas.is-grab-piece {
-  cursor: grab;
+  cursor: var(--cursor-grab);
+  touch-action: none;
 }
 
 .mosaic-canvas.is-grabbing-piece {
-  cursor: grabbing;
+  cursor: var(--cursor-grabbing);
+  touch-action: none;
+}
+
+.canvas-stage-controls {
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.canvas-stage-control-icon {
+  display: block;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.canvas-stage.is-inspecting .canvas-stage-controls,
+.canvas-stage.is-fullscreen .canvas-stage-controls {
+  right: 20px;
+  top: 20px;
 }
 
 .canvas-stage.is-inspecting {
@@ -559,6 +591,7 @@ body {
   .panel-btn:hover:not(:disabled)::before,
   .button-row button:hover:not(:disabled)::before,
   .timeline__controls button:hover:not(:disabled)::before,
+  .canvas-stage-control-btn:hover:not(:disabled)::before,
   .frame-context-menu__item:hover:not(:disabled)::before,
   .ui-icon-btn:hover::before,
   .palette-panel__close:hover::before {
@@ -585,6 +618,7 @@ body {
 html.normal-hover .panel-btn:hover:not(:disabled)::before,
 html.normal-hover .button-row button:hover:not(:disabled)::before,
 html.normal-hover .timeline__controls button:hover:not(:disabled)::before,
+html.normal-hover .canvas-stage-control-btn:hover:not(:disabled)::before,
 html.normal-hover .frame-context-menu__item:hover:not(:disabled)::before,
 html.normal-hover .ui-icon-btn:hover::before,
 html.normal-hover .palette-panel__close:hover::before {
@@ -894,6 +928,7 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
 .panel-btn,
 .button-row button,
 .timeline__controls button,
+.canvas-stage-control-btn,
 .frame-context-menu__item {
   --hover-plate-on: var(--accent-hover);
   --hover-plate-off: var(--fill-faint);
@@ -920,6 +955,7 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
 .panel-btn::before,
 .button-row button::before,
 .timeline__controls button::before,
+.canvas-stage-control-btn::before,
 .frame-context-menu__item::before,
 .ui-icon-btn::before {
   content: "";
@@ -940,6 +976,7 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
 .panel-btn:hover:not(:disabled)::before,
 .button-row button:hover:not(:disabled)::before,
 .timeline__controls button:hover:not(:disabled)::before,
+.canvas-stage-control-btn:hover:not(:disabled)::before,
 .frame-context-menu__item:hover:not(:disabled)::before,
 .ui-icon-btn:hover:not(:disabled)::before,
 .palette-panel__close:hover::before {
@@ -949,6 +986,7 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
 .panel-btn:active:not(:disabled),
 .button-row button:active:not(:disabled):not(.is-active),
 .timeline__controls button:active:not(:disabled):not(.is-active),
+.canvas-stage-control-btn:active:not(:disabled):not(.is-active),
 .frame-context-menu__item:active:not(:disabled) {
   background: var(--brand);
   color: var(--on-brand);
@@ -960,6 +998,7 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
 .panel-btn:active:not(:disabled)::before,
 .button-row button:active:not(:disabled):not(.is-active)::before,
 .timeline__controls button:active:not(:disabled):not(.is-active)::before,
+.canvas-stage-control-btn:active:not(:disabled):not(.is-active)::before,
 .frame-context-menu__item:active:not(:disabled)::before {
   animation: none;
   opacity: 0;
@@ -1374,12 +1413,14 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
   cursor: var(--cursor-default);
 }
 
-.button-row--choice button.is-active:hover::before {
+.button-row--choice button.is-active:hover::before,
+.canvas-stage-control-btn.is-active:hover::before {
   animation: none;
   opacity: 0;
 }
 
-html.normal-hover .button-row--choice button.is-active:hover::before {
+html.normal-hover .button-row--choice button.is-active:hover::before,
+html.normal-hover .canvas-stage-control-btn.is-active:hover::before {
   opacity: 0;
 }
 
@@ -1405,7 +1446,8 @@ html.normal-hover .button-row--choice button.is-active:hover::before {
 }
 
 .button-row button.is-active,
-.timeline__controls button.is-active {
+.timeline__controls button.is-active,
+.canvas-stage-control-btn.is-active {
   --hover-plate-on: var(--brand);
   --hover-plate-off: var(--chrome);
   background: var(--chrome);
@@ -1413,6 +1455,16 @@ html.normal-hover .button-row--choice button.is-active:hover::before {
   transition:
     background 0s,
     color 0s;
+}
+
+.canvas-stage-control-btn {
+  width: var(--icon-btn-size);
+  height: var(--icon-btn-size);
+  min-height: var(--icon-btn-size);
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .control-row {
@@ -1938,7 +1990,7 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
   backdrop-filter: blur(36px);
   -webkit-backdrop-filter: blur(36px);
   box-shadow: 8px 0 32px rgba(0, 0, 0, 0.28);
-  transition: left 0.45s cubic-bezier(0.83, 0, 0.17, 1);
+  transition: left var(--panel-slide-duration) var(--panel-slide-ease);
   pointer-events: none;
 }
 
@@ -2167,14 +2219,59 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
 .color-list {
   display: flex;
   flex-direction: column;
-  gap: var(--settings-row-gap);
-  margin-bottom: var(--settings-row-gap);
 }
 
 .color-row {
+  display: grid;
+  grid-template-rows: 1fr;
+}
+
+.color-row__inner {
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: var(--settings-row-gap);
+  padding-bottom: var(--settings-row-gap);
+}
+
+.color-row.is-adding {
+  animation: color-row-expand var(--panel-slide-duration) var(--panel-slide-ease)
+    both;
+}
+
+.color-row.is-removing {
+  animation: color-row-collapse var(--panel-slide-duration) var(--panel-slide-ease)
+    both;
+}
+
+.color-row.is-adding .color-row__inner,
+.color-row.is-removing .color-row__inner {
+  overflow: hidden;
+}
+
+@keyframes color-row-expand {
+  from {
+    grid-template-rows: 0fr;
+  }
+  to {
+    grid-template-rows: 1fr;
+  }
+}
+
+@keyframes color-row-collapse {
+  from {
+    grid-template-rows: 1fr;
+  }
+  to {
+    grid-template-rows: 0fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .color-row.is-adding,
+  .color-row.is-removing {
+    animation: none;
+  }
 }
 
 .color-swatch-wrap {

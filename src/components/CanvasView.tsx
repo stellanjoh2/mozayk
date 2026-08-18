@@ -20,7 +20,7 @@ import {
   getCachedSourceImage,
 } from "../import/imageSource";
 import { renderMosaic } from "../render/renderFrame";
-import { renderPieceOverlay, heldPiecePulseOpacity, selectionPulseOpacity } from "../render/pieceOverlay";
+import { renderPieceOverlay, heldPiecePulseOpacity, hoverBlinkVisible, selectionPulseOpacity } from "../render/pieceOverlay";
 import {
   canMoveBlock,
   buildDropZoneLoops,
@@ -38,6 +38,7 @@ import {
 } from "../config";
 import type { Frame, Orientation } from "../types";
 import { playUiSound } from "../ui/sounds";
+import { getNormalHoverEffects } from "../ui/hover";
 import { FrameContextMenu } from "./FrameContextMenu";
 import { PhaseOrb } from "./PhaseOrb";
 
@@ -69,6 +70,17 @@ function computeFitScale(
   );
   if (availW <= 0 || availH <= 0) return 1;
   return Math.min(availW / canvasWidth, availH / canvasHeight);
+}
+
+function InspectIcon() {
+  return (
+    <svg className="canvas-stage-control-icon" viewBox="0 0 160 160" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M80,0C35.82,0,0,35.82,0,80s35.82,80,80,80,80-35.82,80-80S124.18,0,80,0ZM120.52,90h-30.52v30.52h-20v-30.52h-30.52v-20h30.52v-30.52h20v30.52h30.52v20Z"
+      />
+    </svg>
+  );
 }
 
 type CanvasViewProps = {
@@ -126,6 +138,9 @@ export function CanvasView({
   const isDraggingPieceRef = useRef(false);
   const dropTargetsRef = useRef<GridSlot[]>([]);
   const lastHoveredSlotRef = useRef<string | null>(null);
+  const gridRef = useRef<ReturnType<typeof getGridDimensions> | null>(null);
+  const blocksRef = useRef(frame.blocks);
+  const onMoveBlockRef = useRef(onMoveBlock);
 
   const stagePadding = isFullscreen ? 0 : STAGE_PADDING;
   const [availW, availH] = stageAvailableSize(
@@ -180,7 +195,7 @@ export function CanvasView({
 
     const start = performance.now();
     const tick = (now: number) => {
-      const t = (now - start) / 250;
+      const t = (now - start) / 500;
       if (t >= 1) {
         setPieceDropBlink(null);
         setDropBlinkT(null);
@@ -231,11 +246,14 @@ export function CanvasView({
     width > 0 && height > 0
       ? getGridDimensions(orientation, frame.settings.density, width, height)
       : null;
+  gridRef.current = grid;
+  blocksRef.current = frame.blocks;
+  onMoveBlockRef.current = onMoveBlock;
 
   const canInspect =
     orientation === "portrait" && !isFullscreen && onToggleInspect != null;
   const canEditPieces =
-    pieceEditingEnabled && !canInspect && !isInspecting && !viewOriginal;
+    pieceEditingEnabled && !isInspecting && !viewOriginal;
   const selectedBlock =
     selectedBlockIndex != null ? frame.blocks[selectedBlockIndex] ?? null : null;
   const dropZoneLoops = useMemo(() => {
@@ -339,6 +357,9 @@ export function CanvasView({
           isDraggingPiece &&
           selectedBlockIndex != null &&
           hoveredTarget;
+        const rect = canvas.getBoundingClientRect();
+        const displayScale =
+          rect.width > 0 ? width / rect.width : 1;
         renderMosaic(canvas, {
           orientation,
           settings: frame.settings,
@@ -352,8 +373,6 @@ export function CanvasView({
           selectionPulseOpacity: showSelectionPulse
             ? selectionPulseOpacity(pulsePhase)
             : undefined,
-          dropBlinkBlockIndex: pieceDropBlink?.blockIndex ?? null,
-          dropBlinkT,
           dragPreview: showDragPreview
             ? {
                 blockIndex: selectedBlockIndex,
@@ -364,6 +383,10 @@ export function CanvasView({
           dragPreviewPulseOpacity: showDragPreview
             ? heldPiecePulseOpacity(pulsePhase)
             : undefined,
+          dropBlinkBlockIndex: pieceDropBlink?.blockIndex ?? null,
+          dropBlinkT,
+          showDensityGrid: isDraggingPiece,
+          displayScale,
         });
       } catch (error) {
         console.error(error);
@@ -392,9 +415,9 @@ export function CanvasView({
     selectedBlockIndex,
     isDraggingPiece,
     pulsePhase,
+    hoveredTarget,
     pieceDropBlink,
     dropBlinkT,
-    hoveredTarget,
   ]);
 
   useLayoutEffect(() => {
@@ -406,11 +429,44 @@ export function CanvasView({
     const displayScale =
       rect && rect.width > 0 ? grid.width / rect.width : 1;
 
+    const heldPreview =
+      isDraggingPiece && selectedBlock && hoveredTarget
+        ? {
+            ...selectedBlock,
+            col: hoveredTarget.col,
+            row: hoveredTarget.row,
+          }
+        : null;
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+
     renderPieceOverlay(overlay, grid, {
       dropZoneLoops: isDraggingPiece ? dropZoneLoops : [],
       displayScale,
+      heldBlock: heldPreview,
+      heldStrokeVisible:
+        heldPreview != null &&
+        (reduceMotion ||
+          getNormalHoverEffects() ||
+          hoverBlinkVisible(pulsePhase)),
+      cornerRadius: frame.settings.cornerRadius,
+      shapeGap: frame.settings.shapeGap,
     });
-  }, [grid, isDraggingPiece, dropZoneLoops, width, height, stageSize.width, stageSize.height]);
+  }, [
+    grid,
+    isDraggingPiece,
+    dropZoneLoops,
+    selectedBlock,
+    hoveredTarget,
+    pulsePhase,
+    frame.settings.cornerRadius,
+    frame.settings.shapeGap,
+    width,
+    height,
+    stageSize.width,
+    stageSize.height,
+  ]);
 
   useEffect(() => {
     if (!canEditPieces || selectedBlockIndex == null) {
@@ -445,11 +501,12 @@ export function CanvasView({
     blockIndex: number,
   ): GridSlot | null => {
     const canvas = canvasRef.current;
-    if (!canvas || !grid) return null;
+    const currentGrid = gridRef.current;
+    if (!canvas || !currentGrid) return null;
     const { x, y } = clientToCanvasPixel(canvas, clientX, clientY);
-    const cell = pixelToGridCell(grid, x, y);
+    const cell = pixelToGridCell(currentGrid, x, y);
     if (!cell) return null;
-    const block = frame.blocks[blockIndex];
+    const block = blocksRef.current[blockIndex];
     if (!block) return null;
     return (
       targets.find((target) =>
@@ -464,22 +521,34 @@ export function CanvasView({
     blockIndex: number,
     targets: GridSlot[],
   ) => {
+    const currentGrid = gridRef.current;
     const target = resolveHoveredTarget(clientX, clientY, targets, blockIndex);
     if (
+      currentGrid &&
       target &&
       canMoveBlock(
-        frame.blocks,
+        blocksRef.current,
         blockIndex,
         target.col,
         target.row,
-        grid!.columns,
-        grid!.rows,
+        currentGrid.columns,
+        currentGrid.rows,
       )
     ) {
-      onMoveBlock?.(blockIndex, target.col, target.row);
+      onMoveBlockRef.current?.(blockIndex, target.col, target.row);
       playUiSound("drop");
       setPieceDropBlink({ blockIndex });
     }
+    setSelectedBlockIndex(null);
+    selectedBlockIndexRef.current = null;
+    setIsDraggingPiece(false);
+    setDropTargets([]);
+    setHoveredTarget(null);
+    dragPointerIdRef.current = null;
+    dragStartRef.current = null;
+  };
+
+  const clearPiecePointer = () => {
     setIsDraggingPiece(false);
     setDropTargets([]);
     setHoveredTarget(null);
@@ -509,7 +578,6 @@ export function CanvasView({
     }
 
     event.preventDefault();
-    event.currentTarget.setPointerCapture(event.pointerId);
     dragPointerIdRef.current = event.pointerId;
     dragStartRef.current = { x: event.clientX, y: event.clientY };
 
@@ -532,85 +600,97 @@ export function CanvasView({
     }
   };
 
-  const handlePiecePointerMove = (event: ReactPointerEvent<HTMLCanvasElement>) => {
-    if (!canEditPieces || dragPointerIdRef.current !== event.pointerId) return;
+  useEffect(() => {
+    if (!canEditPieces) {
+      clearPiecePointer();
+      return;
+    }
 
-    const blockIndex = selectedBlockIndexRef.current;
-    if (blockIndex == null || !grid) return;
+    const onMove = (event: PointerEvent) => {
+      if (dragPointerIdRef.current !== event.pointerId) return;
 
-    let targets = dropTargetsRef.current;
+      const blockIndex = selectedBlockIndexRef.current;
+      const currentGrid = gridRef.current;
+      if (blockIndex == null || !currentGrid) return;
 
-    if (!isDraggingPieceRef.current && dragStartRef.current) {
-      const dx = event.clientX - dragStartRef.current.x;
-      const dy = event.clientY - dragStartRef.current.y;
-      if (Math.hypot(dx, dy) >= PIECE_DRAG_THRESHOLD) {
-        targets = findDropTargets(
-          frame.blocks,
-          blockIndex,
-          grid.columns,
-          grid.rows,
-        );
-        isDraggingPieceRef.current = true;
-        dropTargetsRef.current = targets;
-        setIsDraggingPiece(true);
-        setDropTargets(targets);
+      let targets = dropTargetsRef.current;
+
+      if (!isDraggingPieceRef.current && dragStartRef.current) {
+        const dx = event.clientX - dragStartRef.current.x;
+        const dy = event.clientY - dragStartRef.current.y;
+        if (Math.hypot(dx, dy) >= PIECE_DRAG_THRESHOLD) {
+          targets = findDropTargets(
+            blocksRef.current,
+            blockIndex,
+            currentGrid.columns,
+            currentGrid.rows,
+          );
+          isDraggingPieceRef.current = true;
+          dropTargetsRef.current = targets;
+          setIsDraggingPiece(true);
+          setDropTargets(targets);
+        }
       }
-    }
 
-    if (isDraggingPieceRef.current) {
-      const activeTargets =
-        targets.length > 0
-          ? targets
-          : findDropTargets(
-              frame.blocks,
-              blockIndex,
-              grid.columns,
-              grid.rows,
-            );
-      setHoveredTarget(
-        resolveHoveredTarget(
-          event.clientX,
-          event.clientY,
-          activeTargets,
-          blockIndex,
-        ),
-      );
-    }
-  };
+      if (isDraggingPieceRef.current) {
+        const activeTargets =
+          targets.length > 0
+            ? targets
+            : findDropTargets(
+                blocksRef.current,
+                blockIndex,
+                currentGrid.columns,
+                currentGrid.rows,
+              );
+        setHoveredTarget(
+          resolveHoveredTarget(
+            event.clientX,
+            event.clientY,
+            activeTargets,
+            blockIndex,
+          ),
+        );
+        if (event.cancelable) event.preventDefault();
+      }
+    };
 
-  const handlePiecePointerUp = (event: ReactPointerEvent<HTMLCanvasElement>) => {
-    if (dragPointerIdRef.current !== event.pointerId) return;
+    const onUp = (event: PointerEvent) => {
+      if (dragPointerIdRef.current !== event.pointerId) return;
 
-    const blockIndex = selectedBlockIndexRef.current;
-    if (blockIndex != null && isDraggingPieceRef.current && grid) {
-      const targets =
-        dropTargetsRef.current.length > 0
-          ? dropTargetsRef.current
-          : findDropTargets(
-              frame.blocks,
-              blockIndex,
-              grid.columns,
-              grid.rows,
-            );
-      finishPieceDrag(event.clientX, event.clientY, blockIndex, targets);
-    } else {
-      dragPointerIdRef.current = null;
-      dragStartRef.current = null;
-    }
+      const blockIndex = selectedBlockIndexRef.current;
+      const currentGrid = gridRef.current;
+      if (blockIndex != null && isDraggingPieceRef.current && currentGrid) {
+        const targets =
+          dropTargetsRef.current.length > 0
+            ? dropTargetsRef.current
+            : findDropTargets(
+                blocksRef.current,
+                blockIndex,
+                currentGrid.columns,
+                currentGrid.rows,
+              );
+        finishPieceDrag(event.clientX, event.clientY, blockIndex, targets);
+      } else {
+        dragPointerIdRef.current = null;
+        dragStartRef.current = null;
+      }
+    };
 
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
-  };
+    const onCancel = (event: PointerEvent) => {
+      if (dragPointerIdRef.current !== event.pointerId) return;
+      clearPiecePointer();
+    };
 
-  const handlePiecePointerCancel = (event: ReactPointerEvent<HTMLCanvasElement>) => {
-    if (dragPointerIdRef.current !== event.pointerId) return;
-    setIsDraggingPiece(false);
-    setDropTargets([]);
-    setHoveredTarget(null);
-    dragPointerIdRef.current = null;
-    dragStartRef.current = null;
-  };
+    window.addEventListener("pointermove", onMove, { passive: false });
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onCancel);
+
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onCancel);
+    };
+  }, [canEditPieces]);
 
   useLayoutEffect(() => {
     const stage = stageRef.current;
@@ -642,7 +722,6 @@ export function CanvasView({
       ? Math.max(1, Math.round(stageSize.height) || height)
       : Math.max(1, Math.round(displayWidth * (height / width)));
 
-  const showMagnifyCursor = canInspect && !isInspecting;
   const showPieceCursor = canEditPieces && selectedBlockIndex != null;
   const pieceCursorClass = isDraggingPiece
     ? "is-grabbing-piece"
@@ -672,7 +751,6 @@ export function CanvasView({
             ref={canvasRef}
             className={[
               "mosaic-canvas",
-              showMagnifyCursor ? "is-zoom-in" : "",
               canInspect && isInspecting ? "is-zoom-out" : "",
               pieceCursorClass,
             ]
@@ -684,11 +762,8 @@ export function CanvasView({
               width: displayWidth,
               height: displayHeight,
             }}
-            onClick={canInspect ? onToggleInspect : undefined}
+            onClick={canInspect && isInspecting ? onToggleInspect : undefined}
             onPointerDown={canEditPieces ? handlePiecePointerDown : undefined}
-            onPointerMove={canEditPieces ? handlePiecePointerMove : undefined}
-            onPointerUp={canEditPieces ? handlePiecePointerUp : undefined}
-            onPointerCancel={canEditPieces ? handlePiecePointerCancel : undefined}
             aria-label={
               viewOriginal && frame.imageSource
                 ? "Original photo preview"
@@ -710,6 +785,31 @@ export function CanvasView({
       </div>
       {viewOriginal && frame.imageSource ? (
         <span className="canvas-view-original-badge">Original</span>
+      ) : null}
+      {canInspect ? (
+        <div className="canvas-stage-controls">
+          <button
+            type="button"
+            className={`canvas-stage-control-btn${isInspecting ? " is-active" : ""}`}
+            onClick={() => {
+              playUiSound("push");
+              onToggleInspect?.();
+            }}
+            aria-label={
+              isInspecting
+                ? "Exit 100% inspect"
+                : `Inspect at 100% (${nativeSize[0]}×${nativeSize[1]})`
+            }
+            aria-pressed={isInspecting}
+            title={
+              isInspecting
+                ? "Exit 100% inspect"
+                : `Inspect at 100% (${nativeSize[0]}×${nativeSize[1]})`
+            }
+          >
+            <InspectIcon />
+          </button>
+        </div>
       ) : null}
     </div>
   );
