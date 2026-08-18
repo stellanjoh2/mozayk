@@ -91,6 +91,8 @@ type CanvasViewProps = {
   isInspecting?: boolean;
   fillStage?: boolean;
   pieceEditingEnabled?: boolean;
+  /** Timeline is playing — use a cheaper 1080p preview, skip grid blur. */
+  playing?: boolean;
   onToggleInspect?: () => void;
   onMoveBlock?: (blockIndex: number, toCol: number, toRow: number) => void;
   /** Live mosaic backing store — GIF export downscales from this size. */
@@ -105,6 +107,7 @@ export function CanvasView({
   isInspecting = false,
   fillStage = false,
   pieceEditingEnabled = false,
+  playing = false,
   onToggleInspect,
   onMoveBlock,
   onWorkingCanvasSize,
@@ -158,7 +161,9 @@ export function CanvasView({
           typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1,
         )
       : nativeSize;
-  const [width, height] = isInspecting ? nativeSize : workingSize;
+  // Playback stays on the 1080p grid. Display-matching can pick 1440p/2160p
+  // on Retina, and CSS blur at that size crashes the GPU at 30fps.
+  const [width, height] = isInspecting || playing ? nativeSize : workingSize;
   const fitScale =
     isInspecting || stageSize.width <= 0
       ? 1
@@ -337,10 +342,7 @@ export function CanvasView({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    let cancelled = false;
-    const raf = requestAnimationFrame(() => {
-      if (cancelled) return;
-
+    const draw = () => {
       if (viewOriginal && sourceImage) {
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
@@ -387,10 +389,24 @@ export function CanvasView({
           dropBlinkT,
           showDensityGrid: isDraggingPiece,
           displayScale,
+          skipGridBlur: playing,
         });
       } catch (error) {
         console.error(error);
       }
+    };
+
+    // Playback is already rAF-paced — draw this frame now so we don't fall a
+    // paint behind and pile up mosaic renders.
+    if (playing) {
+      draw();
+      return;
+    }
+
+    let cancelled = false;
+    const raf = requestAnimationFrame(() => {
+      if (cancelled) return;
+      draw();
     });
 
     return () => {
@@ -418,6 +434,7 @@ export function CanvasView({
     hoveredTarget,
     pieceDropBlink,
     dropBlinkT,
+    playing,
   ]);
 
   useLayoutEffect(() => {

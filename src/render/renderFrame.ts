@@ -67,6 +67,8 @@ export type RenderOptions = {
   showDensityGrid?: boolean;
   /** Canvas backing pixels per CSS pixel — keeps skeleton stroke at 1px on screen. */
   displayScale?: number;
+  /** Skip Gaussian blur — live 30fps playback OOMs the GPU tab. Export is unchanged. */
+  skipGridBlur?: boolean;
 };
 
 function drawCheckerboard(
@@ -461,14 +463,16 @@ export function renderMosaic(
     console.error(error);
   }
 
-  applyGridBlur(
-    ctx,
-    orientation,
-    settings,
-    width,
-    height,
-    !transparentBackground,
-  );
+  if (!options.skipGridBlur) {
+    applyGridBlur(
+      ctx,
+      orientation,
+      settings,
+      width,
+      height,
+      !transparentBackground,
+    );
+  }
   applyBonusFx(ctx, settings, width, height);
 
   if (textureOverlayImage) {

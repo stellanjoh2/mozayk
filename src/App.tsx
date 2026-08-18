@@ -1154,10 +1154,24 @@ export default function App() {
 
   useEffect(() => {
     if (!playing) return;
-    const timer = window.setInterval(() => {
-      setActiveIndex((index) => (index + 1) % frames.length);
-    }, playbackDelayMs(playbackFps));
-    return () => window.clearInterval(timer);
+    const frameCount = frames.length;
+    if (frameCount <= 1) return;
+    const frameMs = playbackDelayMs(playbackFps);
+    let raf = 0;
+    let last = performance.now();
+    let acc = 0;
+    const tick = (now: number) => {
+      acc += now - last;
+      last = now;
+      if (acc >= frameMs) {
+        const steps = Math.floor(acc / frameMs);
+        acc -= steps * frameMs;
+        setActiveIndex((index) => (index + steps) % frameCount);
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
   }, [playing, frames.length, playbackFps]);
 
   const togglePlay = useCallback(() => {
@@ -1508,6 +1522,7 @@ export default function App() {
           isInspecting={inspecting}
           fillStage={isMobileGate}
           pieceEditingEnabled={!playing && !viewOriginal}
+          playing={playing}
           onToggleInspect={isMobileGate ? undefined : toggleInspect}
           onMoveBlock={handleMoveBlock}
           onWorkingCanvasSize={handleWorkingCanvasSize}
