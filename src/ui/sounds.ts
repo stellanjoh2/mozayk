@@ -79,6 +79,7 @@ const loadingDecoded = new Map<UiSound, Promise<AudioBuffer | null>>();
 let sliderPlaying = false;
 let sliderToken = 0;
 let hoverUntil = 0;
+const HOVER_MIN_INTERVAL_MS = 120;
 
 function createAudioContext(): AudioContext | null {
   const AC = window.AudioContext ?? (window as WindowWithWebkit).webkitAudioContext;
@@ -232,6 +233,11 @@ export function setUiSoundsVolume(volume: number): void {
 
 export function playUiSound(name: UiSound): void {
   if (!prefs.enabled || prefs.volume <= 0) return;
+  if (name === "hover") {
+    const now = performance.now();
+    if (now < hoverUntil) return;
+    hoverUntil = now + HOVER_MIN_INTERVAL_MS;
+  }
   if (isSliderSound(name)) {
     if (sliderPlaying) return;
     sliderPlaying = true;
@@ -291,7 +297,6 @@ function onButtonHover(event: MouseEvent): void {
   const related = event.relatedTarget;
   if (related instanceof Node && el.contains(related)) return;
   if (performance.now() < hoverUntil) return;
-  hoverUntil = performance.now() + 80;
   playUiSound("hover");
 }
 

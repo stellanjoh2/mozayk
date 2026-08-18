@@ -125,6 +125,7 @@ export function CanvasView({
   const selectedBlockIndexRef = useRef<number | null>(null);
   const isDraggingPieceRef = useRef(false);
   const dropTargetsRef = useRef<GridSlot[]>([]);
+  const lastHoveredSlotRef = useRef<string | null>(null);
 
   const stagePadding = isFullscreen ? 0 : STAGE_PADDING;
   const [availW, availH] = stageAvailableSize(
@@ -210,6 +211,21 @@ export function CanvasView({
   useEffect(() => {
     dropTargetsRef.current = dropTargets;
   }, [dropTargets]);
+
+  useEffect(() => {
+    if (!isDraggingPiece) {
+      lastHoveredSlotRef.current = null;
+      return;
+    }
+    if (!hoveredTarget) {
+      lastHoveredSlotRef.current = null;
+      return;
+    }
+    const key = `${hoveredTarget.col},${hoveredTarget.row}`;
+    if (lastHoveredSlotRef.current === key) return;
+    lastHoveredSlotRef.current = key;
+    playUiSound("hover");
+  }, [isDraggingPiece, hoveredTarget]);
 
   const grid =
     width > 0 && height > 0
