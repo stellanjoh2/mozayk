@@ -195,27 +195,37 @@ export function CanvasView({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    if (viewOriginal && sourceImage) {
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-      drawCoverImage(ctx, sourceImage, width, height);
-      return;
-    }
+    let cancelled = false;
+    const raf = requestAnimationFrame(() => {
+      if (cancelled) return;
 
-    try {
-      renderMosaic(canvas, {
-        orientation,
-        settings: frame.settings,
-        blocks: frame.blocks,
-        width,
-        height,
-        sourceImage: frame.settings.showSourceImage ? sourceImage : null,
-        backgroundImage,
-        textureOverlayImage,
-      });
-    } catch (error) {
-      console.error(error);
-    }
+      if (viewOriginal && sourceImage) {
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        drawCoverImage(ctx, sourceImage, width, height);
+        return;
+      }
+
+      try {
+        renderMosaic(canvas, {
+          orientation,
+          settings: frame.settings,
+          blocks: frame.blocks,
+          width,
+          height,
+          sourceImage: frame.settings.showSourceImage ? sourceImage : null,
+          backgroundImage,
+          textureOverlayImage,
+        });
+      } catch (error) {
+        console.error(error);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf);
+    };
   }, [
     viewOriginal,
     sourceImage,

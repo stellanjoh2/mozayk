@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { playUiSound, type UiSound } from "../ui/sounds";
+import { TypewriterReveal } from "./TypewriterReveal";
 
 type ConfirmDialogProps = {
   open: boolean;
@@ -61,7 +62,7 @@ export function ConfirmDialog({
 
   return (
     <div
-      className={["reset-canvas-backdrop", entered ? "is-open" : ""].filter(Boolean).join(" ")}
+      className={["modal-backdrop", entered ? "is-open" : ""].filter(Boolean).join(" ")}
       role="presentation"
       onClick={() => {
         playUiSound("close");
@@ -69,23 +70,33 @@ export function ConfirmDialog({
       }}
       onTransitionEnd={(event) => {
         if (event.target !== event.currentTarget) return;
-        if (!open) setMounted(false);
+        if (!open && event.propertyName === "opacity") setMounted(false);
       }}
     >
       <div
-        className="reset-canvas-dialog"
+        className="modal-dialog reset-canvas-dialog"
         role="alertdialog"
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descId}
         onClick={(event) => event.stopPropagation()}
       >
-        <h2 id={titleId} className="reset-canvas-dialog__title">
-          {title}
-        </h2>
-        <p id={descId} className="reset-canvas-dialog__message">
-          {message}
-        </p>
+        <TypewriterReveal
+          as="h2"
+          id={titleId}
+          className="reset-canvas-dialog__title"
+          text={title}
+          active={entered}
+          caret
+        />
+        <TypewriterReveal
+          as="p"
+          id={descId}
+          className="reset-canvas-dialog__message"
+          text={message}
+          active={entered}
+          caret
+        />
         <div className="reset-canvas-dialog__actions">
           <button
             ref={cancelRef}

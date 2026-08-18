@@ -116,6 +116,10 @@ function run(): void {
   );
   assert(applied[1].settings.hueShift === 40, "second frame gets the look");
   assert(applied[2].settings.hueShift === 40, "third frame gets the look");
+  assert(
+    applied[1].settings.gridOverlaySeed !== applied[2].settings.gridOverlaySeed,
+    "apply look mints a unique overlay seed per destination frame",
+  );
   assert(applied[1].blocks[0].width === 4, "second mosaic geometry stays");
   assert(applied[2].blocks[1].height === 3, "third mosaic geometry stays");
   assert(

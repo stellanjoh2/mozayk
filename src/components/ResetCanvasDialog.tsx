@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { playUiSound } from "../ui/sounds";
+import { TypewriterReveal } from "./TypewriterReveal";
 
 type ResetCanvasDialogProps = {
   open: boolean;
@@ -47,7 +48,7 @@ export function ResetCanvasDialog({ open, onConfirm, onCancel }: ResetCanvasDial
 
   return (
     <div
-      className={["reset-canvas-backdrop", entered ? "is-open" : ""].filter(Boolean).join(" ")}
+      className={["modal-backdrop", entered ? "is-open" : ""].filter(Boolean).join(" ")}
       role="presentation"
       onClick={() => {
         playUiSound("close");
@@ -55,23 +56,31 @@ export function ResetCanvasDialog({ open, onConfirm, onCancel }: ResetCanvasDial
       }}
       onTransitionEnd={(event) => {
         if (event.target !== event.currentTarget) return;
-        if (!open) setMounted(false);
+        if (!open && event.propertyName === "opacity") setMounted(false);
       }}
     >
       <div
-        className="reset-canvas-dialog"
+        className="modal-dialog reset-canvas-dialog"
         role="alertdialog"
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descId}
         onClick={(event) => event.stopPropagation()}
       >
-        <h2 id={titleId} className="reset-canvas-dialog__title">
-          Reset canvas
-        </h2>
-        <p id={descId} className="reset-canvas-dialog__message">
-          Clear the current mosaic and restore the default canvas? This can be undone.
-        </p>
+        <TypewriterReveal
+          as="h2"
+          id={titleId}
+          className="reset-canvas-dialog__title"
+          text="Reset canvas"
+          active={entered}
+        />
+        <TypewriterReveal
+          as="p"
+          id={descId}
+          className="reset-canvas-dialog__message"
+          text="Clear the current mosaic and restore the default canvas? This can be undone."
+          active={entered}
+        />
         <div className="reset-canvas-dialog__actions">
           <button
             ref={cancelRef}

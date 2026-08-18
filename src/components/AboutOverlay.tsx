@@ -57,7 +57,7 @@ export function AboutOverlay({ open, onClose }: AboutOverlayProps) {
       }}
       onTransitionEnd={(event) => {
         if (event.target !== event.currentTarget) return;
-        if (!open) setMounted(false);
+        if (!open && event.propertyName === "opacity") setMounted(false);
       }}
     >
       <div

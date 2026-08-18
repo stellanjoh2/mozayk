@@ -12,6 +12,7 @@ import {
   type VideoProbe,
 } from "../import/videoImport";
 import { playUiSound } from "../ui/sounds";
+import { TypewriterReveal } from "./TypewriterReveal";
 
 type VideoImportDialogProps = {
   open: boolean;
@@ -73,7 +74,7 @@ export function VideoImportDialog({
 
   return (
     <div
-      className={["reset-canvas-backdrop", entered ? "is-open" : ""].filter(Boolean).join(" ")}
+      className={["modal-backdrop", entered ? "is-open" : ""].filter(Boolean).join(" ")}
       role="presentation"
       onClick={() => {
         playUiSound("close");
@@ -81,31 +82,52 @@ export function VideoImportDialog({
       }}
       onTransitionEnd={(event) => {
         if (event.target !== event.currentTarget) return;
-        if (!open) setMounted(false);
+        if (!open && event.propertyName === "opacity") setMounted(false);
       }}
     >
       <div
-        className="reset-canvas-dialog video-import-dialog"
+        className="modal-dialog reset-canvas-dialog video-import-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descId}
         onClick={(event) => event.stopPropagation()}
       >
-        <h2 id={titleId} className="reset-canvas-dialog__title">
-          Import video
-        </h2>
+        <TypewriterReveal
+          as="h2"
+          id={titleId}
+          className="reset-canvas-dialog__title"
+          text="Import video"
+          active={entered}
+          caret
+        />
         <p id={descId} className="reset-canvas-dialog__message">
-          <span className="video-import-dialog__file">{fileName}</span>
-          <span className="video-import-dialog__meta">
-            {formatClipDuration(probe.duration)} clip ·{" "}
-            {probe.orientation.charAt(0).toUpperCase() + probe.orientation.slice(1)}
-          </span>
+          <TypewriterReveal
+            as="span"
+            className="video-import-dialog__file"
+            text={fileName}
+            active={entered}
+            caret={false}
+          />
+          <TypewriterReveal
+            as="span"
+            className="video-import-dialog__meta"
+            text={`${formatClipDuration(probe.duration)} clip · ${
+              probe.orientation.charAt(0).toUpperCase() + probe.orientation.slice(1)
+            }`}
+            active={entered}
+            caret={false}
+          />
           {clipTruncated ? (
-            <span className="video-import-dialog__note">
-              Mozayk uses the first {MAX_VIDEO_DURATION_S} seconds (
-              {formatClipDuration(importDurationS)}).
-            </span>
+            <TypewriterReveal
+              as="span"
+              className="video-import-dialog__note"
+              text={`Mozayk uses the first ${MAX_VIDEO_DURATION_S} seconds (${formatClipDuration(
+                importDurationS,
+              )}).`}
+              active={entered}
+              caret={false}
+            />
           ) : null}
         </p>
 

@@ -17,6 +17,21 @@ export type TextureOverlayBlendMode =
 export type ShapeType = "block" | "sphere" | "ring" | "triangle" | "cross";
 export type LayoutSource = "procedural" | "imported";
 
+export const RANDOMIZE_PAUSE_KEYS = [
+  "fillAmount",
+  "weight",
+  "scaleBlend",
+  "ringThickness",
+  "randomHeight",
+  "randomWidth",
+  "gridOverlay",
+  "gridCrosses",
+  "gridBlur",
+  "dataFields",
+] as const;
+
+export type RandomizePauseKey = (typeof RANDOMIZE_PAUSE_KEYS)[number];
+
 export type ShapePalette = {
   sphere: boolean;
   ring: boolean;
@@ -143,6 +158,13 @@ export type FrameSettings = {
   textureOverlayTint?: string;
   /** Imported image layouts are reshuffled instead of procedurally regenerated. */
   layoutSource?: LayoutSource;
+  /** Pause icon — skip these controls in Randomize All and keep their instance on Apply Look. */
+  randomizePaused?: Partial<Record<RandomizePauseKey, boolean>>;
+  /** Overlay path instance. Copied when paused; minted per frame on Apply Look. */
+  gridOverlaySeed?: number;
+  gridCrossesSeed?: number;
+  gridBlurSeed?: number;
+  dataFieldsSeed?: number;
 };
 
 export type TextureOverlayData = {

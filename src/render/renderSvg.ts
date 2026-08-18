@@ -174,7 +174,12 @@ function svgGridOverlay(
   const lines = resolveGridOverlayStyle(settings);
   if (lines) {
     const grid = gridOverlayDimensions(orientation, width, height, lines);
-    parts.push(svgOverlayPath(lines, gridOverlayPathData(grid, lines.chaos)));
+    parts.push(
+      svgOverlayPath(
+        lines,
+        gridOverlayPathData(grid, lines.chaos, settings.gridOverlaySeed ?? 0),
+      ),
+    );
   }
 
   const crosses = resolveGridCrossesStyle(settings);
@@ -183,7 +188,12 @@ function svgGridOverlay(
     parts.push(
       svgOverlayPath(
         crosses,
-        gridCrossesPathData(grid, crosses.chaos, crosses.size),
+        gridCrossesPathData(
+          grid,
+          crosses.chaos,
+          crosses.size,
+          settings.gridCrossesSeed ?? 0,
+        ),
       ),
     );
   }

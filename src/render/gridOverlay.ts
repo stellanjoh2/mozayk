@@ -133,10 +133,16 @@ function parseEdgeKey(key: string): [number, number] {
  * Broken hatch as a lattice edge subset: remove + U-detour, then prune any
  * interior degree-1 stubs so every stroke ends at a junction or the canvas edge.
  */
-function brokenGridPathData(grid: GridDimensions, chaos: number): string {
+function brokenGridPathData(
+  grid: GridDimensions,
+  chaos: number,
+  instanceSeed = 0,
+): string {
   const { columns, rows, width, height } = grid;
   const t = chaos / 100;
-  const rng = mulberry32(hashSeed(columns, rows, width, height, chaos));
+  const rng = mulberry32(
+    hashSeed(columns, rows, width, height, chaos, instanceSeed),
+  );
 
   const hEdges = new Set<string>();
   const vEdges = new Set<string>();
@@ -241,9 +247,10 @@ function brokenGridPathData(grid: GridDimensions, chaos: number): string {
 export function gridOverlayPathData(
   grid: GridDimensions,
   chaos = 0,
+  instanceSeed = 0,
 ): string {
   if (chaos <= 0) return perfectGridPathData(grid);
-  return brokenGridPathData(grid, Math.min(100, chaos));
+  return brokenGridPathData(grid, Math.min(100, chaos), instanceSeed);
 }
 
 /** Pluses on interior hatch intersections. Size is full arm span in px. */
@@ -251,13 +258,16 @@ export function gridCrossesPathData(
   grid: GridDimensions,
   chaos = 0,
   size = GRID_CROSS_SIZE_DEFAULT,
+  instanceSeed = 0,
 ): string {
   const { columns, rows, width, height } = grid;
   const half = resolveGridCrossSize(size) / 2;
   const t = Math.min(100, Math.max(0, chaos)) / 100;
   const rng =
     t > 0
-      ? mulberry32(hashSeed(columns, rows, width, height, chaos, 8))
+      ? mulberry32(
+          hashSeed(columns, rows, width, height, chaos, 8, instanceSeed),
+        )
       : null;
   const dropRate = t * 0.55;
   const parts: string[] = [];

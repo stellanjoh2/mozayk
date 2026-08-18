@@ -15,9 +15,11 @@ const COL_STRIDE = 4;
 /** Row spacing within a strip — combined with COL_STRIDE → ~1/16 of cells. */
 const ROW_STRIDE = 4;
 
-export const DATA_FIELDS_SIZE_MIN = 1;
+// 1 was producing “pixel glitch” sized glyphs that were hard to read.
+export const DATA_FIELDS_SIZE_MIN = 2;
 export const DATA_FIELDS_SIZE_MAX = 8;
-export const DATA_FIELDS_SIZE_DEFAULT = 1;
+// Default scale chosen so enabled Data Fields are immediately legible.
+export const DATA_FIELDS_SIZE_DEFAULT = 3;
 export const DATA_FIELDS_COLOR_DEFAULT = "#ffffff";
 export const DATA_FIELDS_SPAWN_MIN = 0;
 export const DATA_FIELDS_SPAWN_MAX = 5;
@@ -206,7 +208,7 @@ export function drawDataFields(
   if (count <= 0) return;
 
   const rng = mulberry32(
-    hashSeed(columns, rows, width, height, spawnRate, 0xdf91),
+    hashSeed(columns, rows, width, height, spawnRate, 0xdf91, settings.dataFieldsSeed ?? 0),
   );
   for (let i = 0; i < count; i++) {
     const j = i + Math.floor(rng() * (candidates.length - i));

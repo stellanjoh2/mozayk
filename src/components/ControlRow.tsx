@@ -1,3 +1,5 @@
+import { useLayoutEffect, useState } from "react";
+
 type SliderRowProps = {
   label: string;
   hint?: string;
@@ -27,16 +29,32 @@ export function SliderRow({
   disabled = false,
   onChange,
 }: SliderRowProps) {
+  const [dragValue, setDragValue] = useState<number | null>(null);
+  const displayValue = dragValue ?? value;
+
   const span = max - min;
-  const val = span === 0 ? 0 : ((value - min) / span) * 100;
+  const val = span === 0 ? 0 : ((displayValue - min) / span) * 100;
   const origin = min < 0 && max > 0 ? ((0 - min) / span) * 100 : 0;
+
+  // Local overlay lets the fill lead App re-renders during a drag. Drop it when
+  // the value comes from elsewhere (other frame, paste, undo).
+  useLayoutEffect(() => {
+    setDragValue(null);
+  }, [value]);
+
+  const handleChange = (next: number) => {
+    setDragValue(next);
+    onChange(next);
+  };
+
+  const endDrag = () => setDragValue(null);
 
   return (
     <label className={`control-row${disabled ? " control-row--muted" : ""}`}>
       <span className="control-row__label">
         <HintLabel hint={hint}>{label}</HintLabel>
         <span className="control-row__value">
-          {formatValue ? formatValue(value) : `${value}${suffix ?? ""}`}
+          {formatValue ? formatValue(displayValue) : `${displayValue}${suffix ?? ""}`}
         </span>
       </span>
       <input
@@ -44,7 +62,7 @@ export function SliderRow({
         min={min}
         max={max}
         step={step}
-        value={value}
+        value={displayValue}
         disabled={disabled}
         style={
           {
@@ -52,7 +70,10 @@ export function SliderRow({
             ["--origin"]: origin,
           } as React.CSSProperties
         }
-        onChange={(e) => onChange(Number(e.target.value))}
+        onPointerDown={() => setDragValue(value)}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+        onChange={(e) => handleChange(Number(e.target.value))}
       />
     </label>
   );

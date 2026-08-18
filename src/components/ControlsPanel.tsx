@@ -7,6 +7,7 @@ import {
   GIF_FRAME_DELAY_PRESETS,
   GIPHY_DURATION_MAX_S,
   GIPHY_DURATION_RECOMMENDED_S,
+  HEAVY_BLUR_FRAME_THRESHOLD,
   MAX_COLORS,
   MAX_FRAMES,
   clampGifFrameDelayCs,
@@ -64,9 +65,13 @@ import { SUPPORTED_VIDEO_ACCEPT } from "../import/supportedVideoTypes";
 import { isMzkFile, MZK_EXTENSION } from "../project/mzkFormat";
 import { BrandLogo } from "./BrandLogo";
 import { AboutOverlay } from "./AboutOverlay";
+import { ConfirmDialog } from "./ConfirmDialog";
 import { ColorSwatch } from "./ColorSwatch";
 import { PalettePanel } from "./PalettePanel";
 import type { PalettePreset } from "../presets/palettePresets";
+import {
+  RemoveIconButton,
+} from "./ControlRowWithPause";
 import { HeadlineToggle, SliderRow, ToggleRow } from "./ControlRow";
 import { HintLabel } from "./HintLabel";
 import {
@@ -213,6 +218,7 @@ export function ControlsPanel({
   const [normalCursor, setNormalCursorOn] = useState(getNormalCursor);
   const [chromeTheme, setChromeThemeOn] = useState(getChromeTheme);
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [heavyBlurDialogOpen, setHeavyBlurDialogOpen] = useState(false);
   const [themesOpen, setThemesOpen] = useState(false);
   const [themesAnimating, setThemesAnimating] = useState(false);
   const shapes = settings.shapes ?? {
@@ -271,7 +277,7 @@ export function ControlsPanel({
     if (!pendingAddColorRef.current) return;
     pendingAddColorRef.current = false;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    setAddingColorIndex(settings.colors.length - 1);
+    setAddingColorIndex(0);
     const timer = window.setTimeout(() => setAddingColorIndex(null), 250);
     return () => window.clearTimeout(timer);
   }, [settings.colors.length]);
@@ -286,7 +292,6 @@ export function ControlsPanel({
 
   const handleRemoveColor = (index: number) => {
     if (settings.colors.length <= 1 || removingColorIndex !== null) return;
-    playUiSound("close");
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       onRemoveColor(index);
       return;
@@ -306,7 +311,20 @@ export function ControlsPanel({
       onApplyPreset={onApplyPalettePreset}
       onAnimatingChange={setThemesAnimating}
     />
+    <ConfirmDialog
+      open={heavyBlurDialogOpen}
+      title="Save your project"
+      message="You're adding blur to a project that's already getting quite heavy. Please save now just in case."
+      confirmLabel="Save"
+      cancelLabel="OK"
+      onConfirm={() => {
+        onSaveProject();
+        setHeavyBlurDialogOpen(false);
+      }}
+      onCancel={() => setHeavyBlurDialogOpen(false)}
+    />
     <aside ref={panelRef} className="controls-panel">
+      <div className="controls-panel__zoom">
       <header className="controls-panel__head">
         <BrandLogo
           className="controls-panel__logo"
@@ -729,18 +747,10 @@ export function ControlsPanel({
           </button>
           {frame.backgroundImage ? (
             <div className="color-swatch__actions">
-              <button
-                type="button"
-                className="color-swatch__remove"
-                aria-label="Remove background image"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  playUiSound("close");
-                  onBackgroundImageClear();
-                }}
-              >
-                ×
-              </button>
+              <RemoveIconButton
+                ariaLabel="Remove background image"
+                onClick={onBackgroundImageClear}
+              />
             </div>
           ) : null}
         </div>
@@ -1010,7 +1020,7 @@ export function ControlsPanel({
         />
         <SliderRow
           label="Size"
-          hint="Bitmap glyph scale · 1 ≈ 8pt"
+          hint="Bitmap glyph scale · 2 ≈ 16pt (min)"
           value={settings.dataFieldsSize ?? DATA_FIELDS_SIZE_DEFAULT}
           min={DATA_FIELDS_SIZE_MIN}
           max={DATA_FIELDS_SIZE_MAX}
@@ -1068,7 +1078,16 @@ export function ControlsPanel({
           title="Grid Blur"
           hint="Gaussian blur over the finished mosaic · PNG only"
           checked={Boolean(settings.gridBlur)}
-          onChange={(gridBlur) => onSettingsChange({ gridBlur }, false)}
+          onChange={(gridBlur) => {
+            onSettingsChange({ gridBlur }, false);
+            if (
+              gridBlur &&
+              !settings.gridBlur &&
+              frameCount >= HEAVY_BLUR_FRAME_THRESHOLD
+            ) {
+              setHeavyBlurDialogOpen(true);
+            }
+          }}
         />
         <label
           className={`control-row${settings.gridBlur ? "" : " control-row--muted"}`}
@@ -1670,6 +1689,7 @@ export function ControlsPanel({
         </p>
       </footer>
       <AboutOverlay open={aboutOpen} onClose={() => setAboutOpen(false)} />
+      </div>
     </aside>
     </>
   );

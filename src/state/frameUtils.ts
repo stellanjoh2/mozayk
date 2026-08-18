@@ -18,6 +18,7 @@ import {
 } from "../layout/generateLayout";
 import {
   carryOverBlockColors,
+  mintChaosSeeds,
   randomizeLayoutSettings,
 } from "../layout/randomizeLayoutSettings";
 import {
@@ -307,6 +308,9 @@ export function applyLookToFrame(
   );
   if (settings.layoutSource === "imported" && !frame.imageSource) {
     settings = { ...settings, layoutSource: "procedural" };
+  }
+  if (frame !== look) {
+    settings = mintChaosSeeds(settings);
   }
 
   const next: Frame = {
@@ -672,12 +676,12 @@ export function addColorToSettings(settings: FrameSettings): FrameSettings {
   const palette = ["#ff0000", "#00ff00", "#0000ff", "#ffff00"];
   const next =
     palette.find((color) => !settings.colors.includes(color)) ?? "#888888";
-  const colors = [...settings.colors, next];
+  const colors = [next, ...settings.colors];
   return {
     ...settings,
     colors,
     colorAmounts: equalColorAmounts(colors.length),
-    colorsLocked: [...colorsLockedForSettings(settings), false],
+    colorsLocked: [false, ...colorsLockedForSettings(settings)],
   };
 }
 

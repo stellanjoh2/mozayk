@@ -187,84 +187,86 @@ export function PalettePanel({
         if (!open) setMounted(false);
       }}
     >
-      <header className="palette-panel__head">
-        <h2 className="palette-panel__title">Pick a Theme</h2>
-        <button
-          type="button"
-          className="palette-panel__close"
-          aria-label="Close"
-          data-ui-sound="close"
-          onClick={onClose}
-        >
-          <PlusIcon />
-        </button>
-      </header>
+      <div className="palette-panel__inner">
+        <header className="palette-panel__head">
+          <h2 className="palette-panel__title">Pick a Theme</h2>
+          <button
+            type="button"
+            className="palette-panel__close"
+            aria-label="Close"
+            data-ui-sound="close"
+            onClick={onClose}
+          >
+            <PlusIcon />
+          </button>
+        </header>
 
-      <div
-        ref={tabsRef}
-        className="palette-panel__tabs"
-        role="tablist"
-        aria-label="Theme categories"
-      >
-        <button
-          type="button"
-          role="tab"
-          aria-selected={paletteTab === "common"}
-          className={
-            paletteTab === "common"
-              ? "palette-panel__tab is-active"
-              : "palette-panel__tab"
-          }
-          onClick={() => selectPaletteTab("common")}
+        <div
+          ref={tabsRef}
+          className="palette-panel__tabs"
+          role="tablist"
+          aria-label="Theme categories"
         >
-          Common
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={paletteTab === "retro"}
-          className={
-            paletteTab === "retro"
-              ? "palette-panel__tab is-active"
-              : "palette-panel__tab"
-          }
-          onClick={() => selectPaletteTab("retro")}
-        >
-          Retro
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={paletteTab === "feral"}
-          className={
-            paletteTab === "feral"
-              ? "palette-panel__tab is-active"
-              : "palette-panel__tab"
-          }
-          onClick={() => selectPaletteTab("feral")}
-        >
-          Feral
-        </button>
-        <span ref={tabLineRef} className="palette-panel__tab-line" aria-hidden />
-      </div>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={paletteTab === "common"}
+            className={
+              paletteTab === "common"
+                ? "palette-panel__tab is-active"
+                : "palette-panel__tab"
+            }
+            onClick={() => selectPaletteTab("common")}
+          >
+            Common
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={paletteTab === "retro"}
+            className={
+              paletteTab === "retro"
+                ? "palette-panel__tab is-active"
+                : "palette-panel__tab"
+            }
+            onClick={() => selectPaletteTab("retro")}
+          >
+            Retro
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={paletteTab === "feral"}
+            className={
+              paletteTab === "feral"
+                ? "palette-panel__tab is-active"
+                : "palette-panel__tab"
+            }
+            onClick={() => selectPaletteTab("feral")}
+          >
+            Feral
+          </button>
+          <span ref={tabLineRef} className="palette-panel__tab-line" aria-hidden />
+        </div>
 
-      <div ref={scrollRef} className="palette-panel__scroll">
-        <PaletteGallery
-          layout="stack"
-          presets={activePresets}
-          onApplyPreset={onApplyPreset}
-        />
+        <div ref={scrollRef} className="palette-panel__scroll">
+          <PaletteGallery
+            layout="stack"
+            presets={activePresets}
+            onApplyPreset={onApplyPreset}
+          />
+        </div>
+        <footer className="palette-panel__foot">
+          <button
+            type="button"
+            className="panel-btn"
+            data-ui-sound="close"
+            onClick={onClose}
+          >
+            Close
+          </button>
+        </footer>
       </div>
-      <footer className="palette-panel__foot">
-        <button
-          type="button"
-          className="panel-btn"
-          data-ui-sound="close"
-          onClick={onClose}
-        >
-          Close
-        </button>
-      </footer>
     </aside>
   );
 }

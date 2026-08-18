@@ -1,5 +1,7 @@
 /** Soft-coded limits — expected to change later. */
 export const MAX_FRAMES = 150;
+/** Warn before adding grid blur on projects this large. */
+export const HEAVY_BLUR_FRAME_THRESHOLD = 90;
 export const MAX_COLORS = 8;
 export const MAX_UNDO = 10;
 /** Video import samples up to this many seconds (first N seconds if longer). */

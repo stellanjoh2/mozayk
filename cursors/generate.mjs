@@ -166,7 +166,7 @@ function sheetSvg(entries) {
           .trim();
       const scale = 88 / SIZE;
       return `<g transform="translate(${x} ${y})">
-  <rect width="108" height="176" fill="#0f0f0f"/>
+  <rect width="108" height="176" fill="#0e0e0e"/>
   <rect x="108" width="108" height="176" fill="#e8e8e8"/>
   <g transform="translate(10 24) scale(${scale})">${inner(darkSvg)}</g>
   <g transform="translate(118 24) scale(${scale})">${inner(lightSvg)}</g>
@@ -176,7 +176,7 @@ function sheetSvg(entries) {
     .join("\n");
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
-  <rect width="100%" height="100%" fill="#151515"/>
+  <rect width="100%" height="100%" fill="#131313"/>
   <text x="${pad}" y="28" fill="#ff5300" font-size="16" font-family="ui-monospace, monospace">mozayk cursors · dark / light</text>
 ${tiles}
 </svg>
@@ -209,7 +209,7 @@ function previewHtml(cards) {
       body {
         margin: 0;
         font-family: "Bitcount Grid Single", ui-monospace, monospace;
-        background: #0f0f0f;
+        background: #0e0e0e;
         color: rgba(255,255,255,0.92);
         padding: 32px;
       }
@@ -237,7 +237,7 @@ function previewHtml(cards) {
         height: 168px;
         margin-bottom: 12px;
         background-image:
-          linear-gradient(#151515, #151515),
+          linear-gradient(#131313, #131313),
           linear-gradient(#e8e8e8, #e8e8e8),
           linear-gradient(45deg, #2e1ebc 25%, #cf41f2 25%, #cf41f2 50%, #ff5300 50%, #ff5300 75%, #41f24b 75%);
         background-size: 33.34% 100%, 33.34% 100%, 33.34% 100%;

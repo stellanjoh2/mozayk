@@ -242,7 +242,7 @@ function drawGridOverlay(
   const lines = resolveGridOverlayStyle(settings);
   if (lines) {
     const grid = gridOverlayDimensions(orientation, width, height, lines);
-    strokeOverlayPath(ctx, lines, gridOverlayPathData(grid, lines.chaos));
+    strokeOverlayPath(ctx, lines, gridOverlayPathData(grid, lines.chaos, settings.gridOverlaySeed ?? 0));
   }
 
   const crosses = resolveGridCrossesStyle(settings);
@@ -251,7 +251,12 @@ function drawGridOverlay(
     strokeOverlayPath(
       ctx,
       crosses,
-      gridCrossesPathData(grid, crosses.chaos, crosses.size),
+      gridCrossesPathData(
+        grid,
+        crosses.chaos,
+        crosses.size,
+        settings.gridCrossesSeed ?? 0,
+      ),
     );
   }
 }

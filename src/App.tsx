@@ -15,6 +15,7 @@ import {
 } from "./config";
 import { CanvasView, Timeline } from "./components/CanvasView";
 import { ControlsPanel, MAX_FRAMES } from "./components/ControlsPanel";
+import { ConfirmDialog } from "./components/ConfirmDialog";
 import { ImportErrorDialog } from "./components/ImportErrorDialog";
 import { MobileGate } from "./components/MobileGate";
 import { ResetCanvasDialog } from "./components/ResetCanvasDialog";
@@ -88,9 +89,16 @@ import {
   validateVideoFile,
 } from "./import/supportedVideoTypes";
 import {
+  clearDraft,
+  readDraftJson,
+  writeDraftJson,
+} from "./project/draftStore";
+import {
   defaultMzkFileName,
+  parseMzkProject,
   readMzkFile,
   serializeMzkProject,
+  type MzkProject,
 } from "./project/mzkFormat";
 import type { Frame, FrameSettings, Orientation } from "./types";
 
@@ -99,6 +107,8 @@ import "./App.css";
 const LAYOUT_REGEN_MS = 280;
 /** Idle gap after which continuous edits (sliders) become a new undo step. */
 const UNDO_COALESCE_MS = 400;
+/** Idle gap before writing the in-memory project to IndexedDB. */
+const AUTOSAVE_MS = 400;
 const MOBILE_GATE_MQ = "(max-width: 900px)";
 
 function useMobileGate(): boolean {
@@ -178,6 +188,8 @@ export default function App() {
     null,
   );
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [pendingDraft, setPendingDraft] = useState<MzkProject | null>(null);
+  const [draftChecked, setDraftChecked] = useState(false);
   const [viewOriginal, setViewOriginal] = useState(false);
   const [inspecting, setInspecting] = useState(false);
   const inspectingRef = useRef(inspecting);
@@ -187,6 +199,8 @@ export default function App() {
   const [toast, setToast] = useState<string | null>(null);
   const layoutRegenTimer = useRef<number | null>(null);
   const shapeRerollTimer = useRef<number | null>(null);
+  const flushLayoutRegenRef = useRef<(() => void) | null>(null);
+  const flushShapeRerollRef = useRef<(() => void) | null>(null);
   const appRef = useRef<HTMLDivElement>(null);
   const activeIndexRef = useRef(activeIndex);
   const orientationRef = useRef(orientation);
@@ -198,11 +212,50 @@ export default function App() {
   const undoCoalesceTimer = useRef<number | null>(null);
   const styleLookRef = useRef<Frame | null>(null);
   const [canPasteStyle, setCanPasteStyle] = useState(false);
+  const exportPresetRef = useRef(exportPreset);
+  const mp4PresetRef = useRef(mp4Preset);
+  const gifPresetRef = useRef(gifPreset);
+  const gifFrameDelayCsRef = useRef(gifFrameDelayCs);
+  const playbackFpsRef = useRef(playbackFps);
+  const pendingDraftRef = useRef(pendingDraft);
+  const draftCheckedRef = useRef(draftChecked);
+  const lastWrittenJsonRef = useRef<string | null>(null);
+  const importingImageRef = useRef(importingImage);
+  const loadingProjectRef = useRef(loadingProject);
 
   activeIndexRef.current = activeIndex;
   orientationRef.current = orientation;
   framesRef.current = frames;
   inspectingRef.current = inspecting;
+  exportPresetRef.current = exportPreset;
+  mp4PresetRef.current = mp4Preset;
+  gifPresetRef.current = gifPreset;
+  gifFrameDelayCsRef.current = gifFrameDelayCs;
+  playbackFpsRef.current = playbackFps;
+  pendingDraftRef.current = pendingDraft;
+  draftCheckedRef.current = draftChecked;
+  importingImageRef.current = importingImage;
+  loadingProjectRef.current = loadingProject;
+
+  const currentProject = useCallback((): MzkProject => ({
+    orientation: orientationRef.current,
+    frames: framesRef.current,
+    activeIndex: activeIndexRef.current,
+    exportPreset: exportPresetRef.current,
+    mp4Preset: mp4PresetRef.current,
+    gifPreset: gifPresetRef.current,
+    gifFrameDelayCs: gifFrameDelayCsRef.current,
+    playbackFps: playbackFpsRef.current,
+  }), []);
+
+  const writeDraftNow = useCallback(() => {
+    if (!draftCheckedRef.current || pendingDraftRef.current) return;
+    if (importingImageRef.current || loadingProjectRef.current) return;
+    const json = serializeMzkProject(currentProject());
+    if (json === lastWrittenJsonRef.current) return;
+    lastWrittenJsonRef.current = json;
+    void writeDraftJson(json).catch(() => {});
+  }, [currentProject]);
 
   const handleWorkingCanvasSize = useCallback(
     (width: number, height: number) => {
@@ -299,6 +352,60 @@ export default function App() {
     });
   }, [resetUndoCoalesce]);
 
+  const applyProject = useCallback(
+    async (project: MzkProject, toastMessage: string) => {
+      const dataUrls = new Set<string>();
+      for (const frame of project.frames) {
+        if (frame.imageSource?.dataUrl) dataUrls.add(frame.imageSource.dataUrl);
+        if (frame.textureOverlay?.dataUrl) {
+          dataUrls.add(frame.textureOverlay.dataUrl);
+        }
+        if (frame.backgroundImage?.dataUrl) {
+          dataUrls.add(frame.backgroundImage.dataUrl);
+        }
+      }
+      await Promise.all(
+        [...dataUrls].map((dataUrl) => ensureCachedSourceImage(dataUrl)),
+      );
+
+      pushUndoCheckpoint();
+      if (layoutRegenTimer.current) {
+        window.clearTimeout(layoutRegenTimer.current);
+        layoutRegenTimer.current = null;
+      }
+      if (shapeRerollTimer.current) {
+        window.clearTimeout(shapeRerollTimer.current);
+        shapeRerollTimer.current = null;
+      }
+
+      const mp4PresetValue = clampMp4ExportPreset(
+        project.orientation,
+        project.mp4Preset,
+      );
+      setOrientation(project.orientation);
+      orientationRef.current = project.orientation;
+      setFrames(project.frames);
+      framesRef.current = project.frames;
+      setActiveIndex(project.activeIndex);
+      activeIndexRef.current = project.activeIndex;
+      setExportPreset(project.exportPreset);
+      exportPresetRef.current = project.exportPreset;
+      setMp4Preset(mp4PresetValue);
+      mp4PresetRef.current = mp4PresetValue;
+      setGifPreset(project.gifPreset);
+      gifPresetRef.current = project.gifPreset;
+      setGifFrameDelayCs(project.gifFrameDelayCs);
+      gifFrameDelayCsRef.current = project.gifFrameDelayCs;
+      setPlaybackFps(project.playbackFps);
+      playbackFpsRef.current = project.playbackFps;
+      setPlaying(false);
+      setViewOriginal(false);
+      setInspecting(false);
+      setToast(toastMessage);
+    },
+    [pushUndoCheckpoint],
+  );
+
   const undo = useCallback(() => {
     const previous = undoStackRef.current[undoStackRef.current.length - 1];
     if (!previous) return;
@@ -355,19 +462,22 @@ export default function App() {
   }, [pushUndoCheckpoint, updateActiveFrame]);
 
   const scheduleLayoutRegen = useCallback(() => {
-    if (layoutRegenTimer.current) {
-      window.clearTimeout(layoutRegenTimer.current);
-    }
+    if (layoutRegenTimer.current) return;
     layoutRegenTimer.current = window.setTimeout(() => {
       layoutRegenTimer.current = null;
       regenerateLayout();
     }, LAYOUT_REGEN_MS);
   }, [regenerateLayout]);
 
+  const flushLayoutRegen = useCallback(() => {
+    if (!layoutRegenTimer.current) return;
+    window.clearTimeout(layoutRegenTimer.current);
+    layoutRegenTimer.current = null;
+    regenerateLayout();
+  }, [regenerateLayout]);
+
   const scheduleShapeReroll = useCallback(() => {
-    if (shapeRerollTimer.current) {
-      window.clearTimeout(shapeRerollTimer.current);
-    }
+    if (shapeRerollTimer.current) return;
     shapeRerollTimer.current = window.setTimeout(() => {
       shapeRerollTimer.current = null;
       updateActiveFrame((frame) => ({
@@ -376,6 +486,28 @@ export default function App() {
       }));
     }, LAYOUT_REGEN_MS);
   }, [updateActiveFrame]);
+
+  const flushShapeReroll = useCallback(() => {
+    if (!shapeRerollTimer.current) return;
+    window.clearTimeout(shapeRerollTimer.current);
+    shapeRerollTimer.current = null;
+    updateActiveFrame((frame) => ({
+      ...frame,
+      blocks: rerollShapes(frame.blocks, frame.settings),
+    }));
+  }, [updateActiveFrame]);
+
+  flushLayoutRegenRef.current = flushLayoutRegen;
+  flushShapeRerollRef.current = flushShapeReroll;
+
+  useEffect(() => {
+    const onPointerUp = () => {
+      flushLayoutRegenRef.current?.();
+      flushShapeRerollRef.current?.();
+    };
+    document.addEventListener("pointerup", onPointerUp);
+    return () => document.removeEventListener("pointerup", onPointerUp);
+  }, []);
 
   useEffect(
     () => () => {
@@ -890,69 +1022,22 @@ export default function App() {
   }, [pushUndoCheckpoint]);
 
   const handleSaveProject = useCallback(() => {
-    const json = serializeMzkProject({
-      orientation: orientationRef.current,
-      frames: framesRef.current,
-      activeIndex: activeIndexRef.current,
-      exportPreset,
-      mp4Preset,
-      gifPreset,
-      gifFrameDelayCs,
-      playbackFps,
-    });
+    const json = serializeMzkProject(currentProject());
     downloadBlob(
       new Blob([json], { type: "application/x-mozayk-project" }),
       defaultMzkFileName(),
     );
+    lastWrittenJsonRef.current = json;
+    void clearDraft().catch(() => {});
     setToast("Project saved");
-  }, [exportPreset, mp4Preset, gifPreset, gifFrameDelayCs, playbackFps]);
+  }, [currentProject]);
 
   const handleLoadProject = useCallback(
     async (file: File) => {
       setLoadingProject(true);
       try {
         const project = await readMzkFile(file);
-        const dataUrls = new Set<string>();
-        for (const frame of project.frames) {
-          if (frame.imageSource?.dataUrl) dataUrls.add(frame.imageSource.dataUrl);
-          if (frame.textureOverlay?.dataUrl) {
-            dataUrls.add(frame.textureOverlay.dataUrl);
-          }
-          if (frame.backgroundImage?.dataUrl) {
-            dataUrls.add(frame.backgroundImage.dataUrl);
-          }
-        }
-        await Promise.all(
-          [...dataUrls].map((dataUrl) => ensureCachedSourceImage(dataUrl)),
-        );
-
-        pushUndoCheckpoint();
-        if (layoutRegenTimer.current) {
-          window.clearTimeout(layoutRegenTimer.current);
-          layoutRegenTimer.current = null;
-        }
-        if (shapeRerollTimer.current) {
-          window.clearTimeout(shapeRerollTimer.current);
-          shapeRerollTimer.current = null;
-        }
-
-        setOrientation(project.orientation);
-        orientationRef.current = project.orientation;
-        setFrames(project.frames);
-        framesRef.current = project.frames;
-        setActiveIndex(project.activeIndex);
-        activeIndexRef.current = project.activeIndex;
-        setExportPreset(project.exportPreset);
-        setMp4Preset(
-          clampMp4ExportPreset(project.orientation, project.mp4Preset),
-        );
-        setGifPreset(project.gifPreset);
-        setGifFrameDelayCs(project.gifFrameDelayCs);
-        setPlaybackFps(project.playbackFps);
-        setPlaying(false);
-        setViewOriginal(false);
-        setInspecting(false);
-        setToast("Project loaded");
+        await applyProject(project, "Project loaded");
       } catch (error) {
         setImportErrorMessage(
           error instanceof Error
@@ -963,8 +1048,97 @@ export default function App() {
         setLoadingProject(false);
       }
     },
-    [pushUndoCheckpoint],
+    [applyProject],
   );
+
+  const handleRestoreDraft = useCallback(async () => {
+    if (loadingProjectRef.current) return;
+    const project = pendingDraftRef.current;
+    if (!project) return;
+    setLoadingProject(true);
+    try {
+      await applyProject(project, "Session restored");
+      setPendingDraft(null);
+    } catch {
+      setImportErrorMessage("This draft could not be restored.");
+    } finally {
+      setLoadingProject(false);
+    }
+  }, [applyProject]);
+
+  const handleAbandonDraft = useCallback(() => {
+    lastWrittenJsonRef.current = serializeMzkProject(currentProject());
+    setPendingDraft(null);
+    void clearDraft().catch(() => {});
+  }, [currentProject]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const json = await readDraftJson();
+        if (cancelled) return;
+        const project = json ? parseMzkProject(json) : null;
+        if (project) {
+          lastWrittenJsonRef.current = json;
+          setPendingDraft(project);
+        } else {
+          if (json) void clearDraft().catch(() => {});
+          lastWrittenJsonRef.current = serializeMzkProject(currentProject());
+        }
+      } catch {
+        if (cancelled) return;
+        lastWrittenJsonRef.current = serializeMzkProject(currentProject());
+      } finally {
+        if (!cancelled) setDraftChecked(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentProject]);
+
+  useEffect(() => {
+    if (!draftChecked || pendingDraft) return;
+    if (importingImage || loadingProject || playing) return;
+
+    const timer = window.setTimeout(() => {
+      writeDraftNow();
+    }, AUTOSAVE_MS);
+    return () => window.clearTimeout(timer);
+  }, [
+    draftChecked,
+    pendingDraft,
+    playing,
+    importingImage,
+    loadingProject,
+    frames,
+    orientation,
+    activeIndex,
+    exportPreset,
+    mp4Preset,
+    gifPreset,
+    gifFrameDelayCs,
+    playbackFps,
+    writeDraftNow,
+  ]);
+
+  useEffect(() => {
+    if (!playing) return;
+    writeDraftNow();
+  }, [playing, writeDraftNow]);
+
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") writeDraftNow();
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("pagehide", writeDraftNow);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("pagehide", writeDraftNow);
+    };
+  }, [writeDraftNow]);
 
   useEffect(() => {
     if (!playing) return;
@@ -1119,6 +1293,15 @@ export default function App() {
           handleResetCanvas();
           setResetDialogOpen(false);
         }}
+      />
+      <ConfirmDialog
+        open={pendingDraft !== null && !isMobileGate && !loadingProject}
+        title="Reconnect available"
+        message="The last session closed before it was saved to a file, but a reconnect is still possible, allowing you to pick up where you left off. If you do not reconnect, you will lose your unsaved project."
+        confirmLabel="Reconnect"
+        cancelLabel="Abandon draft"
+        onConfirm={() => void handleRestoreDraft()}
+        onCancel={handleAbandonDraft}
       />
       <VideoImportDialog
         open={videoImportDialog !== null}

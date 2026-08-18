@@ -1,5 +1,7 @@
 import { useRef, useState } from "react";
 import { ColorPicker } from "./ColorPicker";
+import { RemoveIconButton } from "./ControlRowWithPause";
+import { PauseButton } from "./PauseButton";
 import { hexToRgb, normalizeHex } from "../colorMath";
 
 type ColorSwatchProps = {
@@ -50,44 +52,22 @@ export function ColorSwatch({
       {onToggleLock || onRemove ? (
         <div className="color-swatch__actions">
           {onToggleLock ? (
-            <button
-              type="button"
-              className={`color-swatch__lock has-hint${locked ? " is-locked" : ""}`}
-              data-hint="Keep this colour when randomizing · omit from SVG & transparent PNG export"
-              aria-label={
+            <PauseButton
+              paused={locked}
+              hint="Keep this colour when randomizing · omit from SVG & transparent PNG export"
+              ariaLabel={
                 locked
                   ? "Include colour in randomization"
                   : "Exclude colour from randomization"
               }
-              aria-pressed={locked}
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleLock();
-              }}
-            >
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 12 12"
-                aria-hidden="true"
-              >
-                <rect x="2" y="1.5" width="2.5" height="9" rx="0.5" fill="currentColor" />
-                <rect x="7.5" y="1.5" width="2.5" height="9" rx="0.5" fill="currentColor" />
-              </svg>
-            </button>
+              onToggle={() => onToggleLock()}
+            />
           ) : null}
           {onRemove ? (
-            <button
-              type="button"
-              className="color-swatch__remove"
-              aria-label="Remove colour"
-              onClick={(e) => {
-                e.stopPropagation();
-                onRemove();
-              }}
-            >
-              ×
-            </button>
+            <RemoveIconButton
+              ariaLabel="Remove colour"
+              onClick={onRemove}
+            />
           ) : null}
         </div>
       ) : null}

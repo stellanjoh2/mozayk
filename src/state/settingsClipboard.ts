@@ -30,6 +30,7 @@ import type {
   ShapePalette,
   ShapeType,
 } from "../types";
+import { RANDOMIZE_PAUSE_KEYS } from "../types";
 
 const CLIPBOARD_MIME = "application/x-mozayk-settings";
 const SHAPE_TYPES = new Set<ShapeType>([
@@ -98,6 +99,29 @@ function clampInt(value: unknown, min: number, max: number, fallback: number): n
 function parseOptionalBoolean(value: unknown, fallback: boolean): boolean {
   if (value === undefined || value === null) return fallback;
   return Boolean(value);
+}
+
+function parseOptionalSeed(value: unknown): number | undefined {
+  if (value === undefined || value === null || value === "") return undefined;
+  const n = Number(value);
+  if (!Number.isFinite(n)) return undefined;
+  return n >>> 0;
+}
+
+function parseRandomizePaused(
+  value: unknown,
+): FrameSettings["randomizePaused"] {
+  if (!value || typeof value !== "object") return undefined;
+  const record = value as Record<string, unknown>;
+  const out: NonNullable<FrameSettings["randomizePaused"]> = {};
+  let any = false;
+  for (const key of RANDOMIZE_PAUSE_KEYS) {
+    if (record[key] === true) {
+      out[key] = true;
+      any = true;
+    }
+  }
+  return any ? out : undefined;
 }
 
 function parseColorAmounts(value: unknown, colorCount: number): number[] {
@@ -294,6 +318,13 @@ export function parseSettingsRecord(
       ? normalizeHex(String(candidate.textureOverlayTint))
       : undefined,
     ...(layoutSource ? { layoutSource } : {}),
+    ...(parseRandomizePaused(candidate.randomizePaused)
+      ? { randomizePaused: parseRandomizePaused(candidate.randomizePaused) }
+      : {}),
+    gridOverlaySeed: parseOptionalSeed(candidate.gridOverlaySeed),
+    gridCrossesSeed: parseOptionalSeed(candidate.gridCrossesSeed),
+    gridBlurSeed: parseOptionalSeed(candidate.gridBlurSeed),
+    dataFieldsSeed: parseOptionalSeed(candidate.dataFieldsSeed),
   };
 }
 

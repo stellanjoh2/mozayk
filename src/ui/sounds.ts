@@ -11,7 +11,7 @@ const FILES = {
 } as const;
 
 const HOVER_SELECTOR =
-  ".panel-btn, .button-row button, .timeline__controls button, .frame-context-menu__item, .color-swatch__lock, .color-swatch__remove, .controls-panel__tab, .palette-panel__tab, .palette-panel__close, .palette-gallery__item, .timeline-thumb, .ui-switch";
+  ".panel-btn, .button-row button, .timeline__controls button, .frame-context-menu__item, .ui-icon-btn, .controls-panel__tab, .palette-panel__tab, .palette-panel__close, .palette-gallery__item, .timeline-thumb, .ui-switch";
 
 export type UiSound = keyof typeof FILES;
 
@@ -76,7 +76,8 @@ const rawFiles = new Map<UiSound, ArrayBuffer>();
 const decoded = new Map<UiSound, AudioBuffer>();
 const loadingRaw = new Map<UiSound, Promise<ArrayBuffer | null>>();
 const loadingDecoded = new Map<UiSound, Promise<AudioBuffer | null>>();
-let sliderUntil = 0;
+let sliderPlaying = false;
+let sliderToken = 0;
 let hoverUntil = 0;
 
 function createAudioContext(): AudioContext | null {
@@ -155,11 +156,27 @@ async function bufferFor(name: UiSound): Promise<AudioBuffer | null> {
   return promise;
 }
 
+function isSliderSound(name: UiSound): boolean {
+  return name === "slider" || name === "sliderLeft";
+}
+
+function releaseSliderSound(token: number): void {
+  if (token !== sliderToken) return;
+  sliderPlaying = false;
+}
+
 function startSound(name: UiSound, buf: AudioBuffer): void {
   const ctx = unlockAudio();
-  if (!ctx || ctx.state === "closed") return;
+  const token = sliderToken;
+  if (!ctx || ctx.state === "closed") {
+    if (isSliderSound(name)) releaseSliderSound(token);
+    return;
+  }
   const play = () => {
-    if (!prefs.enabled || prefs.volume <= 0 || ctx.state !== "running") return;
+    if (!prefs.enabled || prefs.volume <= 0 || ctx.state !== "running") {
+      if (isSliderSound(name)) releaseSliderSound(token);
+      return;
+    }
     const source = ctx.createBufferSource();
     source.buffer = buf;
     const rate = PLAYBACK_RATE[name] ?? 1;
@@ -171,7 +188,9 @@ function startSound(name: UiSound, buf: AudioBuffer): void {
     gain.connect(ctx.destination);
     source.start(0);
     if (isSliderSound(name)) {
-      sliderUntil = performance.now() + Math.max((buf.duration / rate) * 1000, 30);
+      const unlock = () => releaseSliderSound(token);
+      source.onended = unlock;
+      window.setTimeout(unlock, Math.max((buf.duration / rate) * 1000, 30));
     }
     if (name === "drop") {
       hoverUntil = Math.max(
@@ -186,7 +205,10 @@ function startSound(name: UiSound, buf: AudioBuffer): void {
   }
   void ctx.resume().then(() => {
     if (ctx.state === "running") play();
-  }).catch(() => {});
+    else if (isSliderSound(name)) releaseSliderSound(token);
+  }).catch(() => {
+    if (isSliderSound(name)) releaseSliderSound(token);
+  });
 }
 
 export function getUiSoundsEnabled(): boolean {
@@ -208,20 +230,22 @@ export function setUiSoundsVolume(volume: number): void {
   savePrefs();
 }
 
-function isSliderSound(name: UiSound): boolean {
-  return name === "slider" || name === "sliderLeft";
-}
-
 export function playUiSound(name: UiSound): void {
   if (!prefs.enabled || prefs.volume <= 0) return;
   if (isSliderSound(name)) {
-    sliderUntil = Math.max(sliderUntil, performance.now() + 50);
+    if (sliderPlaying) return;
+    sliderPlaying = true;
+    sliderToken += 1;
   }
+  const token = sliderToken;
   if (name === "drop") {
     hoverUntil = Math.max(hoverUntil, performance.now() + 400);
   }
   const ctx = unlockAudio();
-  if (!ctx) return;
+  if (!ctx) {
+    if (isSliderSound(name)) releaseSliderSound(token);
+    return;
+  }
   const ready = import.meta.env.DEV ? undefined : decoded.get(name);
   if (ready) {
     try {
@@ -229,10 +253,14 @@ export function playUiSound(name: UiSound): void {
       return;
     } catch {
       decoded.delete(name);
+      if (isSliderSound(name)) releaseSliderSound(token);
     }
   }
   void bufferFor(name).then((buf) => {
-    if (!buf || !prefs.enabled || prefs.volume <= 0) return;
+    if (!buf || !prefs.enabled || prefs.volume <= 0) {
+      if (isSliderSound(name)) releaseSliderSound(token);
+      return;
+    }
     startSound(name, buf);
   });
 }
@@ -305,7 +333,6 @@ function isRangeInput(el: EventTarget | null): el is HTMLInputElement {
   return el instanceof HTMLInputElement && el.type === "range" && !el.disabled;
 }
 
-let rangeDragging = false;
 const lastRangeValues = new WeakMap<HTMLInputElement, number>();
 
 function snapshotRangeValue(el: HTMLInputElement): void {
@@ -317,23 +344,18 @@ function playRangeSliderSound(el: HTMLInputElement): void {
   const prev = lastRangeValues.get(el);
   lastRangeValues.set(el, value);
   if (prev === undefined || value === prev) return;
-  if (rangeDragging && performance.now() < sliderUntil) return;
+  if (sliderPlaying) return;
   playUiSound(value < prev ? "sliderLeft" : "slider");
 }
 
 function onRangePointerDown(event: Event): void {
   if (!isRangeInput(event.target)) return;
-  rangeDragging = true;
   snapshotRangeValue(event.target);
 }
 
 function onRangeKeyDown(event: Event): void {
   if (!isRangeInput(event.target)) return;
   snapshotRangeValue(event.target);
-}
-
-function onRangePointerUp(): void {
-  rangeDragging = false;
 }
 
 function onRangeInput(event: Event): void {
@@ -360,8 +382,6 @@ export function initUiSounds(): void {
   // document.addEventListener("animationiteration", onHoverBlink, true);
   document.addEventListener("pointerdown", onRangePointerDown, true);
   document.addEventListener("keydown", onRangeKeyDown, true);
-  document.addEventListener("pointerup", onRangePointerUp);
-  document.addEventListener("pointercancel", onRangePointerUp);
   document.addEventListener("input", onRangeInput, true);
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible" && prefs.enabled) unlockAudio();

@@ -218,10 +218,13 @@ function drawSharpMask(
   ctx: CanvasRenderingContext2D,
   grid: GridDimensions,
   chaos: number,
+  instanceSeed = 0,
 ): void {
   const { columns, rows, width, height } = grid;
   const t = chaos / 100;
-  const rng = mulberry32(hashSeed(columns, rows, width, height, chaos));
+  const rng = mulberry32(
+    hashSeed(columns, rows, width, height, chaos, instanceSeed),
+  );
   const occupied: boolean[][] = Array.from({ length: rows }, () =>
     Array<boolean>(columns).fill(false),
   );
@@ -312,7 +315,7 @@ export function applyGridBlur(
       );
       const mask = context2d(work.width, work.height);
       if (!mask) return;
-      drawSharpMask(mask, workGrid, chaos);
+      drawSharpMask(mask, workGrid, chaos, settings.gridBlurSeed ?? 0);
 
       // Feather patch edges so restored sharp tiles don't cut hard seams
       // through an otherwise blurred field (esp. high chaos + high amount).
