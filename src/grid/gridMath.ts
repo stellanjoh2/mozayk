@@ -5,6 +5,7 @@ const GRID_ASPECT: Record<Orientation, { cols: number; rows: number }> = {
   landscape: { cols: 16, rows: 9 },
   portrait: { cols: 9, rows: 16 },
   square: { cols: 9, rows: 9 },
+  photo: { cols: 9, rows: 12 },
 };
 
 export function getGridAspect(orientation: Orientation): { cols: number; rows: number } {

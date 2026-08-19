@@ -250,6 +250,43 @@ function run(): void {
     importedBackGrid[0][0] === YELLOW,
     "imported 16:9 → 9:16 → 16:9 restores the original sides",
   );
+
+  const photo = relayoutFrameToOrientation(
+    imported,
+    "landscape",
+    "photo",
+    mulberry32(12),
+  );
+  const photoCounts = getGridCounts("photo", 1);
+  assert(
+    photoCounts.columns === 9 && photoCounts.rows === 12,
+    "photo grid is 9×12 at density 1",
+  );
+  const photoGrid = rasterizeBlockColorGrid(
+    photo.blocks,
+    photoCounts.columns,
+    photoCounts.rows,
+    "#000000",
+  );
+  assert(!photoGrid.flat().includes(YELLOW), "3:4 cover-crop drops the yellow sides");
+  assert(photoGrid[6][4] === PINK, "3:4 centre keeps the 16:9 centre colour");
+
+  const photoBack = relayoutFrameToOrientation(
+    photo,
+    "photo",
+    "landscape",
+    mulberry32(13),
+  );
+  const photoBackGrid = rasterizeBlockColorGrid(
+    photoBack.blocks,
+    landscapeCounts.columns,
+    landscapeCounts.rows,
+    "#000000",
+  );
+  assert(
+    photoBackGrid[0][0] === YELLOW,
+    "16:9 → 3:4 → 16:9 restores the original sides",
+  );
 }
 
 run();

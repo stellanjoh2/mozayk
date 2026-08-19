@@ -52,13 +52,15 @@ import {
   WIREFRAME_PEEL_AMOUNT_DEFAULT,
   WIREFRAME_PEEL_STROKE_DEFAULT,
 } from "../render/wireframePeel";
-import type {
-  Density,
-  Frame,
-  FrameSettings,
-  GridBlendMode,
-  Orientation,
-  TextureOverlayBlendMode,
+import {
+  ORIENTATION_LABELS,
+  ORIENTATIONS,
+  type Density,
+  type Frame,
+  type FrameSettings,
+  type GridBlendMode,
+  type Orientation,
+  type TextureOverlayBlendMode,
 } from "../types";
 import { SUPPORTED_IMAGE_ACCEPT } from "../import/supportedImageTypes";
 import { SUPPORTED_VIDEO_ACCEPT } from "../import/supportedVideoTypes";
@@ -437,28 +439,17 @@ export function ControlsPanel({
       <>
       <section className="panel-section">
         <h2>Canvas</h2>
-        <div className="button-row button-row--3 button-row--choice">
-          <button
-            type="button"
-            className={orientation === "landscape" ? "is-active" : ""}
-            onClick={() => selectOrientation("landscape")}
-          >
-            16:9
-          </button>
-          <button
-            type="button"
-            className={orientation === "square" ? "is-active" : ""}
-            onClick={() => selectOrientation("square")}
-          >
-            1:1
-          </button>
-          <button
-            type="button"
-            className={orientation === "portrait" ? "is-active" : ""}
-            onClick={() => selectOrientation("portrait")}
-          >
-            9:16
-          </button>
+        <div className="button-row button-row--4 button-row--choice">
+          {ORIENTATIONS.map((value) => (
+            <button
+              key={value}
+              type="button"
+              className={orientation === value ? "is-active" : ""}
+              onClick={() => selectOrientation(value)}
+            >
+              {ORIENTATION_LABELS[value]}
+            </button>
+          ))}
         </div>
         <label className="control-row">
           <span className="control-row__label">Grid Density</span>

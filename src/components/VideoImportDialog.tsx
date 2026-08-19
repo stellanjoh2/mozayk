@@ -12,6 +12,7 @@ import {
   type VideoProbe,
 } from "../import/videoImport";
 import { playUiSound } from "../ui/sounds";
+import { ORIENTATION_LABELS } from "../types";
 import { TypewriterReveal } from "./TypewriterReveal";
 
 type VideoImportDialogProps = {
@@ -113,7 +114,7 @@ export function VideoImportDialog({
             as="span"
             className="video-import-dialog__meta"
             text={`${formatClipDuration(probe.duration)} clip · ${
-              probe.orientation.charAt(0).toUpperCase() + probe.orientation.slice(1)
+              ORIENTATION_LABELS[probe.orientation]
             }`}
             active={entered}
             caret={false}

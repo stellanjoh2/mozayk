@@ -42,9 +42,11 @@ export function orientationFromVideoSize(
 ): Orientation {
   if (width <= 0 || height <= 0) return "landscape";
   const aspect = width / height;
+  // 16:9 ≈ 1.778, 1:1 = 1, 3:4 = 0.75, 9:16 = 0.5625
   if (aspect >= 1.25) return "landscape";
-  if (aspect <= 0.8) return "portrait";
-  return "square";
+  if (aspect >= 0.875) return "square";
+  if (aspect >= 0.65625) return "photo";
+  return "portrait";
 }
 
 export function videoFrameCount(

@@ -21,16 +21,17 @@ import {
   resolveTextureOverlayBlend,
 } from "../render/textureOverlay";
 import { WIREFRAME_PEEL_STROKE_DEFAULT } from "../render/wireframePeel";
-import type {
-  Density,
-  FrameSettings,
-  LayoutSource,
-  MosaicBlock,
-  Orientation,
-  ShapePalette,
-  ShapeType,
+import {
+  isOrientation,
+  RANDOMIZE_PAUSE_KEYS,
+  type Density,
+  type FrameSettings,
+  type LayoutSource,
+  type MosaicBlock,
+  type Orientation,
+  type ShapePalette,
+  type ShapeType,
 } from "../types";
-import { RANDOMIZE_PAUSE_KEYS } from "../types";
 
 const CLIPBOARD_MIME = "application/x-mozayk-settings";
 const SHAPE_TYPES = new Set<ShapeType>([
@@ -80,10 +81,6 @@ function parseBackground(candidate: Record<string, unknown>): {
     background,
     transparentBackground: Boolean(candidate.transparentBackground),
   };
-}
-
-function isOrientation(value: unknown): value is Orientation {
-  return value === "landscape" || value === "portrait" || value === "square";
 }
 
 function isLayoutSource(value: unknown): value is LayoutSource {

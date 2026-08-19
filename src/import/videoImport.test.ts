@@ -21,6 +21,8 @@ function run(): void {
   assert(orientationFromVideoSize(1920, 1080) === "landscape", "16:9 is landscape");
   assert(orientationFromVideoSize(1080, 1920) === "portrait", "9:16 is portrait");
   assert(orientationFromVideoSize(1080, 1080) === "square", "1:1 is square");
+  assert(orientationFromVideoSize(1080, 1440) === "photo", "3:4 is photo");
+  assert(orientationFromVideoSize(1080, 1350) === "photo", "4:5 feed still maps to 3:4");
   assert(orientationFromVideoSize(1200, 1000) === "square", "near-square stays square");
   assert(orientationFromVideoSize(0, 0) === "landscape", "empty size defaults landscape");
 

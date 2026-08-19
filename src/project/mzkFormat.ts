@@ -10,11 +10,12 @@ import {
 } from "../config";
 import type { ImageRgb, ImageSourceData } from "../import/imageSource";
 import { parseBlocks, parseSettingsRecord } from "../state/settingsClipboard";
-import type {
-  BackgroundImageData,
-  Frame,
-  Orientation,
-  TextureOverlayData,
+import {
+  isOrientation,
+  type BackgroundImageData,
+  type Frame,
+  type Orientation,
+  type TextureOverlayData,
 } from "../types";
 
 export const MZK_EXTENSION = ".mzk";
@@ -43,10 +44,6 @@ export type MzkProjectPayload = {
   gifFrameDelayCs?: number;
   playbackFps?: number;
 };
-
-function isOrientation(value: unknown): value is Orientation {
-  return value === "landscape" || value === "portrait" || value === "square";
-}
 
 function isExportPreset(value: unknown): value is ExportPreset {
   return value === "1080p" || value === "1440p" || value === "2160p";

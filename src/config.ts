@@ -22,26 +22,20 @@ export type PlaybackFps = (typeof PLAYBACK_FPS_OPTIONS)[number];
 
 import type { Orientation } from "./types";
 
-export const PREVIEW_WIDTH_LANDSCAPE = 1920;
-export const PREVIEW_HEIGHT_LANDSCAPE = 1080;
-export const PREVIEW_SIZE_SQUARE = 1080;
-
 export type ExportPreset = "1080p" | "1440p" | "2160p";
+
+type CanvasSizeSet = Record<Orientation, [number, number]>;
 
 export const EXPORT_PRESETS: Record<
   ExportPreset,
-  {
-    label: string;
-    landscape: [number, number];
-    portrait: [number, number];
-    square: [number, number];
-  }
+  { label: string } & CanvasSizeSet
 > = {
   "1080p": {
     label: "1080p",
     landscape: [1920, 1080],
     portrait: [1080, 1920],
     square: [1080, 1080],
+    photo: [1080, 1440],
   },
   /** Valid perfect-square grid at all density levels (50px cells at k=3). */
   "1440p": {
@@ -49,33 +43,26 @@ export const EXPORT_PRESETS: Record<
     landscape: [2400, 1350],
     portrait: [1350, 2400],
     square: [1350, 1350],
+    photo: [1350, 1800],
   },
   "2160p": {
     label: "2160p",
     landscape: [3840, 2160],
     portrait: [2160, 3840],
     square: [2160, 2160],
+    photo: [2160, 2880],
   },
 };
 
 export function getPreviewSize(orientation: Orientation): [number, number] {
-  if (orientation === "landscape") {
-    return [PREVIEW_WIDTH_LANDSCAPE, PREVIEW_HEIGHT_LANDSCAPE];
-  }
-  if (orientation === "portrait") {
-    return [PREVIEW_HEIGHT_LANDSCAPE, PREVIEW_WIDTH_LANDSCAPE];
-  }
-  return [PREVIEW_SIZE_SQUARE, PREVIEW_SIZE_SQUARE];
+  return getExportSize(orientation, "1080p");
 }
 
 export function getExportSize(
   orientation: Orientation,
   preset: ExportPreset,
 ): [number, number] {
-  const sizes = EXPORT_PRESETS[preset];
-  if (orientation === "landscape") return sizes.landscape;
-  if (orientation === "portrait") return sizes.portrait;
-  return sizes.square;
+  return EXPORT_PRESETS[preset][orientation];
 }
 
 /** Portrait MP4 is fixed at 1080×1920 (9:16). */
@@ -104,18 +91,12 @@ export function getMp4ExportSize(
   return getExportSize(orientation, preset);
 }
 
-/** GIF export sizes — 16:9 that stay on the mosaic grid. */
+/** GIF export sizes that stay on the mosaic grid. */
 export type GifExportPreset = "480p" | "720p";
 
 export const GIF_EXPORT_PRESETS: Record<
   GifExportPreset,
-  {
-    label: string;
-    note: string;
-    landscape: [number, number];
-    portrait: [number, number];
-    square: [number, number];
-  }
+  { label: string; note: string } & CanvasSizeSet
 > = {
   /** 18px cells at density 3; exact 16:9 near 480p. */
   "480p": {
@@ -124,6 +105,7 @@ export const GIF_EXPORT_PRESETS: Record<
     landscape: [864, 486],
     portrait: [486, 864],
     square: [486, 486],
+    photo: [486, 648],
   },
   "720p": {
     label: "720p",
@@ -131,6 +113,7 @@ export const GIF_EXPORT_PRESETS: Record<
     landscape: [1280, 720],
     portrait: [720, 1280],
     square: [720, 720],
+    photo: [720, 960],
   },
 };
 
@@ -163,10 +146,7 @@ export function getGifExportSize(
   orientation: Orientation,
   preset: GifExportPreset,
 ): [number, number] {
-  const sizes = GIF_EXPORT_PRESETS[preset];
-  if (orientation === "landscape") return sizes.landscape;
-  if (orientation === "portrait") return sizes.portrait;
-  return sizes.square;
+  return GIF_EXPORT_PRESETS[preset][orientation];
 }
 
 export function gifDelayMs(delayCs: number): number {

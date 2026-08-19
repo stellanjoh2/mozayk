@@ -1,11 +1,23 @@
 import { MAX_UNDO } from "../config";
-import type { Frame, Orientation } from "../types";
+import type { Frame, Orientation, OrientationLayout } from "../types";
 
 export type CanvasSnapshot = {
   frames: Frame[];
   activeIndex: number;
   orientation: Orientation;
 };
+
+function cloneDerivedLayouts(
+  derived: OrientationLayout["derived"],
+): OrientationLayout["derived"] {
+  if (!derived) return undefined;
+  const next: NonNullable<OrientationLayout["derived"]> = {};
+  for (const key of Object.keys(derived) as Orientation[]) {
+    const blocks = derived[key];
+    if (blocks) next[key] = blocks.map((block) => ({ ...block }));
+  }
+  return next;
+}
 
 /** Clone editable canvas data; reuse imageSource / textureOverlay / backgroundImage refs (dataUrls are large). */
 export function cloneFrameForHistory(frame: Frame): Frame {
@@ -21,19 +33,7 @@ export function cloneFrameForHistory(frame: Frame): Frame {
           orientation: frame.orientationLayout.orientation,
           blocks: frame.orientationLayout.blocks.map((block) => ({ ...block })),
           colors: [...frame.orientationLayout.colors],
-          derived: frame.orientationLayout.derived
-            ? {
-                landscape: frame.orientationLayout.derived.landscape?.map(
-                  (block) => ({ ...block }),
-                ),
-                portrait: frame.orientationLayout.derived.portrait?.map(
-                  (block) => ({ ...block }),
-                ),
-                square: frame.orientationLayout.derived.square?.map((block) => ({
-                  ...block,
-                })),
-              }
-            : undefined,
+          derived: cloneDerivedLayouts(frame.orientationLayout.derived),
         }
       : undefined,
   };

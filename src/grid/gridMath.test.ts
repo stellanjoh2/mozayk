@@ -9,13 +9,12 @@ import {
   inscribedPixelSquare,
   triangleFillPoints,
 } from "./gridMath";
-import type { Orientation } from "../types";
+import { ORIENTATIONS, type Orientation } from "../types";
 
 function assert(condition: boolean, message: string): void {
   if (!condition) throw new Error(message);
 }
 
-const ORIENTATIONS: Orientation[] = ["landscape", "portrait", "square"];
 const CANVASES: Record<Orientation, [number, number][]> = {
   landscape: [
     [864, 486],
@@ -38,6 +37,13 @@ const CANVASES: Record<Orientation, [number, number][]> = {
     [1350, 1350],
     [2160, 2160],
   ],
+  photo: [
+    [486, 648],
+    [720, 960],
+    [1080, 1440],
+    [1350, 1800],
+    [2160, 2880],
+  ],
 };
 
 function run(): void {
@@ -48,7 +54,8 @@ function run(): void {
         if (
           (width === 1920 && height === 1080) ||
           (width === 1080 && height === 1920) ||
-          (width === 1080 && height === 1080)
+          (width === 1080 && height === 1080) ||
+          (width === 1080 && height === 1440)
         ) {
           assert(
             Number.isInteger(grid.cellSize),
@@ -239,6 +246,10 @@ function run(): void {
   assert(display[0] === 96 && display[1] === 54, "display thumb is 96×54");
   const render = getThumbnailRenderSize("landscape");
   assert(render[0] === 480 && render[1] === 270, "render thumb is 480×270");
+  const photoDisplay = getThumbnailSize("photo");
+  assert(photoDisplay[0] === 54 && photoDisplay[1] === 72, "photo display thumb is 54×72");
+  const photoRender = getThumbnailRenderSize("photo");
+  assert(photoRender[0] === 270 && photoRender[1] === 360, "photo render thumb is 270×360");
   for (const orientation of ORIENTATIONS) {
     const [rw, rh] = getThumbnailRenderSize(orientation);
     for (const density of DENSITIES) {

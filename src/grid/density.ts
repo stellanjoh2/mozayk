@@ -80,6 +80,7 @@ export function maxHeightSliderMax(
 ): number {
   if (orientation === "landscape") return 9 * density;
   if (orientation === "portrait") return 16 * density;
+  if (orientation === "photo") return 12 * density;
   return 9 * density;
 }
 

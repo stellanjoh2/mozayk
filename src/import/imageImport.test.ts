@@ -42,8 +42,10 @@ function run(): void {
 
   assert(sameGridAspect(96, 54, 48, 27), "landscape density scale keeps aspect");
   assert(sameGridAspect(54, 96, 27, 48), "portrait density scale keeps aspect");
+  assert(sameGridAspect(54, 72, 27, 36), "photo density scale keeps aspect");
   assert(!sameGridAspect(96, 54, 54, 96), "landscape to portrait changes aspect");
   assert(!sameGridAspect(96, 54, 54, 54), "landscape to square changes aspect");
+  assert(!sameGridAspect(54, 72, 54, 96), "photo to portrait changes aspect");
   assert(!sameGridAspect(0, 54, 96, 54), "empty extents are not the same aspect");
 
   const striped: string[][] = Array.from({ length: 9 }, () => [

@@ -1,6 +1,31 @@
 import type { ImageSourceData } from "./import/imageSource";
 
-export type Orientation = "landscape" | "portrait" | "square";
+/** Canvas ratios: 16:9, 9:16, 1:1, and 3:4 (Instagram photo / profile grid). */
+export type Orientation = "landscape" | "portrait" | "square" | "photo";
+
+/** Wide → tall order for the canvas picker. */
+export const ORIENTATIONS: readonly Orientation[] = [
+  "landscape",
+  "square",
+  "photo",
+  "portrait",
+];
+
+export const ORIENTATION_LABELS: Record<Orientation, string> = {
+  landscape: "16:9",
+  square: "1:1",
+  photo: "3:4",
+  portrait: "9:16",
+};
+
+export function isOrientation(value: unknown): value is Orientation {
+  return (
+    value === "landscape" ||
+    value === "portrait" ||
+    value === "square" ||
+    value === "photo"
+  );
+}
 /** 7 and 9 omitted — fractional cells (17/18, 13/14) broke square spans. */
 export type Density = 1 | 2 | 3 | 4 | 5 | 6 | 8 | 10 | 12;
 export type GridOverlayStroke = 1 | 2 | 4;

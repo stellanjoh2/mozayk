@@ -54,7 +54,10 @@ function run(): void {
   const parsed = parseMzkProject(json);
 
   assert(parsed !== null, "serialized project should parse");
-  assert(parsed.orientation === "portrait", "orientation survives round-trip");
+  assert(
+    parsed.orientation === "portrait",
+    "orientation survives round-trip",
+  );
   assert(parsed.frames.length === 2, "frame count survives round-trip");
   assert(parsed.activeIndex === 1, "active index survives round-trip");
   assert(parsed.exportPreset === "1440p", "export preset survives round-trip");
@@ -138,6 +141,15 @@ function run(): void {
     legacyParsed?.mp4Preset === "1080p",
     "legacy portrait mp4 preset is clamped to 1080p",
   );
+
+  const photoJson = serializeMzkProject({
+    ...sampleProject(),
+    orientation: "photo",
+    mp4Preset: "1440p",
+  });
+  const photoParsed = parseMzkProject(photoJson);
+  assert(photoParsed?.orientation === "photo", "3:4 orientation survives round-trip");
+  assert(photoParsed?.mp4Preset === "1440p", "3:4 mp4 preset is not clamped to 1080p");
 
   console.log("mzkFormat.test.ts: all passed");
 }
