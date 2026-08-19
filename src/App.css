@@ -179,6 +179,7 @@ body,
   height: 100%;
   min-height: 100dvh;
   margin: 0;
+  overscroll-behavior: none;
   cursor: var(--cursor-default);
 }
 
@@ -663,7 +664,7 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
   background: var(--panel);
   overflow-x: hidden;
   overflow-y: scroll;
-  overscroll-behavior-x: none;
+  overscroll-behavior: none;
   scrollbar-gutter: stable;
   height: 100%;
 }
