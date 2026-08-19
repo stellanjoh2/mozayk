@@ -11,7 +11,7 @@ const FILES = {
 } as const;
 
 const HOVER_SELECTOR =
-  ".panel-btn, .button-row button, .timeline__controls button, .canvas-stage-control-btn, .frame-context-menu__item, .ui-icon-btn, .controls-panel__tab, .palette-panel__tab, .palette-panel__close, .palette-gallery__item, .timeline-thumb, .ui-switch";
+  ".panel-btn, .button-row button, .timeline__controls button, .canvas-stage-control-btn, .frame-context-menu__item, .ui-icon-btn, .controls-panel__tab, .palette-panel__tab, .palette-panel__close, .palette-gallery__item, .timeline-thumb, .ui-switch, .about-overlay__content a";
 
 export type UiSound = keyof typeof FILES;
 
@@ -231,9 +231,9 @@ export function setUiSoundsVolume(volume: number): void {
   savePrefs();
 }
 
-export function playUiSound(name: UiSound): void {
+export function playUiSound(name: UiSound, unthrottled = false): void {
   if (!prefs.enabled || prefs.volume <= 0) return;
-  if (name === "hover") {
+  if (name === "hover" && !unthrottled) {
     const now = performance.now();
     if (now < hoverUntil) return;
     hoverUntil = now + HOVER_MIN_INTERVAL_MS;

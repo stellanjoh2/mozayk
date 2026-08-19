@@ -333,7 +333,7 @@ body {
   }
 
   .about-overlay__content p {
-    font-size: 36px;
+    font-size: 48px;
   }
 }
 
@@ -422,7 +422,7 @@ body {
   }
 
   .about-overlay__content p {
-    font-size: 37px;
+    font-size: 48px;
   }
 }
 
@@ -1320,10 +1320,12 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
   position: fixed;
   inset: 0;
   z-index: 50;
-  display: flex;
-  justify-content: center;
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
   padding: 0;
   background: rgba(0, 0, 0, 0);
+  pointer-events: none;
   transition: background 0.2s var(--ui-ease);
 }
 
@@ -1340,6 +1342,7 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
 
 .about-overlay.is-open {
   background: rgba(0, 0, 0, 0.48);
+  pointer-events: auto;
 }
 
 .about-overlay.is-open::before {
@@ -1348,10 +1351,10 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
 
 .about-overlay__scroll {
   position: relative;
-  width: min(100%, 880px);
-  height: 100%;
-  overflow-y: auto;
-  padding: 64px 32px 96px;
+  width: min(100%, 1056px);
+  margin: auto;
+  padding: 64px 32px;
+  text-align: left;
   opacity: 0;
   transform: translateY(12px);
   transition:
@@ -1366,7 +1369,7 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
 
 .about-overlay__content p {
   margin: 0 0 1.15em;
-  font-size: 35px;
+  font-size: 48px;
   line-height: 1.35;
   font-weight: 400;
   color: #ffffff;
@@ -1374,6 +1377,26 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
 
 .about-overlay__content p:last-child {
   margin-bottom: 0;
+}
+
+.about-overlay__content p.about-overlay__links {
+  margin-top: 0.5em;
+  font-size: calc(48px * 2 / 3);
+}
+
+.about-overlay__content a {
+  color: inherit;
+  text-underline-offset: 0.12em;
+}
+
+.about-overlay__content a:hover {
+  animation: hover-plate-blink 0.125s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .about-overlay__content a:hover {
+    animation: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1390,11 +1413,11 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
 
 @media (max-width: 720px) {
   .about-overlay__scroll {
-    padding: 48px 20px 72px;
+    padding: 48px 20px;
   }
 
   .about-overlay__content p {
-    font-size: 30px;
+    font-size: 48px;
   }
 }
 

@@ -1,16 +1,15 @@
 import { useEffect, useState } from "react";
 import { playUiSound } from "../ui/sounds";
+import { TypewriterReveal } from "./TypewriterReveal";
 
-const ABOUT_PARAGRAPHS = [
-  "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.",
-  "Curabitur pretium tincidunt lacus. Nulla facilisi. Ut convallis, sem sit amet interdum consectetuer, odio augue aliquam leo, nec dapibus tortor nibh sed augue.",
-  "Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Vestibulum tortor quam, feugiat vitae, ultricies eget, tempor sit amet, ante. Donec eu libero sit amet quam egestas semper. Aenean ultricies mi vitae est mauris placerat eleifend leo.",
-  "Maecenas fermentum, sem in pharetra pellentesque, velit turpis volutpat ante, in pharetra metus odio a lectus. Fusce ac turpis quis ligula lacinia aliquet. Mauris ipsum nulla, suscipit eget, imperdiet nec, fermentum et, felis. Integer vitae libero ac risus egestas placerat.",
-  "Vivamus luctus egestas leo. Morbi interdum mollis sapien. Sed ac risus. Phasellus lacinia, magna a ullamcorper laoreet, lectus arcu pulvinar risus, vitae facilisis libero dolor a purus.",
-  "Nam dui ligula, fringilla a, euismod sodales, sollicitudin vel, wisi. Morbi a metus. Phasellus enim erat, vestibulum vel, aliquam a, posuere eu, velit. Nullam dictum felis eu pede mollis pretium. Integer tincidunt. Cras dapibus. Vivamus elementum semper nisi. Aenean vulputate eleifend tellus. Aenean leo ligula, porttitor eu, consequat vitae, eleifend ac, enim.",
-  "Aliquam lorem ante, dapibus in, viverra quis, feugiat a, tellus. Phasellus viverra nulla ut metus varius laoreet. Quisque rutrum. Aenean imperdiet. Etiam ultricies nisi vel augue. Curabitur ullamcorper ultricies nisi. Nam eget dui. Etiam rhoncus maecenas tempus.",
-  "Donec pede justo, fringilla vel, aliquet nec, vulputate eget, arcu. In enim justo, rhoncus ut, imperdiet a, venenatis vitae, justo. Nullam dictum felis eu pede mollis pretium. Integer tincidunt cras dapibus.",
-];
+const ABOUT_TEXT =
+  "Hi, I'm Stellan Johansson, a creative director and brand designer with 20+ years across games, 3D, motion, UI and visual identity — shipping titles at studios, running agencies, and shaping platforms used by millions of creators and this is one of my sideprojects.";
+
+const LINKEDIN_URL = "https://www.linkedin.com/in/stellanj/";
+const MOBYGAMES_URL = "https://www.mobygames.com/person/289121/stellan-johansson/credits/";
+const X_URL = "https://x.com/johstell";
+const ORBY_URL = "https://orby.studio/";
+const ABOUT_LINKS_TEXT = "LinkedIn · MobyGames · X · Orby";
 
 type AboutOverlayProps = {
   open: boolean;
@@ -20,16 +19,19 @@ type AboutOverlayProps = {
 export function AboutOverlay({ open, onClose }: AboutOverlayProps) {
   const [mounted, setMounted] = useState(open);
   const [entered, setEntered] = useState(false);
+  const [linksActive, setLinksActive] = useState(false);
 
   useEffect(() => {
     if (open) {
       setMounted(true);
+      setLinksActive(false);
       const id = window.requestAnimationFrame(() => {
         window.requestAnimationFrame(() => setEntered(true));
       });
       return () => window.cancelAnimationFrame(id);
     }
     setEntered(false);
+    setLinksActive(false);
   }, [open]);
 
   useEffect(() => {
@@ -68,9 +70,28 @@ export function AboutOverlay({ open, onClose }: AboutOverlayProps) {
         onClick={(event) => event.stopPropagation()}
       >
         <div className="about-overlay__content">
-          {ABOUT_PARAGRAPHS.map((paragraph) => (
-            <p key={paragraph.slice(0, 40)}>{paragraph}</p>
-          ))}
+          <TypewriterReveal
+            as="p"
+            text={ABOUT_TEXT}
+            active={entered}
+            playTypeSound
+            onComplete={() => setLinksActive(true)}
+          />
+          <TypewriterReveal
+            as="p"
+            className="about-overlay__links"
+            text={ABOUT_LINKS_TEXT}
+            active={entered && linksActive}
+            hold
+            caret={false}
+            playTypeSound
+            links={[
+              { text: "LinkedIn", href: LINKEDIN_URL },
+              { text: "MobyGames", href: MOBYGAMES_URL },
+              { text: "X", href: X_URL },
+              { text: "Orby", href: ORBY_URL },
+            ]}
+          />
         </div>
       </div>
     </div>
