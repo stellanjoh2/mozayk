@@ -72,12 +72,17 @@ function computeFitScale(
   return Math.min(availW / canvasWidth, availH / canvasHeight);
 }
 
-function InspectIcon() {
+function InspectIcon({ minus = false }: { minus?: boolean }) {
   return (
     <svg className="canvas-stage-control-icon" viewBox="0 0 160 160" aria-hidden="true">
       <path
         fill="currentColor"
-        d="M80,0C35.82,0,0,35.82,0,80s35.82,80,80,80,80-35.82,80-80S124.18,0,80,0ZM120.52,90h-30.52v30.52h-20v-30.52h-30.52v-20h30.52v-30.52h20v30.52h30.52v20Z"
+        fillRule="evenodd"
+        d={
+          minus
+            ? "M80,0C35.82,0,0,35.82,0,80s35.82,80,80,80,80-35.82,80-80S124.18,0,80,0ZM120.52,90h-81.04v-20h81.04Z"
+            : "M80,0C35.82,0,0,35.82,0,80s35.82,80,80,80,80-35.82,80-80S124.18,0,80,0ZM120.52,90h-30.52v30.52h-20v-30.52h-30.52v-20h30.52v-30.52h20v30.52h30.52v20Z"
+        }
       />
     </svg>
   );
@@ -824,7 +829,7 @@ export function CanvasView({
                 : `Inspect at 100% (${nativeSize[0]}×${nativeSize[1]})`
             }
           >
-            <InspectIcon />
+            <InspectIcon minus={isInspecting} />
           </button>
         </div>
       ) : null}
@@ -1015,6 +1020,7 @@ function FrameThumbnail({
 }
 
 const DRAG_THRESHOLD = 5;
+const FRAME_SLOT_COLLAPSE_S = 0.45;
 
 type PendingDrag = {
   index: number;
@@ -1236,7 +1242,8 @@ export function Timeline({
   const [insertIndex, setInsertIndex] = useState<number | null>(null);
   const [pointer, setPointer] = useState<{ x: number; y: number } | null>(null);
   const [ghostOffset, setGhostOffset] = useState({ x: 0, y: 0 });
-  const [removing, setRemoving] = useState(false);
+  const [removingIndex, setRemovingIndex] = useState<number | null>(null);
+  const removing = removingIndex !== null;
   const [dropFlash, setDropFlash] = useState<{
     index: number;
     token: number;
@@ -1533,14 +1540,12 @@ export function Timeline({
         if (thumbs.length) gsap.set(thumbs, { autoAlpha: 0 });
       },
       onComplete: () => {
-        setRemoving(false);
         flashNew();
       },
     });
     return () => {
       tween.kill();
       window.clearTimeout(flashTimer);
-      setRemoving(false);
       if (newThumb) {
         gsap.set(newThumb, { autoAlpha: 1, clearProps: "opacity,visibility" });
         newThumb.classList.remove("is-adding");
@@ -1548,6 +1553,59 @@ export function Timeline({
       addingRef.current = false;
     };
   }, [frames]);
+
+  useLayoutEffect(() => {
+    if (removingIndex === null) return;
+
+    const strip = stripRef.current;
+    const item = strip?.querySelector(
+      `[data-frame-index="${removingIndex}"]`,
+    ) as HTMLElement | null;
+    const thumb = item?.querySelector(".timeline-thumb") as HTMLElement | null;
+    if (!strip || !item || !thumb) {
+      onRemove(removingIndex);
+      setRemovingIndex(null);
+      return;
+    }
+
+    const gap = parseFloat(
+      getComputedStyle(item.parentElement ?? item).columnGap,
+    );
+    const slotGap = Number.isFinite(gap) ? gap : 8;
+    const startWidth = item.getBoundingClientRect().width;
+
+    removeTlRef.current?.kill();
+    const index = removingIndex;
+    const tl = gsap.timeline({
+      onComplete: () => {
+        setRemovingIndex(null);
+        onRemove(index);
+      },
+    });
+    tl.fromTo(
+      thumb,
+      { scale: 1 },
+      { scale: 0, duration: 0.25, ease: "power2.in" },
+      0,
+    );
+    tl.fromTo(
+      item,
+      { width: startWidth, minWidth: startWidth, marginRight: 0 },
+      {
+        width: 0,
+        minWidth: 0,
+        marginRight: -slotGap,
+        duration: FRAME_SLOT_COLLAPSE_S,
+        ease: "power3.inOut",
+      },
+      0,
+    );
+    removeTlRef.current = tl;
+
+    return () => {
+      tl.kill();
+    };
+  }, [removingIndex, onRemove]);
 
   const captureStripThen = (action: () => void) => {
     const strip = stripRef.current;
@@ -1580,36 +1638,15 @@ export function Timeline({
 
     playUiSound("delete");
 
-    const strip = stripRef.current;
-    const item = strip?.querySelector(
-      `[data-frame-index="${index}"]`,
-    ) as HTMLElement | null;
-    const thumb = item?.querySelector(".timeline-thumb") as HTMLElement | null;
     const reduceMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
     ).matches;
-
-    if (!strip || !item || !thumb || reduceMotion) {
+    if (reduceMotion || !stripRef.current) {
       onRemove(index);
       return;
     }
 
-    setRemoving(true);
-    thumb.classList.add("is-removing");
-
-    removeTlRef.current = gsap.timeline({
-      onComplete: () => {
-        pendingFlipRef.current = Flip.getState(
-          strip.querySelectorAll(".timeline-strip-item"),
-        );
-        onRemove(index);
-      },
-    });
-    removeTlRef.current.to(thumb, {
-      scale: 0,
-      duration: 0.25,
-      ease: "power2.in",
-    });
+    setRemovingIndex(index);
   };
 
   const handleThumbPointerDown = (
@@ -1822,10 +1859,13 @@ export function Timeline({
             return (
               <div
                 key={frame.id}
-                className="timeline-strip-item"
+                className={`timeline-strip-item${index === removingIndex ? " is-removing" : ""}`}
                 data-timeline-slot
                 data-frame-index={index}
-                style={{ width: thumbW, height: thumbH }}
+                style={{
+                  height: thumbH,
+                  ...(index === removingIndex ? {} : { width: thumbW }),
+                }}
               >
                 <div
                   className="timeline-thumb-cell"
