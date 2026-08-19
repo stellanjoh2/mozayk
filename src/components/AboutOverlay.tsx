@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { playUiSound } from "../ui/sounds";
 import { TypewriterReveal } from "./TypewriterReveal";
 
@@ -20,11 +21,13 @@ export function AboutOverlay({ open, onClose }: AboutOverlayProps) {
   const [mounted, setMounted] = useState(open);
   const [entered, setEntered] = useState(false);
   const [linksActive, setLinksActive] = useState(false);
+  const [okActive, setOkActive] = useState(false);
 
   useEffect(() => {
     if (open) {
       setMounted(true);
       setLinksActive(false);
+      setOkActive(false);
       const id = window.requestAnimationFrame(() => {
         window.requestAnimationFrame(() => setEntered(true));
       });
@@ -32,6 +35,7 @@ export function AboutOverlay({ open, onClose }: AboutOverlayProps) {
     }
     setEntered(false);
     setLinksActive(false);
+    setOkActive(false);
   }, [open]);
 
   useEffect(() => {
@@ -49,7 +53,7 @@ export function AboutOverlay({ open, onClose }: AboutOverlayProps) {
 
   if (!mounted) return null;
 
-  return (
+  return createPortal(
     <div
       className={["about-overlay", entered ? "is-open" : ""].filter(Boolean).join(" ")}
       role="presentation"
@@ -59,7 +63,7 @@ export function AboutOverlay({ open, onClose }: AboutOverlayProps) {
       }}
       onTransitionEnd={(event) => {
         if (event.target !== event.currentTarget) return;
-        if (!open && event.propertyName === "opacity") setMounted(false);
+        if (!open && event.propertyName === "background-color") setMounted(false);
       }}
     >
       <div
@@ -85,6 +89,7 @@ export function AboutOverlay({ open, onClose }: AboutOverlayProps) {
             hold
             caret={false}
             playTypeSound
+            onComplete={() => setOkActive(true)}
             links={[
               { text: "LinkedIn", href: LINKEDIN_URL },
               { text: "MobyGames", href: MOBYGAMES_URL },
@@ -92,8 +97,28 @@ export function AboutOverlay({ open, onClose }: AboutOverlayProps) {
               { text: "Orby", href: ORBY_URL },
             ]}
           />
+          <button
+            type="button"
+            className={["panel-btn", "about-overlay__ok", okActive ? "is-in" : ""]
+              .filter(Boolean)
+              .join(" ")}
+            data-ui-sound="ok"
+            aria-hidden={!okActive}
+            tabIndex={okActive ? 0 : -1}
+            onClick={onClose}
+          >
+            <TypewriterReveal
+              as="span"
+              text="OK"
+              active={entered && okActive}
+              hold
+              caret={false}
+              playTypeSound
+            />
+          </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

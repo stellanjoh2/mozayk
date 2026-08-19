@@ -360,6 +360,7 @@ export function ControlsPanel({
       onApplyPreset={onApplyPalettePreset}
       onAnimatingChange={setThemesAnimating}
     />
+    <AboutOverlay open={aboutOpen} onClose={() => setAboutOpen(false)} />
     <ConfirmDialog
       open={heavyBlurDialogOpen}
       title="Save your project"
@@ -1750,7 +1751,6 @@ export function ControlsPanel({
           </a>
         </p>
       </footer>
-      <AboutOverlay open={aboutOpen} onClose={() => setAboutOpen(false)} />
       </div>
     </aside>
     </>

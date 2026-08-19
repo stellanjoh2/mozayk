@@ -1322,22 +1322,11 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
   z-index: 50;
   display: grid;
   place-items: center;
-  overflow-y: auto;
+  overflow: visible;
   padding: 0;
   background: rgba(0, 0, 0, 0);
   pointer-events: none;
   transition: background 0.2s var(--ui-ease);
-}
-
-.about-overlay::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  opacity: 0;
-  transition: opacity 0.225s var(--ui-ease);
-  pointer-events: none;
 }
 
 .about-overlay.is-open {
@@ -1346,13 +1335,20 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
 }
 
 .about-overlay.is-open::before {
-  opacity: 1;
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
 
 .about-overlay__scroll {
   position: relative;
   width: min(100%, 1056px);
+  max-height: 100%;
   margin: auto;
+  overflow-y: auto;
   padding: 64px 32px;
   text-align: left;
   opacity: 0;
@@ -1382,6 +1378,28 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
 .about-overlay__content p.about-overlay__links {
   margin-top: 0.5em;
   font-size: calc(48px * 2 / 3);
+}
+
+.about-overlay__ok {
+  width: auto;
+  min-width: 8em;
+  margin: 1.6em 0 0;
+  font-size: calc(15px * 1.5);
+  min-height: calc(var(--control-height) * 1.5);
+  padding: calc(10px * 1.5) calc(18px * 1.5);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.about-overlay__ok.is-in {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.about-overlay__ok .typewriter-reveal {
+  display: inline-block;
 }
 
 .about-overlay__content a {
