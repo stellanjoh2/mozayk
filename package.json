@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "check:frost": "node scripts/check-frost-css.mjs",
     "lint": "oxlint",
     "preview": "vite preview"
   },

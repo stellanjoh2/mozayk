@@ -5,9 +5,15 @@ alwaysApply: true
 
 # Mosaic frost (`backdrop-filter`) — do not regress
 
-This has broken many times. Do not "simplify" stacking, portals, or blur layers.
+This has broken many times. Do not "simplify" stacking, portals, blur layers, or CSS minify.
 
 `backdrop-filter` only samples what is **behind that element**, and only if no ancestor is a backdrop root (`isolation`, `transform`, `filter`, `opacity < 1`, `zoom`, `overflow` other than visible).
+
+## Production CSS
+
+- Keep `build.cssMinify: false` in `vite.config.ts`.
+- LightningCSS minify rewrites `backdrop-filter` to `-webkit-backdrop-filter` only. Chrome ignores that, so frost works in `vite dev` and dies on GitHub Pages.
+- `npm run check:frost` must stay in the Pages deploy workflow.
 
 ## About overlay
 

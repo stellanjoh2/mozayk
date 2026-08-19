@@ -27,6 +27,7 @@ jobs:
       - run: npm run build
         env:
           GITHUB_ACTIONS: true
+      - run: npm run check:frost
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
