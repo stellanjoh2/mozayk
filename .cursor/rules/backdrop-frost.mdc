@@ -1,0 +1,24 @@
+---
+description: Never break About overlay or theme-shelf mosaic frost
+alwaysApply: true
+---
+
+# Mosaic frost (`backdrop-filter`) — do not regress
+
+This has broken many times. Do not "simplify" stacking, portals, or blur layers.
+
+`backdrop-filter` only samples what is **behind that element**, and only if no ancestor is a backdrop root (`isolation`, `transform`, `filter`, `opacity < 1`, `zoom`, `overflow` other than visible).
+
+## About overlay
+
+- Keep it portaled to `document.body`.
+- Put **tint and blur on the same node** (`.about-overlay.is-open`).
+- Do not use `::before` for blur while the parent has a fill — that frosts the wash, not the mosaic.
+
+## Colour theme shelf
+
+- Keep it portaled to `document.body` with `position: fixed`.
+- `z-index: 1`, `.app-chrome` at `z-index: 2` so it still slides out **from behind** the controls. Do not raise the shelf above chrome.
+- Slide with `left` / `--ui-chrome-width`, never `transform` on the frost node.
+- Do not nest it in `.app-chrome` (zoom + overflow clip the backdrop to empty chrome).
+- Never put `isolation: isolate` on `.app-chrome`.

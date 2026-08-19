@@ -1,6 +1,7 @@
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   palettePresetsForCategory,
   type PaletteCategory,
@@ -170,7 +171,7 @@ export function PalettePanel({
 
   const activePresets = palettePresetsForCategory(paletteTab);
 
-  return (
+  return createPortal(
     <aside
       ref={panelRef}
       className={["palette-panel", entered ? "is-open" : ""]
@@ -267,6 +268,7 @@ export function PalettePanel({
           </button>
         </footer>
       </div>
-    </aside>
+    </aside>,
+    document.body,
   );
 }

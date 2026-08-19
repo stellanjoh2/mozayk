@@ -99,6 +99,7 @@
   --panel-slide-ease: cubic-bezier(0.83, 0, 0.17, 1);
   --ui-compact-zoom: 1;
   --ui-panel-width: 420px;
+  --ui-chrome-width: var(--ui-panel-width);
   color-scheme: dark;
 }
 
@@ -232,7 +233,7 @@ body {
 
 .app {
   display: grid;
-  grid-template-columns: var(--ui-panel-width) 1fr;
+  grid-template-columns: var(--ui-chrome-width) 1fr;
   width: 100%;
   height: 100%;
   min-height: 100dvh;
@@ -241,7 +242,8 @@ body {
 
 .app-chrome {
   position: relative;
-  z-index: 1;
+  /* Must stay above .palette-panel (z-index 1) so the shelf slides out from behind. */
+  z-index: 2;
   min-width: 0;
   min-height: 0;
   height: 100%;
@@ -257,16 +259,12 @@ body {
   }
 
   .app {
-    grid-template-columns: var(--ui-panel-width) 1fr;
+    grid-template-columns: var(--ui-chrome-width) 1fr;
   }
 
   .controls-panel__zoom {
     width: calc(var(--ui-panel-width) / var(--ui-compact-zoom));
     zoom: var(--ui-compact-zoom);
-  }
-
-  .palette-panel {
-    width: var(--ui-panel-width);
   }
 
   .palette-panel__inner {
@@ -346,16 +344,12 @@ body {
   }
 
   .app {
-    grid-template-columns: var(--ui-panel-width) 1fr;
+    grid-template-columns: var(--ui-chrome-width) 1fr;
   }
 
   .controls-panel__zoom {
     width: calc(var(--ui-panel-width) / var(--ui-compact-zoom));
     zoom: var(--ui-compact-zoom);
-  }
-
-  .palette-panel {
-    width: var(--ui-panel-width);
   }
 
   .palette-panel__inner {
@@ -431,19 +425,16 @@ body {
 @media (min-width: 2561px) {
   :root {
     --ui-compact-zoom: min(100vw / 2560px, 100dvh / 1440px);
+    --ui-chrome-width: calc(var(--ui-panel-width) * var(--ui-compact-zoom));
   }
 
   .app {
-    grid-template-columns: calc(var(--ui-panel-width) * var(--ui-compact-zoom)) 1fr;
+    grid-template-columns: var(--ui-chrome-width) 1fr;
   }
 
   .controls-panel__zoom {
     width: var(--ui-panel-width);
     zoom: var(--ui-compact-zoom);
-  }
-
-  .palette-panel {
-    width: calc(var(--ui-panel-width) * var(--ui-compact-zoom));
   }
 
   .palette-panel__inner {
@@ -1330,21 +1321,16 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
 }
 
 .about-overlay.is-open {
+  /* Tint + blur on this node. A ::before child only frosts the overlay fill. */
   background: rgba(0, 0, 0, 0.48);
   pointer-events: auto;
-}
-
-.about-overlay.is-open::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
 }
 
 .about-overlay__scroll {
   position: relative;
+  isolation: isolate;
   width: min(100%, 1056px);
   max-height: 100%;
   margin: auto;
@@ -1419,7 +1405,6 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
 
 @media (prefers-reduced-motion: reduce) {
   .about-overlay,
-  .about-overlay::before,
   .about-overlay__scroll {
     transition-duration: 0.01ms;
   }
@@ -2066,12 +2051,14 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
 }
 
 .palette-panel {
-  position: absolute;
+  /* Portaled to body. Do not nest this in .app-chrome — overflow/zoom/isolation
+     there make backdrop-filter sample empty chrome instead of the mosaic. */
+  position: fixed;
   top: 0;
   left: 0;
   bottom: 0;
   z-index: 1;
-  width: 100%;
+  width: var(--ui-chrome-width);
   background: var(--glass);
   backdrop-filter: blur(36px);
   -webkit-backdrop-filter: blur(36px);
@@ -2089,7 +2076,7 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
 }
 
 .palette-panel.is-open {
-  left: 100%;
+  left: var(--ui-chrome-width);
   pointer-events: auto;
 }
 
