@@ -154,17 +154,28 @@ export function PalettePanel({
 
   useEffect(() => {
     if (!mounted || !entered) return;
+    const swallowClick = (event: Event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+    };
     const onPointerDown = (event: PointerEvent) => {
       const target = event.target;
       if (!(target instanceof Element)) return;
       if (target.closest(".palette-panel")) return;
       event.preventDefault();
       event.stopPropagation();
+      event.stopImmediatePropagation();
+      // Dismiss is pointerdown; the leftover click would still hit Randomize / canvas.
+      document.addEventListener("click", swallowClick, { capture: true, once: true });
       playUiSound("close");
       onClose();
     };
     document.addEventListener("pointerdown", onPointerDown, true);
-    return () => document.removeEventListener("pointerdown", onPointerDown, true);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown, true);
+      document.removeEventListener("click", swallowClick, true);
+    };
   }, [mounted, entered, onClose]);
 
   if (!mounted) return null;

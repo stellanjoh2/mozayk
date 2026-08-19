@@ -300,12 +300,13 @@ body {
   .shortcut-list__row,
   .panel-btn,
   .button-row button,
-  .timeline__controls button,
+  .timeline__controls > button,
   .frame-context-menu__item,
   .app-toast,
   .import-error-dialog__message,
   .reset-canvas-dialog__message,
-  .control-row select,
+  .control-row .ui-select__trigger,
+  .ui-select__option,
   .rfrct-color-picker__scale-trigger,
   .rfrct-color-picker__scale-option,
   .palette-panel__tab,
@@ -318,11 +319,12 @@ body {
   .reset-canvas-dialog__title,
   .palette-panel__title,
   .timeline__frame-index,
-  .timeline__fps {
+  .timeline__blur-note,
+  .ui-select.timeline__fps .ui-select__trigger {
     font-size: 19px;
   }
 
-  .timeline__fps option {
+  .ui-select__menu.timeline__fps .ui-select__option {
     font-size: 19px;
   }
 
@@ -385,12 +387,13 @@ body {
   .shortcut-list__row,
   .panel-btn,
   .button-row button,
-  .timeline__controls button,
+  .timeline__controls > button,
   .frame-context-menu__item,
   .app-toast,
   .import-error-dialog__message,
   .reset-canvas-dialog__message,
-  .control-row select,
+  .control-row .ui-select__trigger,
+  .ui-select__option,
   .rfrct-color-picker__scale-trigger,
   .rfrct-color-picker__scale-option,
   .palette-panel__tab,
@@ -403,11 +406,12 @@ body {
   .reset-canvas-dialog__title,
   .palette-panel__title,
   .timeline__frame-index,
-  .timeline__fps {
+  .timeline__blur-note,
+  .ui-select.timeline__fps .ui-select__trigger {
     font-size: 20px;
   }
 
-  .timeline__fps option {
+  .ui-select__menu.timeline__fps .ui-select__option {
     font-size: 20px;
   }
 
@@ -594,7 +598,7 @@ body {
 
   .panel-btn:hover:not(:disabled)::before,
   .button-row button:hover:not(:disabled)::before,
-  .timeline__controls button:hover:not(:disabled)::before,
+  .timeline__controls > button:hover:not(:disabled)::before,
   .canvas-stage-control-btn:hover:not(:disabled)::before,
   .frame-context-menu__item:hover:not(:disabled)::before,
   .ui-icon-btn:hover::before,
@@ -621,7 +625,7 @@ body {
 
 html.normal-hover .panel-btn:hover:not(:disabled)::before,
 html.normal-hover .button-row button:hover:not(:disabled)::before,
-html.normal-hover .timeline__controls button:hover:not(:disabled)::before,
+html.normal-hover .timeline__controls > button:hover:not(:disabled)::before,
 html.normal-hover .canvas-stage-control-btn:hover:not(:disabled)::before,
 html.normal-hover .frame-context-menu__item:hover:not(:disabled)::before,
 html.normal-hover .ui-icon-btn:hover::before,
@@ -931,7 +935,7 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
 
 .panel-btn,
 .button-row button,
-.timeline__controls button,
+.timeline__controls > button,
 .canvas-stage-control-btn,
 .frame-context-menu__item {
   --hover-plate-on: var(--accent-hover);
@@ -956,7 +960,7 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
 
 .panel-btn::before,
 .button-row button::before,
-.timeline__controls button::before,
+.timeline__controls > button::before,
 .canvas-stage-control-btn::before,
 .frame-context-menu__item::before,
 .ui-icon-btn::before {
@@ -977,7 +981,7 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
 
 .panel-btn:hover:not(:disabled)::before,
 .button-row button:hover:not(:disabled)::before,
-.timeline__controls button:hover:not(:disabled)::before,
+.timeline__controls > button:hover:not(:disabled)::before,
 .canvas-stage-control-btn:hover:not(:disabled)::before,
 .frame-context-menu__item:hover:not(:disabled)::before,
 .ui-icon-btn:hover:not(:disabled)::before,
@@ -987,7 +991,7 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
 
 .panel-btn:hover:not(:disabled),
 .button-row button:hover:not(:disabled):not(.is-active),
-.timeline__controls button:hover:not(:disabled):not(.is-active),
+.timeline__controls > button:hover:not(:disabled):not(.is-active),
 .canvas-stage-control-btn:hover:not(:disabled):not(.is-active),
 .frame-context-menu__item:hover:not(:disabled) {
   color: var(--brand);
@@ -995,7 +999,7 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
 
 .panel-btn:active:not(:disabled),
 .button-row button:active:not(:disabled):not(.is-active),
-.timeline__controls button:active:not(:disabled):not(.is-active),
+.timeline__controls > button:active:not(:disabled):not(.is-active),
 .canvas-stage-control-btn:active:not(:disabled):not(.is-active),
 .frame-context-menu__item:active:not(:disabled) {
   background: var(--brand);
@@ -1008,7 +1012,7 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
 
 .panel-btn:active:not(:disabled)::before,
 .button-row button:active:not(:disabled):not(.is-active)::before,
-.timeline__controls button:active:not(:disabled):not(.is-active)::before,
+.timeline__controls > button:active:not(:disabled):not(.is-active)::before,
 .canvas-stage-control-btn:active:not(:disabled):not(.is-active)::before,
 .frame-context-menu__item:active:not(:disabled)::before {
   animation: none;
@@ -1439,7 +1443,7 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
   }
 }
 
-.timeline__controls button:disabled {
+.timeline__controls > button:disabled {
   opacity: 0.35;
   cursor: var(--cursor-not-allowed);
 }
@@ -1491,7 +1495,7 @@ html.normal-hover .button-row--choice button.is-active:hover::before {
 
 .button-row button:not(.is-active) svg,
 .canvas-stage-control-btn:not(.is-active) svg,
-.timeline__controls button:not(.is-active) svg,
+.timeline__controls > button:not(.is-active) svg,
 .palette-panel__close svg,
 .ui-icon-btn svg {
   filter:
@@ -1506,7 +1510,7 @@ html.normal-hover .button-row--choice button.is-active:hover::before {
 }
 
 .button-row button.is-active,
-.timeline__controls button.is-active,
+.timeline__controls > button.is-active,
 .canvas-stage-control-btn.is-active {
   --hover-plate-on: var(--brand);
   --hover-plate-off: var(--chrome);
@@ -1645,7 +1649,7 @@ html.normal-hover .button-row--choice button.is-active:hover::before {
 
 .control-row--muted input[type="range"],
 .control-row--muted input[type="checkbox"],
-.control-row--muted select,
+.control-row--muted .ui-select,
 .control-row--muted .color-swatch {
   pointer-events: none;
 }
@@ -1698,8 +1702,11 @@ html.normal-hover .button-row--choice button.is-active:hover::before {
   outline: none;
 }
 
-.control-row select {
-  -webkit-appearance: none;
+.control-row .ui-select {
+  width: 100%;
+}
+
+.control-row .ui-select__trigger {
   appearance: none;
   width: 100%;
   box-sizing: border-box;
@@ -1711,19 +1718,106 @@ html.normal-hover .button-row--choice button.is-active:hover::before {
   background-size: 8px 8px;
   border: 1px solid var(--panel-border);
   color: var(--chrome);
-  border-radius: var(--control-radius);
+  border-radius: 0;
   padding: 8px 32px 8px 10px;
   font: inherit;
   font-size: 16px;
   line-height: 1.2;
+  text-align: left;
+  cursor: var(--cursor-default);
+}
+
+.control-row .ui-select__trigger:disabled {
+  cursor: var(--cursor-not-allowed);
+}
+
+.control-row .ui-select__trigger:focus,
+.control-row .ui-select__trigger:focus-visible {
+  outline: none;
 }
 
 .control-row .button-row {
   margin-bottom: 0;
 }
 
-.control-row select::-ms-expand {
-  display: none;
+.ui-select__menu {
+  position: fixed;
+  z-index: 120;
+  margin: 0;
+  padding: 4px 0;
+  box-sizing: border-box;
+  max-height: min(360px, calc(100dvh - 16px));
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 0;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+  user-select: none;
+  zoom: var(--ui-compact-zoom);
+}
+
+.ui-select__option {
+  --hover-plate-on: var(--accent-hover);
+  position: relative;
+  isolation: isolate;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.2;
+  text-align: left;
+  white-space: nowrap;
+  cursor: var(--cursor-default);
+}
+
+.ui-select__option::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--hover-plate-on);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ui-select__option.is-selected {
+  color: var(--chrome);
+}
+
+.ui-select__option.is-active:not(.is-disabled)::before {
+  animation: hover-plate-blink 0.125s linear infinite;
+}
+
+.ui-select__option.is-active:not(.is-disabled) {
+  color: var(--brand);
+}
+
+.ui-select__option.is-disabled {
+  opacity: 0.35;
+  cursor: var(--cursor-not-allowed);
+}
+
+.ui-select__option:focus,
+.ui-select__option:focus-visible {
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-select__option.is-active:not(.is-disabled)::before {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+html.normal-hover .ui-select__option.is-active:not(.is-disabled)::before {
+  animation: none;
+  opacity: 1;
 }
 
 .control-row--toggle {
@@ -2453,7 +2547,7 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
 
 .timeline__frame-index,
 .timeline__controls,
-.timeline__phase-orb {
+.timeline__playback-status {
   zoom: var(--ui-compact-zoom);
 }
 
@@ -2469,8 +2563,27 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
   user-select: none;
 }
 
-.timeline__phase-orb {
+.timeline__playback-status {
   justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  min-width: 0;
+}
+
+.timeline__blur-note {
+  margin: 0;
+  color: var(--chrome);
+  font-size: 17px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  line-height: var(--icon-btn-size);
+  text-transform: uppercase;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.timeline__phase-orb {
   width: var(--icon-btn-size);
   height: var(--icon-btn-size);
   display: grid;
@@ -2555,13 +2668,16 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
   height: 24px;
 }
 
-.timeline__fps {
-  -webkit-appearance: none;
-  appearance: none;
+.ui-select.timeline__fps {
   display: block;
   width: 152px;
-  height: var(--icon-btn-size);
   flex: 0 0 auto;
+}
+
+.ui-select.timeline__fps .ui-select__trigger {
+  display: block;
+  width: 100%;
+  height: var(--icon-btn-size);
   box-sizing: border-box;
   margin: 0;
   padding: 0 36px 0 14px;
@@ -2571,30 +2687,28 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
   background-position: right 14px center;
   background-size: 9px 9px;
   border: 1px solid var(--panel-border);
-  border-radius: var(--control-radius);
+  border-radius: 0;
   color: var(--chrome);
   font: inherit;
   font-size: 17px;
   font-weight: 400;
   letter-spacing: 0.04em;
   line-height: calc(var(--icon-btn-size) - 2px);
+  text-align: left;
   text-transform: uppercase;
   cursor: var(--cursor-default);
 }
 
-.timeline__fps::-ms-expand {
-  display: none;
-}
-
-.timeline__fps:focus,
-.timeline__fps:focus-visible {
+.ui-select.timeline__fps .ui-select__trigger:focus,
+.ui-select.timeline__fps .ui-select__trigger:focus-visible {
   outline: none;
 }
 
-.timeline__fps option {
+.ui-select__menu.timeline__fps .ui-select__option {
   font-size: 18px;
   font-weight: 400;
   letter-spacing: 0;
+  text-transform: uppercase;
 }
 
 .timeline__scroll {
@@ -3024,10 +3138,18 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
   width: 100%;
   height: var(--rfrct-picker-control-h);
   border: 1px solid var(--panel-border);
-  border-radius: 4px;
   background: var(--fill-faint);
   color: var(--text);
   font: inherit;
+}
+
+.rfrct-color-picker__hex,
+.rfrct-color-picker__channel {
+  border-radius: 4px;
+}
+
+.rfrct-color-picker__scale-trigger {
+  border-radius: 0;
 }
 
 .rfrct-color-picker__hex,
@@ -3061,7 +3183,7 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
   list-style: none;
   background: var(--panel);
   border: 1px solid var(--panel-border);
-  border-radius: 4px;
+  border-radius: 0;
   min-width: 58px;
   z-index: 1;
 }

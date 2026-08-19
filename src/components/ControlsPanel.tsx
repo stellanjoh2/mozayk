@@ -76,6 +76,7 @@ import {
 } from "./ControlRowWithPause";
 import { HeadlineToggle, SliderRow, ToggleRow } from "./ControlRow";
 import { HintLabel } from "./HintLabel";
+import { UiSelect } from "./UiSelect";
 import {
   getNormalCursor,
   setNormalCursor,
@@ -107,6 +108,16 @@ import {
 gsap.registerPlugin(useGSAP);
 
 const COLOR_LIST_SHIFT_MS = 450;
+
+const DENSITY_SELECT_OPTIONS = DENSITY_INFO.map((info) => ({
+  value: String(info.level),
+  label: info.label,
+}));
+
+const BLEND_SELECT_OPTIONS = GRID_BLEND_MODES.map((mode) => ({
+  value: mode,
+  label: GRID_BLEND_LABELS[mode],
+}));
 
 type ControlsPanelProps = {
   frame: Frame;
@@ -453,21 +464,13 @@ export function ControlsPanel({
         </div>
         <label className="control-row">
           <span className="control-row__label">Grid Density</span>
-          <select
+          <UiSelect
             value={settings.density}
-            onChange={(e) =>
-              onSettingsChange(
-                { density: Number(e.target.value) as Density },
-                true,
-              )
+            options={DENSITY_SELECT_OPTIONS}
+            onChange={(density) =>
+              onSettingsChange({ density: Number(density) as Density }, true)
             }
-          >
-            {DENSITY_INFO.map((info) => (
-              <option key={info.level} value={info.level}>
-                {info.level}
-              </option>
-            ))}
-          </select>
+          />
         </label>
       </section>
 
@@ -814,24 +817,19 @@ export function ControlsPanel({
           className={`control-row${settings.gridOverlay ? "" : " control-row--muted"}`}
         >
           <span className="control-row__label">Grid Density</span>
-          <select
+          <UiSelect
             value={settings.gridOverlayDensity ?? 1}
             disabled={!settings.gridOverlay}
-            onChange={(e) =>
+            options={DENSITY_SELECT_OPTIONS}
+            onChange={(gridOverlayDensity) =>
               onSettingsChange(
                 {
-                  gridOverlayDensity: Number(e.target.value) as Density,
+                  gridOverlayDensity: Number(gridOverlayDensity) as Density,
                 },
                 false,
               )
             }
-          >
-            {DENSITY_INFO.map((info) => (
-              <option key={info.level} value={info.level}>
-                {info.level}
-              </option>
-            ))}
-          </select>
+          />
         </label>
         <div
           className={`control-row${settings.gridOverlay ? "" : " control-row--muted"}`}
@@ -892,24 +890,19 @@ export function ControlsPanel({
               Blend
             </HintLabel>
           </span>
-          <select
+          <UiSelect
             value={settings.gridOverlayBlend ?? "normal"}
             disabled={!settings.gridOverlay}
-            onChange={(e) =>
+            options={BLEND_SELECT_OPTIONS}
+            onChange={(gridOverlayBlend) =>
               onSettingsChange(
                 {
-                  gridOverlayBlend: e.target.value as GridBlendMode,
+                  gridOverlayBlend: gridOverlayBlend as GridBlendMode,
                 },
                 false,
               )
             }
-          >
-            {GRID_BLEND_MODES.map((mode) => (
-              <option key={mode} value={mode}>
-                {GRID_BLEND_LABELS[mode]}
-              </option>
-            ))}
-          </select>
+          />
         </label>
       </section>
 
@@ -928,24 +921,19 @@ export function ControlsPanel({
           className={`control-row${settings.gridCrosses ? "" : " control-row--muted"}`}
         >
           <span className="control-row__label">Grid Density</span>
-          <select
+          <UiSelect
             value={settings.gridCrossesDensity ?? 1}
             disabled={!settings.gridCrosses}
-            onChange={(e) =>
+            options={DENSITY_SELECT_OPTIONS}
+            onChange={(gridCrossesDensity) =>
               onSettingsChange(
                 {
-                  gridCrossesDensity: Number(e.target.value) as Density,
+                  gridCrossesDensity: Number(gridCrossesDensity) as Density,
                 },
                 false,
               )
             }
-          >
-            {DENSITY_INFO.map((info) => (
-              <option key={info.level} value={info.level}>
-                {info.level}
-              </option>
-            ))}
-          </select>
+          />
         </label>
         <div
           className={`control-row${settings.gridCrosses ? "" : " control-row--muted"}`}
@@ -1018,24 +1006,19 @@ export function ControlsPanel({
               Blend
             </HintLabel>
           </span>
-          <select
+          <UiSelect
             value={settings.gridCrossesBlend ?? "normal"}
             disabled={!settings.gridCrosses}
-            onChange={(e) =>
+            options={BLEND_SELECT_OPTIONS}
+            onChange={(gridCrossesBlend) =>
               onSettingsChange(
                 {
-                  gridCrossesBlend: e.target.value as GridBlendMode,
+                  gridCrossesBlend: gridCrossesBlend as GridBlendMode,
                 },
                 false,
               )
             }
-          >
-            {GRID_BLEND_MODES.map((mode) => (
-              <option key={mode} value={mode}>
-                {GRID_BLEND_LABELS[mode]}
-              </option>
-            ))}
-          </select>
+          />
         </label>
       </section>
 
@@ -1093,24 +1076,19 @@ export function ControlsPanel({
               Blend
             </HintLabel>
           </span>
-          <select
+          <UiSelect
             value={settings.dataFieldsBlend ?? "normal"}
             disabled={!settings.dataFields}
-            onChange={(e) =>
+            options={BLEND_SELECT_OPTIONS}
+            onChange={(dataFieldsBlend) =>
               onSettingsChange(
                 {
-                  dataFieldsBlend: e.target.value as GridBlendMode,
+                  dataFieldsBlend: dataFieldsBlend as GridBlendMode,
                 },
                 false,
               )
             }
-          >
-            {GRID_BLEND_MODES.map((mode) => (
-              <option key={mode} value={mode}>
-                {GRID_BLEND_LABELS[mode]}
-              </option>
-            ))}
-          </select>
+          />
         </label>
       </section>
 
@@ -1119,7 +1097,7 @@ export function ControlsPanel({
       >
         <HeadlineToggle
           title="Grid Blur"
-          hint="Gaussian blur over the finished mosaic · PNG only"
+          hint="Gaussian blur over the finished mosaic · skipped during playback"
           checked={Boolean(settings.gridBlur)}
           onChange={(gridBlur) => {
             onSettingsChange({ gridBlur }, false);
@@ -1136,24 +1114,19 @@ export function ControlsPanel({
           className={`control-row${settings.gridBlur ? "" : " control-row--muted"}`}
         >
           <span className="control-row__label">Grid Density</span>
-          <select
+          <UiSelect
             value={settings.gridBlurDensity ?? settings.density}
             disabled={!settings.gridBlur}
-            onChange={(e) =>
+            options={DENSITY_SELECT_OPTIONS}
+            onChange={(gridBlurDensity) =>
               onSettingsChange(
                 {
-                  gridBlurDensity: Number(e.target.value) as Density,
+                  gridBlurDensity: Number(gridBlurDensity) as Density,
                 },
                 false,
               )
             }
-          >
-            {DENSITY_INFO.map((info) => (
-              <option key={info.level} value={info.level}>
-                {info.level}
-              </option>
-            ))}
-          </select>
+          />
         </label>
         <SliderRow
           label="Amount"
@@ -1223,24 +1196,22 @@ export function ControlsPanel({
                   Blend
                 </HintLabel>
               </span>
-              <select
+              <UiSelect
                 value={settings.textureOverlayBlend ?? "multiply"}
-                onChange={(e) =>
+                options={TEXTURE_OVERLAY_BLEND_MODES.map((mode) => ({
+                  value: mode,
+                  label: TEXTURE_OVERLAY_BLEND_LABELS[mode],
+                }))}
+                onChange={(textureOverlayBlend) =>
                   onSettingsChange(
                     {
-                      textureOverlayBlend: e.target
-                        .value as TextureOverlayBlendMode,
+                      textureOverlayBlend:
+                        textureOverlayBlend as TextureOverlayBlendMode,
                     },
                     false,
                   )
                 }
-              >
-                {TEXTURE_OVERLAY_BLEND_MODES.map((mode) => (
-                  <option key={mode} value={mode}>
-                    {TEXTURE_OVERLAY_BLEND_LABELS[mode]}
-                  </option>
-                ))}
-              </select>
+              />
             </label>
             <SliderRow
               label="Opacity"
@@ -1396,16 +1367,16 @@ export function ControlsPanel({
               Resolution
             </HintLabel>
           </span>
-          <select
+          <UiSelect
             value={exportPreset}
-            onChange={(e) => onExportPresetChange(e.target.value as ExportPreset)}
-          >
-            {Object.entries(EXPORT_PRESETS).map(([key, preset]) => (
-              <option key={key} value={key}>
-                {preset.label}
-              </option>
-            ))}
-          </select>
+            options={Object.entries(EXPORT_PRESETS).map(([key, preset]) => ({
+              value: key,
+              label: preset.label,
+            }))}
+            onChange={(preset) =>
+              onExportPresetChange(preset as ExportPreset)
+            }
+          />
         </label>
         <button type="button" className="panel-btn" onClick={onExportPngFrame}>
           Export PNG Frame
@@ -1441,17 +1412,15 @@ export function ControlsPanel({
               Resolution
             </HintLabel>
           </span>
-          <select
+          <UiSelect
             value={clampMp4ExportPreset(orientation, mp4Preset)}
             disabled={orientation === "portrait"}
-            onChange={(e) => onMp4PresetChange(e.target.value as ExportPreset)}
-          >
-            {getMp4ExportPresets(orientation).map((key) => (
-              <option key={key} value={key}>
-                {EXPORT_PRESETS[key].label}
-              </option>
-            ))}
-          </select>
+            options={getMp4ExportPresets(orientation).map((key) => ({
+              value: key,
+              label: EXPORT_PRESETS[key].label,
+            }))}
+            onChange={(preset) => onMp4PresetChange(preset as ExportPreset)}
+          />
         </label>
         <Mp4ExportMeta
           frameCount={frameCount}
@@ -1477,18 +1446,16 @@ export function ControlsPanel({
               Resolution
             </HintLabel>
           </span>
-          <select
+          <UiSelect
             value={gifPreset}
-            onChange={(e) =>
-              onGifPresetChange(e.target.value as GifExportPreset)
+            options={Object.entries(GIF_EXPORT_PRESETS).map(([key, preset]) => ({
+              value: key,
+              label: `${preset.label} — ${preset.note}`,
+            }))}
+            onChange={(preset) =>
+              onGifPresetChange(preset as GifExportPreset)
             }
-          >
-            {Object.entries(GIF_EXPORT_PRESETS).map(([key, preset]) => (
-              <option key={key} value={key}>
-                {preset.label} — {preset.note}
-              </option>
-            ))}
-          </select>
+          />
         </label>
         <label className="control-row">
           <span className="control-row__label">
@@ -1496,23 +1463,17 @@ export function ControlsPanel({
               Frame duration
             </HintLabel>
           </span>
-          <select
+          <UiSelect
             value={clampGifFrameDelayCs(gifFrameDelayCs, frameCount)}
-            onChange={(e) => onGifFrameDelayChange(Number(e.target.value))}
-          >
-            {GIF_FRAME_DELAY_PRESETS.map((preset) => (
-              <option
-                key={preset.cs}
-                value={preset.cs}
-                disabled={
-                  gifDurationSeconds(frameCount, preset.cs) >
-                  GIPHY_DURATION_MAX_S
-                }
-              >
-                {preset.label} — {preset.note}
-              </option>
-            ))}
-          </select>
+            options={GIF_FRAME_DELAY_PRESETS.map((preset) => ({
+              value: String(preset.cs),
+              label: `${preset.label} — ${preset.note}`,
+              disabled:
+                gifDurationSeconds(frameCount, preset.cs) >
+                GIPHY_DURATION_MAX_S,
+            }))}
+            onChange={(delayCs) => onGifFrameDelayChange(Number(delayCs))}
+          />
         </label>
         <GifExportMeta frameCount={frameCount} delayCs={gifFrameDelayCs} />
         <button type="button" className="panel-btn" onClick={onExportGif}>

@@ -20,6 +20,7 @@ import {
   getCachedSourceImage,
 } from "../import/imageSource";
 import { renderMosaic } from "../render/renderFrame";
+import { isGridBlurActive } from "../render/gridBlur";
 import { renderPieceOverlay, heldPiecePulseOpacity, hoverBlinkVisible, selectionPulseOpacity } from "../render/pieceOverlay";
 import {
   canMoveBlock,
@@ -41,6 +42,7 @@ import { playUiSound } from "../ui/sounds";
 import { getNormalHoverEffects } from "../ui/hover";
 import { FrameContextMenu } from "./FrameContextMenu";
 import { PhaseOrb } from "./PhaseOrb";
+import { UiSelect } from "./UiSelect";
 
 const STAGE_PADDING = 24;
 const PIECE_DRAG_THRESHOLD = 4;
@@ -1712,6 +1714,9 @@ export function Timeline({
   };
 
   const draggedFrame = dragIndex !== null ? frames[dragIndex] : null;
+  const activeFrame = frames[activeIndex];
+  const showBlurPlaybackNote =
+    playing && activeFrame != null && isGridBlurActive(activeFrame.settings);
   const visualItems = buildVisualStripItems(
     frames.length,
     dragIndex,
@@ -1746,29 +1751,22 @@ export function Timeline({
             </svg>
           )}
         </button>
-        <select
+        <UiSelect
           className="timeline__fps"
           value={playbackFps}
           aria-label="Playback speed"
           title="Playback speed"
-          onChange={(event) => {
+          options={PLAYBACK_FPS_OPTIONS.map((fps) => ({
+            value: String(fps),
+            label: `${fps} FPS`,
+            disabled:
+              playbackDurationSeconds(frames.length, fps) > GIPHY_DURATION_MAX_S,
+          }))}
+          onChange={(fps) => {
             playUiSound("push");
-            onPlaybackFpsChange(Number(event.target.value));
-            event.currentTarget.blur();
+            onPlaybackFpsChange(Number(fps));
           }}
-        >
-          {PLAYBACK_FPS_OPTIONS.map((fps) => (
-            <option
-              key={fps}
-              value={fps}
-              disabled={
-                playbackDurationSeconds(frames.length, fps) > GIPHY_DURATION_MAX_S
-              }
-            >
-              {fps} FPS
-            </option>
-          ))}
-        </select>
+        />
         <button
           type="button"
           className="timeline__btn"
@@ -1827,8 +1825,15 @@ export function Timeline({
         </button>
         </div>
         {playing ? (
-          <div className="timeline__phase-orb" aria-hidden="true">
-            <PhaseOrb />
+          <div className="timeline__playback-status">
+            {showBlurPlaybackNote ? (
+              <p className="timeline__blur-note" aria-live="polite">
+                Blur deactivated for performance
+              </p>
+            ) : null}
+            <div className="timeline__phase-orb" aria-hidden="true">
+              <PhaseOrb />
+            </div>
           </div>
         ) : null}
       </div>
