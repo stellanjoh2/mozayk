@@ -1,3 +1,4 @@
+import { playUiSound } from "../ui/sounds";
 import { TypewriterReveal } from "./TypewriterReveal";
 
 type ImportErrorDialogProps = {
@@ -15,7 +16,10 @@ export function ImportErrorDialog({
     <div
       className="import-error-backdrop"
       role="presentation"
-      onClick={onDismiss}
+      onClick={() => {
+        playUiSound("close");
+        onDismiss();
+      }}
     >
       <div
         className="import-error-dialog"
@@ -40,6 +44,7 @@ export function ImportErrorDialog({
         <button
           type="button"
           className="panel-btn import-error-dialog__button"
+          data-ui-sound="close"
           onClick={onDismiss}
         >
           OK

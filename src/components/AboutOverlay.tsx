@@ -4,7 +4,7 @@ import { playUiSound } from "../ui/sounds";
 import { TypewriterReveal } from "./TypewriterReveal";
 
 const ABOUT_TEXT =
-  "Hi, I'm Stellan Johansson, a creative director and brand designer with 20+ years across games, 3D, motion, UI and visual identity — shipping titles at studios, running agencies, and shaping platforms used by millions of creators and this is one of my sideprojects.";
+  "Hi, I'm Stellan Johansson, a creative director and brand designer with 20+ years across games, 3D, motion, UI and visual identity — shipping titles at studios, running agencies, and shaping platforms used by millions of creators. Mozayk is one of my sideprojects.";
 
 const LINKEDIN_URL = "https://www.linkedin.com/in/stellanj/";
 const MOBYGAMES_URL = "https://www.mobygames.com/person/289121/stellan-johansson/credits/";
@@ -102,7 +102,7 @@ export function AboutOverlay({ open, onClose }: AboutOverlayProps) {
             className={["panel-btn", "about-overlay__ok", okActive ? "is-in" : ""]
               .filter(Boolean)
               .join(" ")}
-            data-ui-sound="ok"
+            data-ui-sound="close"
             aria-hidden={!okActive}
             tabIndex={okActive ? 0 : -1}
             onClick={onClose}
