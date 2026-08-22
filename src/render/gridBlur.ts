@@ -285,7 +285,7 @@ export function applyGridBlur(
   try {
     const amount = clampInt(settings.gridBlurAmount, 0, 100, 50);
 
-    const density = settings.gridBlurDensity ?? settings.density;
+    const density = settings.gridBlurDensity ?? (settings.density || 1);
     const grid = getGridDimensions(orientation, density, width, height);
     const radius = (amount / 100) * grid.cellSize;
     if (radius < 0.25) return;

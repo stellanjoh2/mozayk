@@ -2,6 +2,7 @@ import { MAX_COLORS } from "../config";
 import {
   defaultMaxCellSize,
   defaultMinCellSize,
+  gridScale,
   maxHeightSliderMax,
   maxWidthSliderMax,
 } from "../grid/density";
@@ -28,7 +29,6 @@ import {
   coverCropColorGrid,
   gridExtentsFromBlocks,
   rasterizeBlockColorGrid,
-  sameGridAspect,
 } from "../import/imageImport";
 import type { ImageImportResult } from "../import/imageImport";
 import { getCachedSourceImage } from "../import/imageSource";
@@ -460,30 +460,8 @@ export function relayoutImportedFrame(
     orientation,
   );
 
-  const { columns, rows } = getGridCounts(orientation, settings.density);
-  const oldExtents = gridExtentsFromBlocks(frame.blocks);
-  const gridSizeChanged =
-    oldExtents.columns > 0 &&
-    oldExtents.rows > 0 &&
-    (oldExtents.columns !== columns || oldExtents.rows !== rows);
-  const aspectUnchanged = sameGridAspect(
-    oldExtents.columns,
-    oldExtents.rows,
-    columns,
-    rows,
-  );
-
-  // Same-ratio density changes keep the current mosaic (scale).
-  // Ratio changes recrop the photo when it is available; otherwise cover-crop.
-  if (gridSizeChanged && aspectUnchanged) {
-    const kept = relayoutFromExistingColorGrid(
-      { ...frame, settings },
-      orientation,
-      rng,
-    );
-    if (kept) return dropOrientationLayout({ ...kept, settings });
-  }
-
+  // Always resample from the original photo when it is loaded. Scaling the
+  // current mosaic (the old same-ratio path) permanently lost detail.
   const image = getCachedSourceImage(frame.imageSource.dataUrl);
   if (image) {
     const blocks = buildMergedLayoutFromImage(
@@ -496,6 +474,13 @@ export function relayoutImportedFrame(
     );
     return dropOrientationLayout({ ...frame, settings, blocks });
   }
+
+  const { columns, rows } = getGridCounts(orientation, settings.density);
+  const oldExtents = gridExtentsFromBlocks(frame.blocks);
+  const gridSizeChanged =
+    oldExtents.columns > 0 &&
+    oldExtents.rows > 0 &&
+    (oldExtents.columns !== columns || oldExtents.rows !== rows);
 
   if (gridSizeChanged) {
     const kept = relayoutFromExistingColorGrid(
@@ -730,7 +715,16 @@ export function applyDensityChange(
 ): FrameSettings {
   if (settings.density === newDensity) return settings;
 
-  const ratio = newDensity / settings.density;
+  if (gridScale(settings.density) === 0 || gridScale(newDensity) === 0) {
+    return {
+      ...settings,
+      density: newDensity,
+      minCellSize: defaultMinCellSize(),
+      maxCellSize: defaultMaxCellSize(newDensity),
+    };
+  }
+
+  const ratio = gridScale(newDensity) / gridScale(settings.density);
   const scale = (value: number) => Math.max(1, Math.round(value * ratio));
 
   return {
@@ -758,6 +752,13 @@ export function clampSettingsForOrientation(
     orientation,
     settings.density,
   );
+  if (maxSpan <= 0 || maxRow <= 0) {
+    return {
+      ...settings,
+      minCellSize: defaultMinCellSize(),
+      maxCellSize: defaultMaxCellSize(settings.density),
+    };
+  }
   return {
     ...settings,
     maxWidth: Math.min(settings.maxWidth, maxSpan),

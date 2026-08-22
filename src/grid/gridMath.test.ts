@@ -2,6 +2,7 @@ import { DENSITIES } from "./density";
 import {
   blockPixelRect,
   crossFillRects,
+  getGridCounts,
   getGridDimensions,
   getThumbnailRenderSize,
   getThumbnailSize,
@@ -47,8 +48,19 @@ const CANVASES: Record<Orientation, [number, number][]> = {
 };
 
 function run(): void {
+  const d0 = getGridCounts("landscape", 0);
+  assert(d0.columns === 0 && d0.rows === 0, "density OFF has no cells");
+
+  const d1Landscape = getGridCounts("landscape", 1);
+  assert(
+    d1Landscape.columns === 16 && d1Landscape.rows === 9,
+    "density 1 landscape is 16×9",
+  );
+  const d1Square = getGridCounts("square", 1);
+  assert(d1Square.columns === 9 && d1Square.rows === 9, "density 1 square is 9×9");
+
   for (const orientation of ORIENTATIONS) {
-    for (const density of DENSITIES) {
+    for (const density of DENSITIES.filter((d) => d > 0)) {
       for (const [width, height] of CANVASES[orientation]) {
         const grid = getGridDimensions(orientation, density, width, height);
         if (
@@ -252,7 +264,7 @@ function run(): void {
   assert(photoRender[0] === 270 && photoRender[1] === 360, "photo render thumb is 270×360");
   for (const orientation of ORIENTATIONS) {
     const [rw, rh] = getThumbnailRenderSize(orientation);
-    for (const density of DENSITIES) {
+    for (const density of DENSITIES.filter((d) => d > 0)) {
       const grid = getGridDimensions(orientation, density, rw, rh);
       assert(
         grid.cellSize > 0,

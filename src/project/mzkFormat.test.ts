@@ -131,6 +131,66 @@ function run(): void {
     gifPreset: "720p",
     gifFrameDelayCs: 7,
   });
+  const legacyDensityJson = JSON.stringify({
+    v: 1,
+    mozayk: "project",
+    orientation: "landscape",
+    frames: [
+      {
+        id: "legacy-density",
+        settings: {
+          ...createDefaultSettings(),
+          density: 1,
+          gridOverlayDensity: 5,
+        },
+        blocks: [
+          { col: 0, row: 0, width: 4, height: 9, shape: "block", color: "#ffffff" },
+        ],
+      },
+    ],
+    activeIndex: 0,
+  });
+  const legacyDensity = parseMzkProject(legacyDensityJson);
+  assert(legacyDensity !== null, "v1 project with density 1 should parse");
+  assert(
+    legacyDensity?.frames[0].settings.density === 1,
+    "v1 density 1 stays 16×9",
+  );
+  assert(
+    legacyDensity?.frames[0].settings.gridOverlayDensity === 5,
+    "v1 overlay density 5 stays 5",
+  );
+
+  const v2DensityJson = JSON.stringify({
+    v: 2,
+    mozayk: "project",
+    orientation: "landscape",
+    frames: [
+      {
+        id: "v2-density",
+        settings: {
+          ...createDefaultSettings(),
+          density: 3,
+          gridOverlayDensity: 6,
+        },
+        blocks: [
+          { col: 0, row: 0, width: 4, height: 9, shape: "block", color: "#ffffff" },
+        ],
+      },
+    ],
+    activeIndex: 0,
+  });
+  const v2Density = parseMzkProject(v2DensityJson);
+  assert(v2Density !== null, "v2 project should parse");
+  assert(
+    v2Density?.frames[0].settings.density === 2,
+    "v2 density 3 migrates back to 2",
+  );
+  assert(
+    v2Density?.frames[0].settings.gridOverlayDensity === 5,
+    "v2 overlay density 6 migrates to 5",
+  );
+
   const legacyParsed = parseMzkProject(legacyJson);
   assert(legacyParsed !== null, "legacy project without playbackFps should parse");
   assert(

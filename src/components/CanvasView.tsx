@@ -100,6 +100,7 @@ type CanvasViewProps = {
   pieceEditingEnabled?: boolean;
   /** Timeline is playing — use a cheaper 1080p preview, skip grid blur. */
   playing?: boolean;
+  shortcutLegend?: { text: string; id: number } | null;
   onToggleInspect?: () => void;
   onMoveBlock?: (blockIndex: number, toCol: number, toRow: number) => void;
   /** Live mosaic backing store — GIF export downscales from this size. */
@@ -115,6 +116,7 @@ export function CanvasView({
   fillStage = false,
   pieceEditingEnabled = false,
   playing = false,
+  shortcutLegend = null,
   onToggleInspect,
   onMoveBlock,
   onWorkingCanvasSize,
@@ -809,6 +811,14 @@ export function CanvasView({
       </div>
       {viewOriginal && frame.imageSource ? (
         <span className="canvas-view-original-badge">Original</span>
+      ) : null}
+      {shortcutLegend ? (
+        <span
+          key={shortcutLegend.id}
+          className="canvas-view-original-badge canvas-shortcut-legend"
+        >
+          {shortcutLegend.text}
+        </span>
       ) : null}
       {canInspect ? (
         <div className="canvas-stage-controls">

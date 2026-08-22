@@ -405,6 +405,7 @@ export function generateLayout(
   rng: Rng = Math.random,
 ): MosaicBlock[] {
   const { columns, rows } = getGridCounts(orientation, settings.density);
+  if (columns <= 0 || rows <= 0) return [];
   const occupied = Array.from({ length: rows }, () =>
     Array<boolean>(columns).fill(false),
   );

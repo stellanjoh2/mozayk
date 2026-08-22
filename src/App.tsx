@@ -77,6 +77,7 @@ import {
 } from "./import/videoImport";
 import {
   ensureCachedSourceImage,
+  getCachedSourceImage,
   readImageFileAsDataUrl,
 } from "./import/imageSource";
 import {
@@ -101,6 +102,8 @@ import {
   serializeMzkProject,
   type MzkProject,
 } from "./project/mzkFormat";
+import { stepDensity } from "./grid/density";
+import { getShortcutLegendEnabled } from "./ui/shortcutLegend";
 import type { Frame, FrameSettings, Orientation } from "./types";
 
 import "./App.css";
@@ -160,6 +163,14 @@ function isTextInputTarget(target: EventTarget | null): boolean {
   return input.type === "text" || input.type === "search" || input.type === "number";
 }
 
+function isSelectNavigationTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  return (
+    target.closest(".ui-select") !== null ||
+    target.closest(".ui-select__menu") !== null
+  );
+}
+
 export default function App() {
   const isMobileGate = useMobileGate();
   const [orientation, setOrientation] = useState<Orientation>("landscape");
@@ -194,6 +205,12 @@ export default function App() {
   const [viewOriginal, setViewOriginal] = useState(false);
   const [inspecting, setInspecting] = useState(false);
   const inspectingRef = useRef(inspecting);
+  const playingRef = useRef(playing);
+  const [shortcutLegend, setShortcutLegend] = useState<{
+    text: string;
+    id: number;
+  } | null>(null);
+  const shortcutLegendIdRef = useRef(0);
   const [workingCanvasSize, setWorkingCanvasSize] = useState<
     readonly [number, number]
   >(() => getPreviewSize("landscape"));
@@ -228,6 +245,7 @@ export default function App() {
   orientationRef.current = orientation;
   framesRef.current = frames;
   inspectingRef.current = inspecting;
+  playingRef.current = playing;
   exportPresetRef.current = exportPreset;
   mp4PresetRef.current = mp4Preset;
   gifPresetRef.current = gifPreset;
@@ -598,6 +616,14 @@ export default function App() {
             orientationRef.current,
           );
         });
+        const dataUrl = active.imageSource?.dataUrl;
+        if (dataUrl && !getCachedSourceImage(dataUrl)) {
+          void ensureCachedSourceImage(dataUrl).then(() => {
+            updateActiveFrame((frame) =>
+              regenerateFrameLayout(frame, orientationRef.current),
+            );
+          });
+        }
         return;
       }
 
@@ -1217,11 +1243,31 @@ export default function App() {
     };
   }, []);
 
+  const flashLegend = useCallback((text: string) => {
+    if (!getShortcutLegendEnabled()) return;
+    shortcutLegendIdRef.current += 1;
+    setShortcutLegend({ text, id: shortcutLegendIdRef.current });
+  }, []);
+
   const stepFrame = useCallback((delta: -1 | 1) => {
-    setActiveIndex(
-      (index) => (index + delta + frames.length) % frames.length,
-    );
+    if (frames.length <= 1) return null;
+    const next =
+      (activeIndexRef.current + delta + frames.length) % frames.length;
+    setActiveIndex(next);
+    return next;
   }, [frames.length]);
+
+  const stepGridDensity = useCallback(
+    (delta: -1 | 1) => {
+      const frame = framesRef.current[activeIndexRef.current];
+      if (!frame) return null;
+      const next = stepDensity(frame.settings.density, delta);
+      if (next === frame.settings.density) return null;
+      handleSettingsChange({ density: next }, true);
+      return next;
+    },
+    [handleSettingsChange],
+  );
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -1230,35 +1276,67 @@ export default function App() {
       const mod = event.metaKey || event.ctrlKey;
       if (mod && event.code === "KeyZ") {
         event.preventDefault();
-        if (event.shiftKey) redo();
-        else undo();
+        if (event.shiftKey) {
+          if (redoStackRef.current.length === 0) return;
+          redo();
+          flashLegend("Redo");
+        } else {
+          if (undoStackRef.current.length === 0) return;
+          undo();
+          flashLegend("Undo");
+        }
         return;
       }
       if (mod && event.code === "KeyY") {
         event.preventDefault();
+        if (redoStackRef.current.length === 0) return;
         redo();
+        flashLegend("Redo");
         return;
       }
 
       if (event.key === "Escape" && inspectingRef.current) {
         event.preventDefault();
         setInspecting(false);
+        flashLegend("Inspect off");
         return;
       }
 
       const key = event.key.toLowerCase();
       if (event.code === "KeyF" || key === "f") {
         event.preventDefault();
+        const leaving = getFullscreenElement() === appRef.current;
         toggleFullscreen();
+        flashLegend(leaving ? "Fullscreen off" : "Fullscreen");
       } else if (event.code === "Space" || key === " ") {
         event.preventDefault();
+        const next = !playingRef.current;
         togglePlay();
+        flashLegend(next ? "Play" : "Stop");
       } else if (event.code === "ArrowLeft" || key === "arrowleft") {
         event.preventDefault();
-        stepFrame(-1);
+        const next = stepFrame(-1);
+        if (next !== null) flashLegend(`Frame ${next + 1}`);
       } else if (event.code === "ArrowRight" || key === "arrowright") {
         event.preventDefault();
-        stepFrame(1);
+        const next = stepFrame(1);
+        if (next !== null) flashLegend(`Frame ${next + 1}`);
+      } else if (
+        !mod &&
+        (event.code === "ArrowUp" ||
+          event.code === "ArrowDown" ||
+          key === "arrowup" ||
+          key === "arrowdown") &&
+        !isSelectNavigationTarget(event.target) &&
+        !document.querySelector(".ui-select__menu")
+      ) {
+        event.preventDefault();
+        const next = stepGridDensity(
+          event.code === "ArrowUp" || key === "arrowup" ? 1 : -1,
+        );
+        if (next !== null) {
+          flashLegend(next === 0 ? "Density OFF" : `Density ${next}`);
+        }
       } else if (event.code === "KeyO" || key === "o") {
         const frame = frames[activeIndexRef.current] ?? frames[0];
         if (frame?.imageSource) {
@@ -1268,12 +1346,15 @@ export default function App() {
       } else if (!mod && event.code === "KeyQ") {
         event.preventDefault();
         randomizeLayout();
+        flashLegend("Randomize layout");
       } else if (!mod && event.code === "KeyW") {
         event.preventDefault();
         randomizeAll();
+        flashLegend("Randomize all");
       } else if (!mod && event.code === "KeyE") {
         event.preventDefault();
         randomizeCurrentColors();
+        flashLegend("Randomize colours");
       }
     };
 
@@ -1283,6 +1364,8 @@ export default function App() {
     toggleFullscreen,
     togglePlay,
     stepFrame,
+    stepGridDensity,
+    flashLegend,
     frames,
     undo,
     redo,
@@ -1523,6 +1606,7 @@ export default function App() {
           fillStage={isMobileGate}
           pieceEditingEnabled={!playing && !viewOriginal}
           playing={playing}
+          shortcutLegend={shortcutLegend}
           onToggleInspect={isMobileGate ? undefined : toggleInspect}
           onMoveBlock={handleMoveBlock}
           onWorkingCanvasSize={handleWorkingCanvasSize}

@@ -1,4 +1,4 @@
-import { REFERENCE_DENSITY } from "./density";
+import { REFERENCE_DENSITY, gridScale } from "./density";
 import type { Density, GridDimensions, MosaicBlock, Orientation } from "../types";
 
 const GRID_ASPECT: Record<Orientation, { cols: number; rows: number }> = {
@@ -26,9 +26,9 @@ export function getThumbnailSize(
   orientation: Orientation,
   pixelsPerCell = THUMBNAIL_DISPLAY_PIXELS_PER_CELL,
 ): [number, number] {
-  const density = REFERENCE_DENSITY;
+  const scale = gridScale(REFERENCE_DENSITY);
   const { cols, rows } = getGridAspect(orientation);
-  return [cols * density * pixelsPerCell, rows * density * pixelsPerCell];
+  return [cols * scale * pixelsPerCell, rows * scale * pixelsPerCell];
 }
 
 export function getThumbnailRenderSize(
@@ -42,7 +42,12 @@ export function getGridCounts(
   density: Density,
 ): { columns: number; rows: number } {
   const { cols, rows } = getGridAspect(orientation);
-  return { columns: cols * density, rows: rows * density };
+  const scale = gridScale(density);
+  if (scale <= 0) return { columns: 0, rows: 0 };
+  return {
+    columns: Math.max(1, Math.round(cols * scale)),
+    rows: Math.max(1, Math.round(rows * scale)),
+  };
 }
 
 export function getGridDimensions(
@@ -52,6 +57,9 @@ export function getGridDimensions(
   height: number,
 ): GridDimensions {
   const { columns, rows } = getGridCounts(orientation, density);
+  if (columns <= 0 || rows <= 0) {
+    return { columns: 0, rows: 0, cellSize: 0, width, height };
+  }
   const cellW = width / columns;
   const cellH = height / rows;
 
@@ -193,8 +201,8 @@ export function pixelToGridCell(
   y: number,
 ): { col: number; row: number } | null {
   if (x < 0 || y < 0 || x >= grid.width || y >= grid.height) return null;
-  const col = Math.floor(x / grid.cellSize);
-  const row = Math.floor(y / grid.cellSize);
+  const col = Math.floor((x / grid.width) * grid.columns);
+  const row = Math.floor((y / grid.height) * grid.rows);
   if (col >= grid.columns || row >= grid.rows) return null;
   return { col, row };
 }

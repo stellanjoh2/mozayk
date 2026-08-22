@@ -1,4 +1,5 @@
-import { randomizeColors } from "./generateLayout";
+import { generateLayout, randomizeColors } from "./generateLayout";
+import { createDefaultSettings } from "../state/frameUtils";
 import type { MosaicBlock } from "../types";
 
 function assert(condition: boolean, message: string): asserts condition {
@@ -27,6 +28,12 @@ function tiles(count: number, color = "#ff0000"): MosaicBlock[] {
 }
 
 function run(): void {
+  const off = generateLayout("landscape", {
+    ...createDefaultSettings(),
+    density: 0,
+  });
+  assert(off.length === 0, "density OFF generates no tiles");
+
   const palette = ["#ff0000", "#00ff00", "#0000ff", "#ffff00"];
   const amounts = [25, 25, 25, 25];
 

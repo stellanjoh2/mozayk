@@ -26,8 +26,12 @@ export function isOrientation(value: unknown): value is Orientation {
     value === "photo"
   );
 }
-/** 7 and 9 omitted — fractional cells (17/18, 13/14) broke square spans. */
-export type Density = 1 | 2 | 3 | 4 | 5 | 6 | 8 | 10 | 12;
+/**
+ * User-facing density steps. 0 is OFF (no tiles).
+ * 1–12 multiply the 16×9 / 9×9 / 9×12 / 9×16 base (always square cells).
+ * 7 and 9 omitted — fractional cells (17/18, 13/14) broke square spans.
+ */
+export type Density = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 8 | 10 | 12;
 export type GridOverlayStroke = 1 | 2 | 4;
 /** Blend mode for grid overlay strokes over the mosaic. */
 export type GridBlendMode = "normal" | "difference" | "screen";

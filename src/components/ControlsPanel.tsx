@@ -86,6 +86,10 @@ import {
   setNormalHoverEffects,
 } from "../ui/hover";
 import {
+  getShortcutLegendEnabled,
+  setShortcutLegendEnabled,
+} from "../ui/shortcutLegend";
+import {
   CHROME_APPEARANCE_LABELS,
   CHROME_APPEARANCES,
   CHROME_COLOR_LABELS,
@@ -110,6 +114,13 @@ gsap.registerPlugin(useGSAP);
 const COLOR_LIST_SHIFT_MS = 450;
 
 const DENSITY_SELECT_OPTIONS = DENSITY_INFO.map((info) => ({
+  value: String(info.level),
+  label: info.label,
+}));
+
+const OVERLAY_DENSITY_SELECT_OPTIONS = DENSITY_INFO.filter(
+  (info) => info.level > 0,
+).map((info) => ({
   value: String(info.level),
   label: info.label,
 }));
@@ -236,6 +247,9 @@ export function ControlsPanel({
   const [soundVolume, setSoundVolume] = useState(getUiSoundsVolume);
   const [normalHover, setNormalHover] = useState(getNormalHoverEffects);
   const [normalCursor, setNormalCursorOn] = useState(getNormalCursor);
+  const [shortcutLegendOn, setShortcutLegendOn] = useState(
+    getShortcutLegendEnabled,
+  );
   const [chromeAppearance, setChromeAppearanceOn] = useState(getChromeAppearance);
   const [chromeColor, setChromeColorOn] = useState(getChromeColor);
   const [aboutOpen, setAboutOpen] = useState(false);
@@ -820,7 +834,7 @@ export function ControlsPanel({
           <UiSelect
             value={settings.gridOverlayDensity ?? 1}
             disabled={!settings.gridOverlay}
-            options={DENSITY_SELECT_OPTIONS}
+            options={OVERLAY_DENSITY_SELECT_OPTIONS}
             onChange={(gridOverlayDensity) =>
               onSettingsChange(
                 {
@@ -924,7 +938,7 @@ export function ControlsPanel({
           <UiSelect
             value={settings.gridCrossesDensity ?? 1}
             disabled={!settings.gridCrosses}
-            options={DENSITY_SELECT_OPTIONS}
+            options={OVERLAY_DENSITY_SELECT_OPTIONS}
             onChange={(gridCrossesDensity) =>
               onSettingsChange(
                 {
@@ -1115,9 +1129,9 @@ export function ControlsPanel({
         >
           <span className="control-row__label">Grid Density</span>
           <UiSelect
-            value={settings.gridBlurDensity ?? settings.density}
+            value={settings.gridBlurDensity ?? (settings.density || 1)}
             disabled={!settings.gridBlur}
-            options={DENSITY_SELECT_OPTIONS}
+            options={OVERLAY_DENSITY_SELECT_OPTIONS}
             onChange={(gridBlurDensity) =>
               onSettingsChange(
                 {
@@ -1581,6 +1595,15 @@ export function ControlsPanel({
             setNormalCursorOn(next);
           }}
         />
+        <ToggleRow
+          label="Shortcut Legend"
+          hint="Flash labels on canvas · ~1s"
+          checked={shortcutLegendOn}
+          onChange={(next) => {
+            setShortcutLegendEnabled(next);
+            setShortcutLegendOn(next);
+          }}
+        />
         <div className="control-row">
           <span className="control-row__label">Theme</span>
           <div className="button-row button-row--choice">
@@ -1633,6 +1656,12 @@ export function ControlsPanel({
               <kbd>←</kbd> <kbd>→</kbd>
             </p>
             <p className="shortcut-list__desc">Previous / next frame</p>
+          </li>
+          <li className="shortcut-list__row">
+            <p className="shortcut-list__keys">
+              <kbd>↑</kbd> <kbd>↓</kbd>
+            </p>
+            <p className="shortcut-list__desc">Increase / decrease grid density</p>
           </li>
           <li className="shortcut-list__row">
             <p className="shortcut-list__keys">

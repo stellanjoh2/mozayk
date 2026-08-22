@@ -587,6 +587,33 @@ body {
   top: 20px;
 }
 
+.canvas-shortcut-legend {
+  right: auto;
+  top: 16px;
+  left: 16px;
+  bottom: auto;
+  background: var(--bg);
+  color: var(--chrome);
+  animation: canvas-shortcut-legend-fade 1.15s var(--ui-ease) forwards;
+}
+
+.canvas-stage.is-fullscreen .canvas-shortcut-legend {
+  right: auto;
+  top: 20px;
+  left: 20px;
+  bottom: auto;
+}
+
+@keyframes canvas-shortcut-legend-fade {
+  0%,
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
 .canvas-stage.is-fullscreen .mosaic-canvas {
   box-shadow: none;
 }
@@ -595,6 +622,11 @@ body {
   .canvas-stage,
   .mosaic-canvas {
     transition: none;
+  }
+
+  .canvas-shortcut-legend {
+    animation-duration: 1s;
+    animation-timing-function: step-end;
   }
 
   .panel-btn:hover:not(:disabled)::before,

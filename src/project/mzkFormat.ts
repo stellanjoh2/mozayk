@@ -9,6 +9,7 @@ import {
   MAX_FRAMES,
 } from "../config";
 import type { ImageRgb, ImageSourceData } from "../import/imageSource";
+import { migrateProjectDensity } from "../grid/density";
 import { parseBlocks, parseSettingsRecord } from "../state/settingsClipboard";
 import {
   isOrientation,
@@ -33,7 +34,7 @@ export type MzkProject = {
 };
 
 export type MzkProjectPayload = {
-  v: 1;
+  v: 1 | 2 | 3;
   mozayk: "project";
   orientation: Orientation;
   frames: Frame[];
@@ -106,13 +107,37 @@ function parseBackgroundImage(value: unknown): BackgroundImageData | undefined {
   return { dataUrl: record.dataUrl, name };
 }
 
-function parseFrame(value: unknown): Frame | null {
+function migrateSettingsRecord(
+  record: Record<string, unknown>,
+  version: 1 | 2 | 3,
+): Record<string, unknown> {
+  if (version !== 2) return record;
+  const next = { ...record };
+  for (const key of [
+    "density",
+    "gridOverlayDensity",
+    "gridCrossesDensity",
+    "gridBlurDensity",
+  ] as const) {
+    const raw = next[key];
+    if (raw === undefined || raw === null || raw === "") continue;
+    const n = Number(raw);
+    if (!Number.isFinite(n)) continue;
+    next[key] = migrateProjectDensity(n, version);
+  }
+  return next;
+}
+
+function parseFrame(value: unknown, projectVersion: 1 | 2 | 3): Frame | null {
   if (!value || typeof value !== "object") return null;
   const record = value as Record<string, unknown>;
   if (!record.settings || typeof record.settings !== "object") return null;
 
   const settings = parseSettingsRecord(
-    record.settings as Record<string, unknown>,
+    migrateSettingsRecord(
+      record.settings as Record<string, unknown>,
+      projectVersion,
+    ),
   );
   if (!settings) return null;
 
@@ -143,7 +168,7 @@ export function isMzkFile(file: File): boolean {
 
 export function serializeMzkProject(project: MzkProject): string {
   const payload: MzkProjectPayload = {
-    v: 1,
+    v: 3,
     mozayk: "project",
     orientation: project.orientation,
     frames: project.frames.map(cloneFrameForSave),
@@ -180,13 +205,19 @@ export function parseMzkProject(raw: string): MzkProject | null {
     if (!parsed || typeof parsed !== "object") return null;
 
     const record = parsed as Record<string, unknown>;
-    if (record.mozayk !== "project" || record.v !== 1) return null;
+    if (
+      record.mozayk !== "project" ||
+      (record.v !== 1 && record.v !== 2 && record.v !== 3)
+    ) {
+      return null;
+    }
+    const projectVersion = record.v as 1 | 2 | 3;
     if (!isOrientation(record.orientation)) return null;
     if (!Array.isArray(record.frames) || record.frames.length === 0) return null;
 
     const frames: Frame[] = [];
     for (const item of record.frames.slice(0, MAX_FRAMES)) {
-      const frame = parseFrame(item);
+      const frame = parseFrame(item, projectVersion);
       if (!frame) return null;
       frames.push(frame);
     }

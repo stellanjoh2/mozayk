@@ -1,4 +1,5 @@
 import { hexToRgb, rgbToHex } from "../colorMath";
+import { isDensityOff } from "../grid/density";
 import { getGridCounts } from "../grid/gridMath";
 import { assignShape, type Rng } from "../shapes/shapePalette";
 import type {
@@ -640,6 +641,7 @@ export function buildMergedLayoutFromIndexedGrid(
   settings: FrameSettings,
   rng: Rng = Math.random,
 ): MosaicBlock[] {
+  if (isDensityOff(settings.density)) return [];
   return buildBlocksFromIndexedGrid(indexedGrid, palette, settings, rng, true);
 }
 
@@ -667,6 +669,7 @@ export function buildMergedLayoutFromImage(
   paletteRgb: ImageRgb[],
   rng: Rng = Math.random,
 ): MosaicBlock[] {
+  if (isDensityOff(settings.density)) return [];
   const { columns, rows } = getGridCounts(orientation, settings.density);
   const sampled = sampleImageGrid(image, columns, rows);
   const { indexRgb, colors } = colorsForImportIndexing(palette, paletteRgb);
@@ -803,7 +806,10 @@ export function paletteFromImages(
   settings: FrameSettings,
   colorCount: number = IMPORT_COLOR_COUNT,
 ): ImportPalette {
-  const { columns, rows } = getGridCounts(orientation, settings.density);
+  const { columns, rows } = getGridCounts(
+    orientation,
+    isDensityOff(settings.density) ? 1 : settings.density,
+  );
   const pixels: Rgb[] = [];
   for (const image of images) {
     pixels.push(...sampleImageGrid(image, columns, rows).flat());
@@ -827,6 +833,20 @@ export function importImageToMosaicWithPalette(
   palette: ImportPalette,
   options: ImageImportOptions = {},
 ): ImageImportResult {
+  if (isDensityOff(settings.density)) {
+    const dataUrl = sourceDataUrl(image);
+    cacheSourceImage(dataUrl, image);
+    return {
+      colors: palette.colors,
+      colorAmounts: palette.colorAmounts,
+      blocks: [],
+      imageSource: {
+        dataUrl,
+        palette: palette.colors,
+        paletteRgb: palette.paletteRgb,
+      },
+    };
+  }
   const { columns, rows } = getGridCounts(orientation, settings.density);
   const mergeRegions = options.mergeRegions ?? true;
   const sampled = sampleImageGrid(image, columns, rows);
@@ -862,7 +882,10 @@ export function importImageToMosaic(
   settings: FrameSettings,
   options: ImageImportOptions = {},
 ): ImageImportResult {
-  const { columns, rows } = getGridCounts(orientation, settings.density);
+  const { columns, rows } = getGridCounts(
+    orientation,
+    isDensityOff(settings.density) ? 1 : settings.density,
+  );
   const colorCount = options.colorCount ?? IMPORT_COLOR_COUNT;
   const sampled = sampleImageGrid(image, columns, rows);
   const palette = paletteFromPixels(sampled.flat(), colorCount);
