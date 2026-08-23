@@ -72,6 +72,7 @@ body,
   flex-wrap: wrap;
   gap: 28px 40px;
   padding: 22px 32px 56px;
+  transition: transform 0.45s cubic-bezier(0.83, 0, 0.17, 1);
 }
 
 .logo-creator__dock-group {
@@ -189,7 +190,14 @@ body,
 }
 
 .logo-creator.is-ui-hidden .logo-creator__dock {
-  display: none;
+  transform: translateY(100%);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logo-creator__dock {
+    transition: none;
+  }
 }
 
 .logo-creator__dock .logo-creator__speed-btn {

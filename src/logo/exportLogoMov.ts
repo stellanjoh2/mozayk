@@ -7,6 +7,7 @@ import {
   logoPieces,
   pieceOnInLoop,
   resolveLogoSvg,
+  serializeVisibleLogoSvg,
   setPieceVisible,
   type Speed,
 } from "./logoReveal";
@@ -76,6 +77,7 @@ export async function exportLogoMov(
     host.remove();
     throw new Error("MOV export failed");
   }
+  for (const { el } of pieces) setPieceVisible(el, false);
 
   const phaseMs = SPEEDS[speed] * 1000;
   const durationS = (phaseMs * 2) / 1000;
@@ -111,7 +113,7 @@ export async function exportLogoMov(
         setPieceVisible(el, pieceOnInLoop(t, timeMs, phaseMs));
       }
       const url = URL.createObjectURL(
-        new Blob([new XMLSerializer().serializeToString(svg)], {
+        new Blob([serializeVisibleLogoSvg(svg)], {
           type: "image/svg+xml;charset=utf-8",
         }),
       );

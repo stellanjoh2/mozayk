@@ -50,8 +50,8 @@ export function FrameContextMenu({
     onCloseRef.current();
   });
 
-  useGSAP(
-    (_, contextSafe) => {
+  const { contextSafe } = useGSAP(
+    () => {
       const el = rootRef.current;
       if (!el) return;
 

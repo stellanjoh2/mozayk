@@ -23,6 +23,24 @@ export function resolveLogoSvg(markup: string, chromatic: readonly string[]): st
   return svg;
 }
 
+export function isPieceHidden(el: Element): boolean {
+  const svgEl = el as SVGElement;
+  return (
+    svgEl.style.display === "none" ||
+    svgEl.getAttribute("display") === "none" ||
+    svgEl.getAttribute("visibility") === "hidden"
+  );
+}
+
+/** Drop hidden tiles from the tree so SVG-as-image cannot rasterize 1px ghosts. */
+export function serializeVisibleLogoSvg(svg: Element): string {
+  const clone = svg.cloneNode(true) as Element;
+  for (const el of clone.querySelectorAll(PIECE_SELECTOR)) {
+    if (isPieceHidden(el)) el.remove();
+  }
+  return new XMLSerializer().serializeToString(clone);
+}
+
 export function setPieceVisible(el: SVGElement, visible: boolean): void {
   el.style.transition = "none";
   // Opacity 0 / visibility:hidden still rasterize coverage — white tiles leak

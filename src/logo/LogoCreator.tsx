@@ -206,14 +206,17 @@ export function LogoCreator() {
 
   const toggleLoop = () => {
     if (loopRef.current) {
-      stopPlayback();
+      loopRef.current = false;
+      setLooping(false);
+      loopPoolRef.current = [];
+      loopPoolIndexRef.current = 0;
+      clearLoopTimer();
       return;
     }
     loopRef.current = true;
     setLooping(true);
     loopPoolRef.current = [];
     loopPoolIndexRef.current = 0;
-    setMarkup(nextLoopLayout());
   };
 
   useLayoutEffect(() => {
@@ -331,6 +334,10 @@ export function LogoCreator() {
         event.preventDefault();
         playUiSound("ok");
         restoreColours();
+      } else if (event.code === "KeyL" && !event.repeat) {
+        event.preventDefault();
+        playUiSound(loopRef.current ? "close" : "ok");
+        toggleLoop();
       } else if (event.code === "KeyH" && !event.repeat) {
         event.preventDefault();
         const next = !uiHiddenRef.current;
@@ -393,6 +400,7 @@ export function LogoCreator() {
   return (
     <div className={`logo-creator${uiHidden ? " is-ui-hidden" : ""}`}>
       <div
+        key={playTick}
         ref={markRef}
         className="logo-creator__mark"
         style={markStyle}
@@ -400,7 +408,12 @@ export function LogoCreator() {
         aria-label="mozayk logotype"
         dangerouslySetInnerHTML={{ __html: markup }}
       />
-      <nav className="logo-creator__dock" aria-label="Logotype tools">
+      <nav
+        className="logo-creator__dock"
+        aria-label="Logotype tools"
+        aria-hidden={uiHidden}
+        inert={uiHidden}
+      >
         <div className="logo-creator__dock-group">
           <button type="button" aria-keyshortcuts="q" onClick={randomizeLayout}>
             Randomize Layout
@@ -448,6 +461,7 @@ export function LogoCreator() {
             aria-pressed={looping}
             aria-label="Loop"
             title="Loop"
+            aria-keyshortcuts="l"
             data-ui-sound={looping ? "close" : "ok"}
             onClick={toggleLoop}
           >
