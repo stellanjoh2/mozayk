@@ -1296,7 +1296,7 @@ export function ControlsPanel({
           onChange={(brightness) => onSettingsChange({ brightness }, false)}
         />
         <ToggleRow
-          label="Invert"
+          label="Invert all"
           hint="Full-frame difference with white · PNG only"
           checked={Boolean(settings.invert)}
           onChange={(invert) => onSettingsChange({ invert }, false)}
