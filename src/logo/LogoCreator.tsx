@@ -1,6 +1,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import logoSvg from "../assets/mozayk_logo.svg?raw";
 import { generateRandomPalette } from "../layout/generateLayout";
+import { ColorPicker } from "../components/ColorPicker";
+import { normalizeHex } from "../colorMath";
 import { downloadBlob } from "../export/downloadBlob";
 import { exportLogoMov } from "./exportLogoMov";
 import {
@@ -19,10 +21,59 @@ import {
   type Speed,
 } from "./logoReveal";
 import { paintLogoWithBrandTokens } from "./paintLogo";
+import { CaretIcon, LoopIcon, PlayIcon, StopIcon } from "../ui/icons";
+import { playUiSound } from "../ui/sounds";
 import "./LogoCreator.css";
 
 /** Must match --brand-blue / --brand-purple / --brand-orange in App.css */
 const ORIGINAL_CHROMATIC = ["#2e1ebc", "#cf41f2", "#ff5300"] as const;
+
+function typingInField(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  return Boolean(target.closest("input, textarea, select") || target.isContentEditable);
+}
+
+function LogoColorSwatch({
+  color,
+  label,
+  open,
+  onToggle,
+  onChange,
+  onClose,
+}: {
+  color: string;
+  label: string;
+  open: boolean;
+  onToggle: () => void;
+  onChange: (hex: string) => void;
+  onClose: () => void;
+}) {
+  const anchorRef = useRef<HTMLButtonElement>(null);
+  const hex = normalizeHex(color);
+  return (
+    <>
+      <button
+        ref={anchorRef}
+        type="button"
+        className="logo-creator__swatch"
+        style={{ ["--swatch" as string]: hex, background: hex }}
+        aria-label={label}
+        aria-expanded={open}
+        aria-haspopup="dialog"
+        title={hex}
+        onClick={onToggle}
+      />
+      {open ? (
+        <ColorPicker
+          value={hex}
+          anchorRef={anchorRef}
+          onChange={onChange}
+          onClose={onClose}
+        />
+      ) : null}
+    </>
+  );
+}
 
 function loadImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -49,12 +100,16 @@ export function LogoCreator() {
   const [playing, setPlaying] = useState(false);
   const [playTick, setPlayTick] = useState(0);
   const [openMenu, setOpenMenu] = useState<null | "speed" | "export">(null);
+  const [openColor, setOpenColor] = useState<number | null>(null);
+  const [uiHidden, setUiHidden] = useState(false);
   const [exporting, setExporting] = useState(false);
   const speedMenuRef = useRef<HTMLDivElement>(null);
   const exportRef = useRef<HTMLDivElement>(null);
   const playingRef = useRef(false);
+  const uiHiddenRef = useRef(false);
   speedRef.current = speed;
   playingRef.current = playing;
+  uiHiddenRef.current = uiHidden;
 
   const markStyle = useMemo(
     () =>
@@ -91,11 +146,7 @@ export function LogoCreator() {
     setPlayTick((tick) => tick + 1);
   };
 
-  const stopPlayback = () => {
-    loopRef.current = false;
-    setLooping(false);
-    loopPoolRef.current = [];
-    loopPoolIndexRef.current = 0;
+  const pausePlayback = () => {
     revealGenRef.current += 1;
     clearRevealTimers();
     clearLoopTimer();
@@ -103,21 +154,38 @@ export function LogoCreator() {
     showAllPieces();
   };
 
+  const stopPlayback = () => {
+    loopRef.current = false;
+    setLooping(false);
+    loopPoolRef.current = [];
+    loopPoolIndexRef.current = 0;
+    pausePlayback();
+  };
+
   const randomizeLayout = () => {
     if (playingRef.current || loopRef.current) stopPlayback();
     setMarkup(paintLogoWithBrandTokens(logoSvg));
   };
   const randomizeColours = () => {
-    if (playingRef.current || loopRef.current) stopPlayback();
+    if (playingRef.current) pausePlayback();
+    setOpenColor(null);
     setColors(generateRandomPalette(3));
   };
   const restoreColours = () => {
     if (playingRef.current || loopRef.current) stopPlayback();
+    setOpenColor(null);
     setColors([...ORIGINAL_CHROMATIC]);
+  };
+  const setColorAt = (index: number, hex: string) => {
+    setColors((prev) => prev.map((c, i) => (i === index ? hex : c)));
+  };
+  const toggleMenu = (menu: "speed" | "export") => {
+    setOpenColor(null);
+    setOpenMenu((open) => (open === menu ? null : menu));
   };
 
   const togglePlay = () => {
-    if (playingRef.current || loopRef.current) {
+    if (playingRef.current) {
       stopPlayback();
       return;
     }
@@ -224,10 +292,16 @@ export function LogoCreator() {
       if (speedMenuRef.current?.contains(target) || exportRef.current?.contains(target)) {
         return;
       }
+      const el = event.target;
+      if (!(el instanceof Element) || !el.closest(".logo-creator__dock button")) {
+        playUiSound("close");
+      }
       setOpenMenu(null);
     };
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpenMenu(null);
+      if (event.key !== "Escape") return;
+      playUiSound("close");
+      setOpenMenu(null);
     };
     document.addEventListener("pointerdown", onPointerDown);
     document.addEventListener("keydown", onKeyDown);
@@ -240,18 +314,31 @@ export function LogoCreator() {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (typingInField(event.target)) return;
       if (event.code === "Space") {
         event.preventDefault();
+        playUiSound(playingRef.current ? "close" : "push");
         togglePlay();
       } else if (event.code === "KeyQ") {
         event.preventDefault();
+        playUiSound("push");
         randomizeLayout();
       } else if (event.code === "KeyW") {
         event.preventDefault();
+        playUiSound("push");
         randomizeColours();
       } else if (event.code === "KeyE") {
         event.preventDefault();
+        playUiSound("ok");
         restoreColours();
+      } else if (event.code === "KeyH" && !event.repeat) {
+        event.preventDefault();
+        const next = !uiHiddenRef.current;
+        uiHiddenRef.current = next;
+        setOpenMenu(null);
+        setOpenColor(null);
+        setUiHidden(next);
+        playUiSound(next ? "close" : "push");
       }
     };
     document.addEventListener("keydown", onKeyDown);
@@ -304,7 +391,7 @@ export function LogoCreator() {
   };
 
   return (
-    <div className="logo-creator">
+    <div className={`logo-creator${uiHidden ? " is-ui-hidden" : ""}`}>
       <div
         ref={markRef}
         className="logo-creator__mark"
@@ -318,41 +405,74 @@ export function LogoCreator() {
           <button type="button" aria-keyshortcuts="q" onClick={randomizeLayout}>
             Randomize Layout
           </button>
+          <div className="logo-creator__swatches" role="group" aria-label="Logotype colours">
+            {colors.map((color, i) => (
+              <LogoColorSwatch
+                key={i}
+                color={color}
+                label={`Colour ${i + 1}: ${normalizeHex(color)}`}
+                open={openColor === i}
+                onToggle={() => {
+                  setOpenMenu(null);
+                  setOpenColor((open) => (open === i ? null : i));
+                }}
+                onChange={(hex) => setColorAt(i, hex)}
+                onClose={() => setOpenColor(null)}
+              />
+            ))}
+          </div>
           <button type="button" aria-keyshortcuts="w" onClick={randomizeColours}>
             Randomize Colours
           </button>
-          <button type="button" aria-keyshortcuts="e" onClick={restoreColours}>
+          <button type="button" aria-keyshortcuts="e" data-ui-sound="ok" onClick={restoreColours}>
             Restore
           </button>
         </div>
         <div className="logo-creator__dock-divider" aria-hidden="true" />
-        <div className="logo-creator__dock-group">
+        <div className="logo-creator__dock-group logo-creator__dock-group--playback">
           <button
             type="button"
-            className={playing ? "is-on" : undefined}
+            className={`logo-creator__icon-btn${playing ? " is-on" : ""}`}
             aria-pressed={playing}
+            aria-label={playing ? "Stop" : "Play"}
+            title={playing ? "Stop" : "Play"}
             aria-keyshortcuts="Space"
+            data-ui-sound={playing ? "close" : "push"}
             onClick={togglePlay}
           >
-            {playing ? "Stop" : "Play"}
+            {playing ? <StopIcon /> : <PlayIcon />}
           </button>
           <button
             type="button"
-            className={looping ? "is-on" : undefined}
+            className={`logo-creator__icon-btn${looping ? " is-on" : ""}`}
             aria-pressed={looping}
+            aria-label="Loop"
+            title="Loop"
+            data-ui-sound={looping ? "close" : "ok"}
             onClick={toggleLoop}
           >
-            Loop
+            <LoopIcon />
           </button>
           <div className="logo-creator__pop" ref={speedMenuRef}>
             <button
               type="button"
-              className={openMenu === "speed" ? "is-on" : undefined}
+              className={`logo-creator__speed-btn${openMenu === "speed" ? " is-on" : ""}`}
+              aria-label={`Speed: ${SPEED_LABELS[speed]}`}
+              title={`Speed: ${SPEED_LABELS[speed]}`}
               aria-expanded={openMenu === "speed"}
               aria-haspopup="menu"
-              onClick={() => setOpenMenu((open) => (open === "speed" ? null : "speed"))}
+              data-ui-sound={openMenu === "speed" ? "close" : "push"}
+              onClick={() => toggleMenu("speed")}
             >
-              Speed
+              <span className="logo-creator__speed-value">
+                {SPEED_KEYS.map((key) => (
+                  <span key={key} className="logo-creator__speed-sizer" aria-hidden="true">
+                    {SPEED_LABELS[key]}
+                  </span>
+                ))}
+                <span>{SPEED_LABELS[speed]}</span>
+              </span>
+              <CaretIcon />
             </button>
             {openMenu === "speed" ? (
               <div className="logo-creator__pop-menu" role="menu">
@@ -384,22 +504,28 @@ export function LogoCreator() {
             aria-expanded={openMenu === "export"}
             aria-haspopup="menu"
             disabled={exporting}
-            onClick={() => setOpenMenu((open) => (open === "export" ? null : "export"))}
+            data-ui-sound={openMenu === "export" ? "close" : "push"}
+            onClick={() => toggleMenu("export")}
           >
             {exporting ? "Exporting…" : "Export"}
           </button>
           {openMenu === "export" ? (
             <div className="logo-creator__pop-menu" role="menu">
-              <button type="button" role="menuitem" onClick={() => void onExportPng()}>
+              <button type="button" role="menuitem" data-ui-sound="ok" onClick={() => void onExportPng()}>
                 PNG
               </button>
-              <button type="button" role="menuitem" onClick={onExportSvg}>
+              <button type="button" role="menuitem" data-ui-sound="ok" onClick={onExportSvg}>
                 SVG
               </button>
-              <button type="button" role="menuitem" onClick={() => void onExportMov()}>
+              <button type="button" role="menuitem" data-ui-sound="ok" onClick={() => void onExportMov()}>
                 MOV
               </button>
-              <button type="button" role="menuitem" onClick={() => void onExportMov(true)}>
+              <button
+                type="button"
+                role="menuitem"
+                data-ui-sound="ok"
+                onClick={() => void onExportMov(true)}
+              >
                 MOV Transparent
               </button>
             </div>

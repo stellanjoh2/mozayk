@@ -11,7 +11,7 @@ const FILES = {
 } as const;
 
 const HOVER_SELECTOR =
-  ".panel-btn, .button-row button, .timeline__controls button, .canvas-stage-control-btn, .frame-context-menu__item, .ui-icon-btn, .controls-panel__tab, .palette-panel__tab, .palette-panel__close, .palette-gallery__item, .timeline-thumb, .ui-switch, .about-overlay__content a";
+  ".panel-btn, .button-row button, .timeline__controls button, .canvas-stage-control-btn, .frame-context-menu__item, .ui-icon-btn, .controls-panel__tab, .palette-panel__tab, .palette-panel__close, .palette-gallery__item, .timeline-thumb, .ui-switch, .about-overlay__content a, .logo-creator__dock button, .logo-creator__swatch";
 
 export type UiSound = keyof typeof FILES;
 
@@ -273,6 +273,7 @@ export function playUiSound(name: UiSound, unthrottled = false): void {
 
 function shouldPlayHover(el: HTMLElement): boolean {
   if (el instanceof HTMLButtonElement && el.disabled) return false;
+  if (el.classList.contains("is-on")) return false;
   if (el.classList.contains("ui-switch")) {
     const input = el.querySelector("input");
     if (input instanceof HTMLInputElement && input.disabled) return false;
@@ -311,7 +312,7 @@ function onButtonHover(event: MouseEvent): void {
 function onPanelBtnClick(event: Event): void {
   const el = event.target;
   if (!(el instanceof Element)) return;
-  const btn = el.closest(".panel-btn, .palette-panel__close");
+  const btn = el.closest(".panel-btn, .palette-panel__close, .logo-creator__dock button, .logo-creator__swatch");
   if (btn instanceof HTMLButtonElement && !btn.disabled) {
     const cue = btn.dataset.uiSound;
     if (cue && cue in FILES) {

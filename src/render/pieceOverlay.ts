@@ -130,7 +130,7 @@ export function heldPiecePulseOpacity(phase: number): number {
   return 0.625 + 0.375 * Math.sin(phase * Math.PI * 2);
 }
 
-/** Hard on/off — same 0.125s duty as hover-plate-blink (phase is 2 Hz while dragging). */
+/** Hard on/off — same 4/30s period as hover-plate-blink (phase is 2 Hz while dragging). */
 export function hoverBlinkVisible(phase: number): boolean {
-  return (phase * 4) % 1 < 0.5;
+  return (phase * (30 / 8)) % 1 < 0.5;
 }

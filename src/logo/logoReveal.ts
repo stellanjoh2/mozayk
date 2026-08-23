@@ -25,15 +25,38 @@ export function resolveLogoSvg(markup: string, chromatic: readonly string[]): st
 
 export function setPieceVisible(el: SVGElement, visible: boolean): void {
   el.style.transition = "none";
-  el.style.opacity = visible ? "1" : "0";
+  // Opacity 0 / visibility:hidden still rasterize coverage — white tiles leak
+  // 1px ghosts on black. display:none drops them from painting entirely.
+  el.style.opacity = "";
+  el.style.fill = visible ? "" : "none";
+  el.style.visibility = visible ? "visible" : "hidden";
+  el.style.display = visible ? "" : "none";
+  if (visible) {
+    el.removeAttribute("visibility");
+    el.removeAttribute("display");
+  } else {
+    el.setAttribute("visibility", "hidden");
+    el.setAttribute("display", "none");
+  }
 }
 
 function pieceBox(el: Element): { x: number; y: number } {
+  const svgEl = el as SVGElement;
+  const wasHidden = svgEl.style.display === "none" || svgEl.getAttribute("display") === "none";
+  if (wasHidden) {
+    svgEl.style.display = "";
+    svgEl.removeAttribute("display");
+  }
   try {
     const box = (el as SVGGraphicsElement).getBBox();
     return { x: box.x, y: box.y };
   } catch {
     return { x: 0, y: 0 };
+  } finally {
+    if (wasHidden) {
+      svgEl.style.display = "none";
+      svgEl.setAttribute("display", "none");
+    }
   }
 }
 

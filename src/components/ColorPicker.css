@@ -1,0 +1,281 @@
+/* Color picker (ported from rfrct, monochrome accents) */
+.rfrct-color-picker,
+.rfrct-color-picker * {
+  box-sizing: border-box;
+}
+
+.rfrct-color-picker {
+  --rfrct-picker-pad: 12px;
+  --rfrct-picker-gap: 12px;
+  --rfrct-picker-control-h: 28px;
+  position: fixed;
+  z-index: 100;
+  width: 296px;
+  padding: var(--rfrct-picker-pad);
+  border-radius: 8px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  zoom: var(--ui-compact-zoom);
+}
+
+.rfrct-color-picker__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: var(--settings-label-h);
+  margin-bottom: var(--rfrct-picker-gap);
+}
+
+.rfrct-color-picker__title {
+  margin: 0;
+  font-size: var(--panel-label-size);
+  font-weight: 400;
+  line-height: 1.2;
+  color: var(--muted);
+}
+
+.rfrct-color-picker__close {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: transparent;
+  cursor: var(--cursor-default);
+  color: var(--muted);
+}
+
+.rfrct-color-picker__close::before,
+.rfrct-color-picker__close::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 12px;
+  height: 1px;
+  background: currentColor;
+}
+
+.rfrct-color-picker__close::before {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.rfrct-color-picker__close::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+.rfrct-color-picker__sv {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 0;
+  overflow: hidden;
+  cursor: var(--cursor-crosshair);
+  touch-action: none;
+}
+
+.rfrct-color-picker__sv-thumb,
+.rfrct-color-picker__hue-thumb {
+  position: absolute;
+  box-sizing: border-box;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+
+.rfrct-color-picker__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rfrct-picker-gap);
+  margin-top: var(--rfrct-picker-gap);
+}
+
+.rfrct-color-picker__hue {
+  --hue-ratio: 0;
+  position: relative;
+  height: 12px;
+  border-radius: 999px;
+  cursor: var(--cursor-default);
+  touch-action: none;
+}
+
+.rfrct-color-picker__hue-track {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    to right,
+    #f00,
+    #ff0,
+    #0f0,
+    #0ff,
+    #00f,
+    #f0f,
+    #f00
+  );
+}
+
+.rfrct-color-picker__hue-thumb {
+  top: 50%;
+  left: calc(var(--hue-ratio) * 100%);
+}
+
+.rfrct-color-picker__inputs {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 58px;
+  gap: 8px;
+  align-items: center;
+}
+
+.rfrct-color-picker__eyedropper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--rfrct-picker-control-h);
+  height: var(--rfrct-picker-control-h);
+  border: none;
+  border-radius: var(--control-radius);
+  background: var(--fill-faint);
+  color: var(--muted);
+  cursor: var(--cursor-default);
+}
+
+.rfrct-color-picker__hex,
+.rfrct-color-picker__channel,
+.rfrct-color-picker__scale-trigger {
+  width: 100%;
+  height: var(--rfrct-picker-control-h);
+  border: 1px solid var(--panel-border);
+  background: var(--fill-faint);
+  color: var(--text);
+  font: inherit;
+}
+
+.rfrct-color-picker__hex,
+.rfrct-color-picker__channel {
+  border-radius: 4px;
+}
+
+.rfrct-color-picker__scale-trigger {
+  border-radius: 0;
+}
+
+.rfrct-color-picker__hex,
+.rfrct-color-picker__channel {
+  font-size: 15px;
+}
+
+.rfrct-color-picker__scale-trigger {
+  font-size: 16px;
+}
+
+.rfrct-color-picker__hex,
+.rfrct-color-picker__channel {
+  cursor: var(--cursor-text);
+}
+
+.rfrct-color-picker__scale-combo {
+  position: relative;
+}
+
+.rfrct-color-picker__scale-trigger {
+  cursor: var(--cursor-default);
+}
+
+.rfrct-color-picker__scale-list {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 0;
+  min-width: 58px;
+  z-index: 1;
+}
+
+.rfrct-color-picker__scale-option {
+  display: block;
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  padding: 6px 10px;
+  text-align: center;
+  cursor: var(--cursor-default);
+  font: inherit;
+  font-size: 16px;
+}
+
+.rfrct-color-picker__scale-option:hover,
+.rfrct-color-picker__scale-option.is-selected {
+  background: var(--fill-faint);
+}
+
+.rfrct-color-picker__recent-rule {
+  height: 1px;
+  margin: 0 0 10px;
+  background: var(--fill-faint);
+}
+
+.rfrct-color-picker__recent-swatches {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.rfrct-color-picker__recent-swatch {
+  aspect-ratio: 1;
+  width: 100%;
+  border: 1px solid var(--fill-strong);
+  border-radius: 0;
+  cursor: var(--cursor-default);
+  padding: 0;
+}
+
+@media (min-width: 901px) and (max-width: 1600px) {
+  .rfrct-color-picker {
+    --ui-compact-zoom: 0.75;
+    --panel-label-size: 17px;
+  }
+
+  .rfrct-color-picker__hex,
+  .rfrct-color-picker__channel {
+    font-size: 16px;
+  }
+
+  .rfrct-color-picker__scale-trigger,
+  .rfrct-color-picker__scale-option {
+    font-size: 17px;
+  }
+}
+
+@media (min-width: 1601px) and (max-width: 1920px) {
+  .rfrct-color-picker {
+    --ui-compact-zoom: 0.875;
+    --panel-label-size: 18px;
+  }
+
+  .rfrct-color-picker__hex,
+  .rfrct-color-picker__channel {
+    font-size: 17px;
+  }
+
+  .rfrct-color-picker__scale-trigger,
+  .rfrct-color-picker__scale-option {
+    font-size: 18px;
+  }
+}
+
+@media (min-width: 2561px) {
+  .rfrct-color-picker {
+    --ui-compact-zoom: min(100vw / 2560px, 100dvh / 1440px);
+  }
+}

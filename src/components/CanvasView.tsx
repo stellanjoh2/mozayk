@@ -38,6 +38,7 @@ import {
   playbackDurationSeconds,
 } from "../config";
 import type { Frame, Orientation } from "../types";
+import { PlayIcon, StopIcon } from "../ui/icons";
 import { playUiSound } from "../ui/sounds";
 import { getNormalHoverEffects } from "../ui/hover";
 import { FrameContextMenu } from "./FrameContextMenu";
@@ -1772,15 +1773,7 @@ export function Timeline({
           aria-pressed={playing}
           title={playing ? "Stop" : "Play"}
         >
-          {playing ? (
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <rect x="5" y="5" width="14" height="14" fill="currentColor" />
-            </svg>
-          ) : (
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <polygon points="6,5 19,12 6,19" fill="currentColor" />
-            </svg>
-          )}
+          {playing ? <StopIcon /> : <PlayIcon />}
         </button>
         <UiSelect
           className="timeline__fps"
@@ -1982,26 +1975,18 @@ export function Timeline({
           canDuplicate={canAddFrame}
           canDelete={frames.length > 1}
           onCopyStyle={() => {
-            const index = menu.index;
-            setMenu(null);
             playUiSound("ok");
-            onCopyStyle(index);
+            onCopyStyle(menu.index);
           }}
           onPasteStyle={() => {
-            const index = menu.index;
-            setMenu(null);
             playUiSound("ok");
-            onPasteStyle(index);
+            onPasteStyle(menu.index);
           }}
           onDuplicate={() => {
-            const index = menu.index;
-            setMenu(null);
-            handleDuplicateClick(index);
+            handleDuplicateClick(menu.index);
           }}
           onDelete={() => {
-            const index = menu.index;
-            setMenu(null);
-            handleRemoveClick(index);
+            handleRemoveClick(menu.index);
           }}
           onClose={() => setMenu(null)}
         />

@@ -20,6 +20,7 @@ import {
   type ColorScale,
   type Hsv,
 } from "../colorMath";
+import "./ColorPicker.css";
 
 const PANEL_WIDTH = 296;
 

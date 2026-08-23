@@ -744,7 +744,7 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
 
 .controls-panel__tab:hover:not(.is-active) {
   color: var(--text);
-  animation: hover-plate-blink 0.125s linear infinite;
+  animation: hover-plate-blink calc(4s / 30) linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1026,7 +1026,7 @@ a.panel-btn {
 .frame-context-menu__item:hover:not(:disabled)::before,
 .ui-icon-btn:hover:not(:disabled)::before,
 .palette-panel__close:hover::before {
-  animation: hover-plate-blink 0.125s linear infinite;
+  animation: hover-plate-blink calc(4s / 30) linear infinite;
 }
 
 .panel-btn:hover:not(:disabled),
@@ -1438,7 +1438,7 @@ a.panel-btn {
 }
 
 .about-overlay__content a:hover {
-  animation: hover-plate-blink 0.125s linear infinite;
+  animation: hover-plate-blink calc(4s / 30) linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1831,7 +1831,7 @@ html.normal-hover .button-row--choice button.is-active:hover::before {
 }
 
 .ui-select__option.is-active:not(.is-disabled)::before {
-  animation: hover-plate-blink 0.125s linear infinite;
+  animation: hover-plate-blink calc(4s / 30) linear infinite;
 }
 
 .ui-select__option.is-active:not(.is-disabled) {
@@ -2142,7 +2142,7 @@ html.normal-hover .ui-select__option.is-active:not(.is-disabled)::before {
 }
 
 .ui-switch:hover .ui-switch__track::after {
-  animation: hover-plate-blink 0.125s linear infinite;
+  animation: hover-plate-blink calc(4s / 30) linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2262,7 +2262,7 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
 
 .palette-panel__tab:hover:not(.is-active) {
   color: var(--text);
-  animation: hover-plate-blink 0.125s linear infinite;
+  animation: hover-plate-blink calc(4s / 30) linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2331,7 +2331,7 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
 }
 
 .palette-panel__close:hover::before {
-  animation: hover-plate-blink 0.125s linear infinite;
+  animation: hover-plate-blink calc(4s / 30) linear infinite;
 }
 
 .palette-panel__close svg {
@@ -2407,7 +2407,7 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
 
 .palette-gallery__item:hover .palette-gallery__label {
   color: var(--text);
-  animation: hover-plate-blink 0.125s linear infinite;
+  animation: hover-plate-blink calc(4s / 30) linear infinite;
 }
 
 .palette-gallery__item.is-active .palette-gallery__swatch::after {
@@ -2517,7 +2517,7 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
 }
 
 .color-swatch:hover:not(:disabled) .color-swatch__hex {
-  animation: hover-plate-blink 0.125s linear infinite;
+  animation: hover-plate-blink calc(4s / 30) linear infinite;
 }
 
 .color-row.is-adding,
@@ -2840,7 +2840,7 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
   border-radius: 1px;
   background: var(--accent);
   box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 50%, transparent);
-  animation: hover-plate-blink 0.125s linear infinite;
+  animation: hover-plate-blink calc(4s / 30) linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2890,7 +2890,7 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
 
 .timeline-thumb:hover:not(.is-active) {
   transition: none;
-  animation: hover-border-blink 0.125s linear infinite;
+  animation: hover-border-blink calc(4s / 30) linear infinite;
 }
 
 .timeline-thumb.is-active {
@@ -3028,243 +3028,6 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
   .frame-context-menu {
     height: auto;
   }
-}
-
-/* Color picker (ported from rfrct, monochrome accents) */
-.rfrct-color-picker {
-  --rfrct-picker-pad: 12px;
-  --rfrct-picker-gap: 12px;
-  --rfrct-picker-control-h: 28px;
-  position: fixed;
-  z-index: 100;
-  width: 296px;
-  padding: var(--rfrct-picker-pad);
-  border-radius: 8px;
-  background: var(--panel);
-  border: 1px solid var(--panel-border);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
-  overflow: hidden;
-  zoom: var(--ui-compact-zoom);
-}
-
-.rfrct-color-picker__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: var(--settings-label-h);
-  margin-bottom: var(--rfrct-picker-gap);
-}
-
-.rfrct-color-picker__title {
-  margin: 0;
-  font-size: var(--panel-label-size);
-  font-weight: 400;
-  line-height: 1.2;
-  color: var(--muted);
-}
-
-.rfrct-color-picker__close {
-  position: relative;
-  width: 22px;
-  height: 22px;
-  border: none;
-  background: transparent;
-  cursor: var(--cursor-default);
-  color: var(--muted);
-}
-
-.rfrct-color-picker__close::before,
-.rfrct-color-picker__close::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 12px;
-  height: 1px;
-  background: currentColor;
-}
-
-.rfrct-color-picker__close::before {
-  transform: translate(-50%, -50%) rotate(45deg);
-}
-
-.rfrct-color-picker__close::after {
-  transform: translate(-50%, -50%) rotate(-45deg);
-}
-
-.rfrct-color-picker__sv {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 1;
-  border-radius: 0;
-  overflow: hidden;
-  cursor: var(--cursor-crosshair);
-  touch-action: none;
-}
-
-.rfrct-color-picker__sv-thumb,
-.rfrct-color-picker__hue-thumb {
-  position: absolute;
-  box-sizing: border-box;
-  width: 14px;
-  height: 14px;
-  border: 2px solid #fff;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
-}
-
-.rfrct-color-picker__body {
-  display: flex;
-  flex-direction: column;
-  gap: var(--rfrct-picker-gap);
-  margin-top: var(--rfrct-picker-gap);
-}
-
-.rfrct-color-picker__hue {
-  --hue-ratio: 0;
-  position: relative;
-  height: 12px;
-  border-radius: 999px;
-  cursor: var(--cursor-default);
-  touch-action: none;
-}
-
-.rfrct-color-picker__hue-track {
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(
-    to right,
-    #f00,
-    #ff0,
-    #0f0,
-    #0ff,
-    #00f,
-    #f0f,
-    #f00
-  );
-}
-
-.rfrct-color-picker__hue-thumb {
-  top: 50%;
-  left: calc(var(--hue-ratio) * 100%);
-}
-
-.rfrct-color-picker__inputs {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) 58px;
-  gap: 8px;
-  align-items: center;
-}
-
-.rfrct-color-picker__eyedropper {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--rfrct-picker-control-h);
-  height: var(--rfrct-picker-control-h);
-  border: none;
-  border-radius: var(--control-radius);
-  background: var(--fill-faint);
-  color: var(--muted);
-  cursor: var(--cursor-default);
-}
-
-.rfrct-color-picker__hex,
-.rfrct-color-picker__channel,
-.rfrct-color-picker__scale-trigger {
-  width: 100%;
-  height: var(--rfrct-picker-control-h);
-  border: 1px solid var(--panel-border);
-  background: var(--fill-faint);
-  color: var(--text);
-  font: inherit;
-}
-
-.rfrct-color-picker__hex,
-.rfrct-color-picker__channel {
-  border-radius: 4px;
-}
-
-.rfrct-color-picker__scale-trigger {
-  border-radius: 0;
-}
-
-.rfrct-color-picker__hex,
-.rfrct-color-picker__channel {
-  font-size: 15px;
-}
-
-.rfrct-color-picker__scale-trigger {
-  font-size: 16px;
-}
-
-.rfrct-color-picker__hex,
-.rfrct-color-picker__channel {
-  cursor: var(--cursor-text);
-}
-
-.rfrct-color-picker__scale-combo {
-  position: relative;
-}
-
-.rfrct-color-picker__scale-trigger {
-  cursor: var(--cursor-default);
-}
-
-.rfrct-color-picker__scale-list {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 4px);
-  margin: 0;
-  padding: 4px 0;
-  list-style: none;
-  background: var(--panel);
-  border: 1px solid var(--panel-border);
-  border-radius: 0;
-  min-width: 58px;
-  z-index: 1;
-}
-
-.rfrct-color-picker__scale-option {
-  display: block;
-  width: 100%;
-  border: none;
-  background: transparent;
-  color: var(--text);
-  padding: 6px 10px;
-  text-align: center;
-  cursor: var(--cursor-default);
-  font: inherit;
-  font-size: 16px;
-}
-
-.rfrct-color-picker__scale-option:hover,
-.rfrct-color-picker__scale-option.is-selected {
-  background: var(--fill-faint);
-}
-
-.rfrct-color-picker__recent-rule {
-  height: 1px;
-  margin: 0 0 10px;
-  background: var(--fill-faint);
-}
-
-.rfrct-color-picker__recent-swatches {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 6px;
-}
-
-.rfrct-color-picker__recent-swatch {
-  aspect-ratio: 1;
-  width: 100%;
-  border: 1px solid var(--fill-strong);
-  border-radius: 0;
-  cursor: var(--cursor-default);
-  padding: 0;
 }
 
 /* Phones and tablets — desktop layouts are unchanged. */
