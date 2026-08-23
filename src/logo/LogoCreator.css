@@ -1,0 +1,153 @@
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  background: #000;
+  color-scheme: dark;
+}
+
+.logo-creator {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  background: #000;
+  color: #fff;
+  font-family:
+    "Bitcount Grid Single Variable",
+    "Bitcount Grid Single",
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    monospace;
+}
+
+.logo-creator__mark {
+  width: 80vw;
+}
+
+.logo-creator__mark svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.logo-creator__dock {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 28px 40px;
+  padding: 22px 32px 56px;
+}
+
+.logo-creator__dock-group {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 28px;
+}
+
+.logo-creator__dock-divider {
+  align-self: stretch;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+@keyframes hover-plate-blink {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  50.001%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.logo-creator__dock button {
+  --hover-plate-on: rgba(255, 255, 255, 0.2);
+  position: relative;
+  isolation: isolate;
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 10px 12px;
+  color: rgba(255, 255, 255, 0.42);
+  font: inherit;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.logo-creator__dock button::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--hover-plate-on);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.logo-creator__dock button:hover {
+  color: #fff;
+}
+
+.logo-creator__dock button:hover::before {
+  animation: hover-plate-blink 0.125s linear infinite;
+}
+
+.logo-creator__dock button.is-on,
+.logo-creator__dock button:active:not(:disabled) {
+  background: #ff5300;
+  color: #0f0f0f;
+}
+
+.logo-creator__dock button.is-on:hover,
+.logo-creator__dock button:active:not(:disabled):hover {
+  color: #0f0f0f;
+}
+
+.logo-creator__dock button.is-on::before,
+.logo-creator__dock button.is-on:hover::before,
+.logo-creator__dock button:active:not(:disabled)::before {
+  animation: none;
+  opacity: 0;
+}
+
+.logo-creator__dock button:focus-visible {
+  color: #fff;
+  outline: 1px solid rgba(255, 255, 255, 0.35);
+  outline-offset: 4px;
+}
+
+.logo-creator__dock button.is-on:focus-visible {
+  color: #0f0f0f;
+}
+
+.logo-creator__pop {
+  position: relative;
+}
+
+.logo-creator__pop-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  display: flex;
+  flex-direction: column;
+  min-width: max(100%, 12em);
+  background: #1a1a1a;
+}
+
+.logo-creator__pop-menu button {
+  width: 100%;
+}

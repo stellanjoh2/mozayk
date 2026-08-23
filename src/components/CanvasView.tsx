@@ -541,6 +541,11 @@ export function CanvasView({
     );
   };
 
+  const clearPieceSelection = () => {
+    setSelectedBlockIndex(null);
+    selectedBlockIndexRef.current = null;
+  };
+
   const finishPieceDrag = (
     clientX: number,
     clientY: number,
@@ -565,8 +570,7 @@ export function CanvasView({
       playUiSound("drop");
       setPieceDropBlink({ blockIndex });
     }
-    setSelectedBlockIndex(null);
-    selectedBlockIndexRef.current = null;
+    clearPieceSelection();
     setIsDraggingPiece(false);
     setDropTargets([]);
     setHoveredTarget(null);
@@ -593,13 +597,13 @@ export function CanvasView({
     );
     const cell = pixelToGridCell(grid, x, y);
     if (!cell) {
-      setSelectedBlockIndex(null);
+      clearPieceSelection();
       return;
     }
 
     const hitIndex = hitTestBlock(frame.blocks, cell.col, cell.row);
     if (hitIndex == null) {
-      setSelectedBlockIndex(null);
+      clearPieceSelection();
       return;
     }
 
@@ -707,14 +711,31 @@ export function CanvasView({
       clearPiecePointer();
     };
 
+    const onOutsidePointerDown = (event: PointerEvent) => {
+      if (event.button !== 0) return;
+      if (selectedBlockIndexRef.current == null) return;
+      if (isDraggingPieceRef.current) return;
+      const canvas = canvasRef.current;
+      if (
+        canvas &&
+        event.target instanceof Node &&
+        canvas.contains(event.target)
+      ) {
+        return;
+      }
+      clearPieceSelection();
+    };
+
     window.addEventListener("pointermove", onMove, { passive: false });
     window.addEventListener("pointerup", onUp);
     window.addEventListener("pointercancel", onCancel);
+    window.addEventListener("pointerdown", onOutsidePointerDown, true);
 
     return () => {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onCancel);
+      window.removeEventListener("pointerdown", onOutsidePointerDown, true);
     };
   }, [canEditPieces]);
 

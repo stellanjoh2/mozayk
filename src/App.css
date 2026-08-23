@@ -1012,6 +1012,13 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
   margin-bottom: 20px;
 }
 
+a.panel-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
 .panel-btn:hover:not(:disabled)::before,
 .button-row button:hover:not(:disabled)::before,
 .timeline__controls > button:hover:not(:disabled)::before,
