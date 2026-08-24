@@ -51,7 +51,8 @@ function hexToHsl(hex: string): { h: number; s: number; l: number } {
 }
 
 function isBlueHue(h: number): boolean {
-  return h >= 195 && h <= 250;
+  // Include cyan (~190–195) so a warm accent is not trapped between cyan and blue.
+  return h >= 185 && h <= 250;
 }
 
 function isWarmHue(h: number): boolean {
