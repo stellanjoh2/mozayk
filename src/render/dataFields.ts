@@ -1,7 +1,12 @@
 import { normalizeHex } from "../colorMath";
 import { getGridDimensions, gridEdge } from "../grid/gridMath";
 import { resolveGridBlendMode } from "./gridOverlayParams";
-import type { FrameSettings, GridDimensions, Orientation } from "../types";
+import type {
+  DataFieldsValueType,
+  FrameSettings,
+  GridDimensions,
+  Orientation,
+} from "../types";
 
 const PAD_X = 2;
 const PAD_Y = 2;
@@ -24,11 +29,27 @@ export const DATA_FIELDS_COLOR_DEFAULT = "#ffffff";
 export const DATA_FIELDS_SPAWN_MIN = 0;
 export const DATA_FIELDS_SPAWN_MAX = 5;
 export const DATA_FIELDS_SPAWN_DEFAULT = 1;
+export const DATA_FIELDS_VALUE_TYPES: readonly DataFieldsValueType[] = [
+  "grid",
+  "index",
+  "random",
+  "decimal",
+  "hex",
+];
+export const DATA_FIELDS_VALUE_TYPE_DEFAULT: DataFieldsValueType = "grid";
+export const DATA_FIELDS_VALUE_TYPE_LABELS: Record<DataFieldsValueType, string> =
+  {
+    grid: "Grid",
+    index: "Index",
+    random: "Random",
+    decimal: "Decimal",
+    hex: "Hex",
+  };
 /** Labels drawn when spawn rate is 1, regardless of grid density. */
 const SPAWN_AT_ONE = 3;
 
 /**
- * 5×7 bitmaps for digits / separator — filled rects, no canvas text AA.
+ * 5×7 bitmaps for digits, hex letters, and separators — filled rects, no AA.
  * Rows are MSB = left.
  */
 const GLYPHS: Record<string, readonly number[]> = {
@@ -43,6 +64,13 @@ const GLYPHS: Record<string, readonly number[]> = {
   "8": [0b01110, 0b10001, 0b10001, 0b01110, 0b10001, 0b10001, 0b01110],
   "9": [0b01110, 0b10001, 0b10001, 0b01111, 0b00001, 0b00010, 0b01100],
   ",": [0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b00100, 0b01000],
+  ".": [0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b00100],
+  A: [0b01110, 0b10001, 0b10001, 0b11111, 0b10001, 0b10001, 0b10001],
+  B: [0b11110, 0b10001, 0b10001, 0b11110, 0b10001, 0b10001, 0b11110],
+  C: [0b01110, 0b10001, 0b10000, 0b10000, 0b10000, 0b10001, 0b01110],
+  D: [0b11110, 0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b11110],
+  E: [0b11111, 0b10000, 0b10000, 0b11110, 0b10000, 0b10000, 0b11111],
+  F: [0b11111, 0b10000, 0b10000, 0b11110, 0b10000, 0b10000, 0b10000],
 };
 
 function hashSeed(...values: number[]): number {
@@ -83,6 +111,18 @@ export function resolveDataFieldsSize(value: unknown): number {
     DATA_FIELDS_SIZE_MAX,
     DATA_FIELDS_SIZE_DEFAULT,
   );
+}
+
+export function resolveDataFieldsValueType(
+  value: unknown,
+): DataFieldsValueType {
+  if (
+    typeof value === "string" &&
+    (DATA_FIELDS_VALUE_TYPES as readonly string[]).includes(value)
+  ) {
+    return value as DataFieldsValueType;
+  }
+  return DATA_FIELDS_VALUE_TYPE_DEFAULT;
 }
 
 function glyphAdvance(scale: number): number {
@@ -142,8 +182,35 @@ function drawLabelRtl(
   }
 }
 
-function cellLabel(col: number, row: number): string {
-  return `${col},${row}`;
+/** Stable per cell + seed so changing spawn rate does not reshuffle values. */
+export function dataFieldLabel(
+  type: DataFieldsValueType,
+  col: number,
+  row: number,
+  columns: number,
+  rows: number,
+  seed: number,
+): string {
+  switch (type) {
+    case "index": {
+      const last = Math.max(0, columns * rows - 1);
+      const width = Math.max(4, String(last).length);
+      return String(row * columns + col).padStart(width, "0");
+    }
+    case "random":
+      return String(hashSeed(col, row, seed, 0xdf10) % 1000).padStart(3, "0");
+    case "decimal": {
+      const n = hashSeed(col, row, seed, 0xdf20) % 1000;
+      return `${Math.floor(n / 100)}.${String(n % 100).padStart(2, "0")}`;
+    }
+    case "hex":
+      return (hashSeed(col, row, seed, 0xdf30) % 0x1000)
+        .toString(16)
+        .toUpperCase()
+        .padStart(3, "0");
+    default:
+      return `${col},${row}`;
+  }
 }
 
 /**
@@ -183,11 +250,13 @@ export function drawDataFields(
   if (spawnRate <= 0) return;
 
   const scale = resolveDataFieldsSize(settings.dataFieldsSize);
+  const valueType = resolveDataFieldsValueType(settings.dataFieldsValueType);
   const color = normalizeHex(
     settings.dataFieldsColor,
     DATA_FIELDS_COLOR_DEFAULT,
   );
   const blend = resolveGridBlendMode(settings.dataFieldsBlend);
+  const seed = settings.dataFieldsSeed ?? 0;
 
   let grid: GridDimensions;
   try {
@@ -208,7 +277,7 @@ export function drawDataFields(
   if (count <= 0) return;
 
   const rng = mulberry32(
-    hashSeed(columns, rows, width, height, spawnRate, 0xdf91, settings.dataFieldsSeed ?? 0),
+    hashSeed(columns, rows, width, height, spawnRate, 0xdf91, seed),
   );
   for (let i = 0; i < count; i++) {
     const j = i + Math.floor(rng() * (candidates.length - i));
@@ -229,7 +298,13 @@ export function drawDataFields(
     const { col, row } = candidates[i];
     const x = gridEdge(col, columns, width);
     const y = gridEdge(row, rows, height);
-    drawLabelRtl(ctx, cellLabel(col, row), x, y, scale);
+    drawLabelRtl(
+      ctx,
+      dataFieldLabel(valueType, col, row, columns, rows, seed),
+      x,
+      y,
+      scale,
+    );
   }
 
   ctx.restore();

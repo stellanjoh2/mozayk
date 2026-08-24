@@ -35,6 +35,13 @@ export type Density = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 8 | 10 | 12;
 export type GridOverlayStroke = 1 | 2 | 4;
 /** Blend mode for grid overlay strokes over the mosaic. */
 export type GridBlendMode = "normal" | "difference" | "screen";
+/** Content shown by data-field labels. */
+export type DataFieldsValueType =
+  | "grid"
+  | "index"
+  | "random"
+  | "decimal"
+  | "hex";
 /** Blend mode for a full-frame texture overlay (dirt / grain / etc.). */
 export type TextureOverlayBlendMode =
   | "multiply"
@@ -169,8 +176,10 @@ export type FrameSettings = {
   wireframePeelAmount?: number;
   /** Outline thickness in px: 1, 2, or 4. Defaults to 1. */
   wireframePeelStroke?: GridOverlayStroke;
-  /** Sparse monospace coordinate labels in cell corners (PNG). */
+  /** Sparse monospace labels in cell corners (PNG). */
   dataFields?: boolean;
+  /** What each label shows. Defaults to grid coordinates. */
+  dataFieldsValueType?: DataFieldsValueType;
   /** How many labels appear 0–5. 1 ≈ a few; 5 fills sparse strips (~1/16 of cells). Defaults to 1. */
   dataFieldsSpawnRate?: number;
   /** Glyph scale 1–8. Defaults to 1 (~8pt). */

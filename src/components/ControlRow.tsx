@@ -188,3 +188,43 @@ export function HeadlineToggle({
     </>
   );
 }
+
+type HeadlineDisclosureProps = {
+  title: string;
+  hint?: string;
+  open: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+};
+
+export function HeadlineDisclosure({
+  title,
+  hint,
+  open,
+  onToggle,
+  children,
+}: HeadlineDisclosureProps) {
+  return (
+    <>
+      <button
+        type="button"
+        className={
+          open
+            ? "headline-toggle headline-disclosure"
+            : "headline-toggle headline-disclosure is-off"
+        }
+        aria-expanded={open}
+        onClick={() => {
+          playUiSound(open ? "close" : "ok");
+          onToggle();
+        }}
+      >
+        <h2>
+          <HintLabel hint={hint}>{title}</HintLabel>
+        </h2>
+        <span className="headline-disclosure__caret" aria-hidden />
+      </button>
+      <CollapsibleControls open={open}>{children}</CollapsibleControls>
+    </>
+  );
+}

@@ -8,6 +8,7 @@ import {
   DATA_FIELDS_SPAWN_MAX,
   DATA_FIELDS_SPAWN_MIN,
   resolveDataFieldsSize,
+  resolveDataFieldsValueType,
 } from "../render/dataFields";
 import {
   GRID_CROSS_SIZE_DEFAULT,
@@ -291,6 +292,9 @@ export function parseSettingsRecord(
       WIREFRAME_PEEL_STROKE_DEFAULT,
     ),
     dataFields: Boolean(candidate.dataFields),
+    dataFieldsValueType: resolveDataFieldsValueType(
+      candidate.dataFieldsValueType,
+    ),
     dataFieldsSpawnRate: clampInt(
       candidate.dataFieldsSpawnRate,
       DATA_FIELDS_SPAWN_MIN,

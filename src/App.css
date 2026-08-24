@@ -672,8 +672,10 @@ html.normal-hover .palette-gallery__item:hover .palette-gallery__label {
   opacity: 1;
 }
 
-html.normal-hover .controls-panel__tab:hover:not(.is-active) {
+html.normal-hover .controls-panel__tab:hover:not(.is-active),
+html.normal-hover .headline-disclosure:hover {
   animation: none;
+  opacity: 1;
 }
 
 html.normal-hover .palette-panel__tab:hover:not(.is-active) {
@@ -1629,6 +1631,10 @@ html.normal-hover .button-row--choice button.is-active:hover::before {
   margin-bottom: 0;
 }
 
+.panel-section > .color-swatch-wrap:last-child .panel-btn {
+  margin-bottom: 0;
+}
+
 .control-row__label {
   display: flex;
   align-items: center;
@@ -1935,9 +1941,51 @@ html.normal-hover .ui-select__option.is-active:not(.is-disabled)::before {
   margin-bottom: 0;
 }
 
+.headline-disclosure {
+  appearance: none;
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  text-align: left;
+  cursor: var(--cursor-default);
+}
+
+.headline-disclosure:focus {
+  outline: none;
+}
+
+.headline-disclosure:focus-visible h2 {
+  color: var(--chrome);
+}
+
+.headline-disclosure__caret {
+  display: block;
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  background: var(--ui-chevron);
+  transform: rotate(-90deg);
+  transition: transform var(--panel-slide-duration) var(--panel-slide-ease);
+}
+
+.headline-disclosure.is-off .headline-disclosure__caret {
+  transform: rotate(90deg);
+}
+
+.headline-disclosure:hover {
+  animation: hover-plate-blink calc(4s / 30) linear infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .headline-toggle {
+  .headline-toggle,
+  .headline-disclosure__caret {
     transition: none;
+  }
+
+  .headline-disclosure:hover {
+    animation: none;
   }
 }
 
@@ -1954,6 +2002,19 @@ html.normal-hover .ui-select__option.is-active:not(.is-disabled)::before {
 .headline-toggle.is-off h2,
 .headline-toggle.is-off h3 {
   color: var(--muted);
+}
+
+.headline-disclosure:hover h2,
+.panel-section.is-off .headline-disclosure:hover h2 {
+  color: var(--brand);
+}
+
+.headline-disclosure:hover .headline-disclosure__caret {
+  background: conic-gradient(
+    from 225deg at 50% 50%,
+    var(--brand) 0 90deg,
+    transparent 90deg
+  );
 }
 
 .ui-icon-btn {

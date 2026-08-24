@@ -32,6 +32,9 @@ import {
   DATA_FIELDS_SPAWN_DEFAULT,
   DATA_FIELDS_SPAWN_MAX,
   DATA_FIELDS_SPAWN_MIN,
+  DATA_FIELDS_VALUE_TYPE_DEFAULT,
+  DATA_FIELDS_VALUE_TYPE_LABELS,
+  DATA_FIELDS_VALUE_TYPES,
 } from "../render/dataFields";
 import {
   GRID_BLEND_LABELS,
@@ -57,6 +60,7 @@ import {
 import {
   ORIENTATION_LABELS,
   ORIENTATIONS,
+  type DataFieldsValueType,
   type Density,
   type Frame,
   type FrameSettings,
@@ -76,7 +80,7 @@ import type { PalettePreset } from "../presets/palettePresets";
 import {
   RemoveIconButton,
 } from "./ControlRowWithPause";
-import { HeadlineToggle, SliderRow, ToggleRow } from "./ControlRow";
+import { HeadlineDisclosure, HeadlineToggle, SliderRow, ToggleRow } from "./ControlRow";
 import { HintLabel } from "./HintLabel";
 import { UiSelect } from "./UiSelect";
 import {
@@ -132,6 +136,13 @@ const BLEND_SELECT_OPTIONS = GRID_BLEND_MODES.map((mode) => ({
   label: GRID_BLEND_LABELS[mode],
 }));
 
+const DATA_FIELDS_VALUE_SELECT_OPTIONS = DATA_FIELDS_VALUE_TYPES.map(
+  (type) => ({
+    value: type,
+    label: DATA_FIELDS_VALUE_TYPE_LABELS[type],
+  }),
+);
+
 type ControlsPanelProps = {
   frame: Frame;
   orientation: Orientation;
@@ -186,6 +197,16 @@ type ControlsPanelProps = {
 };
 
 type PanelTab = "create" | "export" | "settings";
+
+type ExportFormat = "png" | "jpg" | "mp4" | "gif" | "svg";
+
+const EXPORT_OPEN_DEFAULT: Record<ExportFormat, boolean> = {
+  png: false,
+  jpg: false,
+  mp4: false,
+  gif: false,
+  svg: false,
+};
 
 export function ControlsPanel({
   frame,
@@ -249,6 +270,7 @@ export function ControlsPanel({
   const textureInputRef = useRef<HTMLInputElement>(null);
   const projectInputRef = useRef<HTMLInputElement>(null);
   const [panelTab, setPanelTab] = useState<PanelTab>("create");
+  const [exportOpen, setExportOpen] = useState(() => ({ ...EXPORT_OPEN_DEFAULT }));
   const [soundsOn, setSoundsOn] = useState(getUiSoundsEnabled);
   const [soundVolume, setSoundVolume] = useState(getUiSoundsVolume);
   const [normalHover, setNormalHover] = useState(getNormalHoverEffects);
@@ -296,7 +318,11 @@ export function ControlsPanel({
   const selectPanelTab = (tab: PanelTab) => {
     if (tab === panelTab) return;
     setPanelTab(tab);
+    if (tab === "export") setExportOpen({ ...EXPORT_OPEN_DEFAULT });
     panelRef.current?.scrollTo({ top: 0 });
+  };
+  const toggleExportFormat = (format: ExportFormat) => {
+    setExportOpen((prev) => ({ ...prev, [format]: !prev[format] }));
   };
 
   useGSAP(
@@ -1038,10 +1064,32 @@ export function ControlsPanel({
       >
         <HeadlineToggle
           title="Data Fields"
-          hint="Sparse monospace coordinates in cell corners · PNG only"
+          hint="Sparse monospace labels in cell corners · PNG only"
           checked={Boolean(settings.dataFields)}
           onChange={(dataFields) => onSettingsChange({ dataFields }, false)}
         >
+        <label className="control-row">
+          <span className="control-row__label">
+            <HintLabel hint="Grid coords, serial index, or random numbers">
+              Value type
+            </HintLabel>
+          </span>
+          <UiSelect
+            value={
+              settings.dataFieldsValueType ?? DATA_FIELDS_VALUE_TYPE_DEFAULT
+            }
+            options={DATA_FIELDS_VALUE_SELECT_OPTIONS}
+            onChange={(dataFieldsValueType) =>
+              onSettingsChange(
+                {
+                  dataFieldsValueType:
+                    dataFieldsValueType as DataFieldsValueType,
+                },
+                false,
+              )
+            }
+          />
+        </label>
         <SliderRow
           label="Spawn rate"
           hint="1 ≈ a few labels · 5 fills the sparse strips"
@@ -1375,8 +1423,16 @@ export function ControlsPanel({
       </>
       ) : panelTab === "export" ? (
       <>
-      <section className="panel-section">
-        <h2>PNG</h2>
+      <section
+        className={
+          exportOpen.png ? "panel-section" : "panel-section is-off"
+        }
+      >
+        <HeadlineDisclosure
+          title="PNG"
+          open={exportOpen.png}
+          onToggle={() => toggleExportFormat("png")}
+        >
         <label className="control-row">
           <span className="control-row__label">
             <HintLabel hint="Preview matches display">
@@ -1412,10 +1468,19 @@ export function ControlsPanel({
         >
           Export PNG Sequence (ZIP)
         </button>
+        </HeadlineDisclosure>
       </section>
 
-      <section className="panel-section">
-        <h2>JPG</h2>
+      <section
+        className={
+          exportOpen.jpg ? "panel-section" : "panel-section is-off"
+        }
+      >
+        <HeadlineDisclosure
+          title="JPG"
+          open={exportOpen.jpg}
+          onToggle={() => toggleExportFormat("jpg")}
+        >
         <label className="control-row">
           <span className="control-row__label">
             <HintLabel hint="Same sizes as PNG · no transparency">
@@ -1443,10 +1508,19 @@ export function ControlsPanel({
         >
           Export JPG Sequence (ZIP)
         </button>
+        </HeadlineDisclosure>
       </section>
 
-      <section className="panel-section">
-        <h2>MP4</h2>
+      <section
+        className={
+          exportOpen.mp4 ? "panel-section" : "panel-section is-off"
+        }
+      >
+        <HeadlineDisclosure
+          title="MP4"
+          open={exportOpen.mp4}
+          onToggle={() => toggleExportFormat("mp4")}
+        >
         <label className="control-row">
           <span className="control-row__label">
             <HintLabel
@@ -1483,10 +1557,19 @@ export function ControlsPanel({
         >
           Export MP4
         </button>
+        </HeadlineDisclosure>
       </section>
 
-      <section className="panel-section">
-        <h2>GIF</h2>
+      <section
+        className={
+          exportOpen.gif ? "panel-section" : "panel-section is-off"
+        }
+      >
+        <HeadlineDisclosure
+          title="GIF"
+          open={exportOpen.gif}
+          onToggle={() => toggleExportFormat("gif")}
+        >
         <label className="control-row">
           <span className="control-row__label">
             <HintLabel hint="Recommended 480p · max 720p">
@@ -1526,10 +1609,19 @@ export function ControlsPanel({
         <button type="button" className="panel-btn" onClick={onExportGif}>
           Export GIF
         </button>
+        </HeadlineDisclosure>
       </section>
 
-      <section className="panel-section">
-        <h2>SVG</h2>
+      <section
+        className={
+          exportOpen.svg ? "panel-section" : "panel-section is-off"
+        }
+      >
+        <HeadlineDisclosure
+          title="SVG"
+          open={exportOpen.svg}
+          onToggle={() => toggleExportFormat("svg")}
+        >
         <p className="export-group__meta">
           Shapes and grids · no blur, noise, or texture
         </p>
@@ -1541,6 +1633,7 @@ export function ControlsPanel({
         >
           Export SVG Frame
         </button>
+        </HeadlineDisclosure>
       </section>
       </>
       ) : (
