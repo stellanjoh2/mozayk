@@ -103,6 +103,7 @@ import {
   type MzkProject,
 } from "./project/mzkFormat";
 import { stepDensity } from "./grid/density";
+import { recordVisualExported } from "./stats/beacon";
 import { getShortcutLegendEnabled } from "./ui/shortcutLegend";
 import { triggerShortcutButton } from "./ui/sounds";
 import type { Frame, FrameSettings, Orientation } from "./types";
@@ -806,6 +807,7 @@ export default function App() {
   const runExport = useCallback(async (task: () => Promise<void> | void) => {
     try {
       await task();
+      recordVisualExported();
     } catch {
       setToast("Export failed");
     }

@@ -17,6 +17,7 @@ export default defineConfig({
       input: {
         main: resolve(root, "index.html"),
         logo: resolve(root, "logo.html"),
+        stats: resolve(root, "stats/index.html"),
       },
     },
   },
