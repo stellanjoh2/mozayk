@@ -523,6 +523,8 @@ function stackPngPasses(
 
 export function renderMosaicToBlob(
   options: RenderOptions,
+  type = "image/png",
+  quality?: number,
 ): Promise<Blob | null> {
   const offscreen = document.createElement("canvas");
   try {
@@ -538,6 +540,6 @@ export function renderMosaicToBlob(
     ? offscreen
     : stackPngPasses(offscreen, PNG_STACK_PASSES);
   return new Promise((resolve) => {
-    output.toBlob((blob) => resolve(blob), "image/png");
+    output.toBlob((blob) => resolve(blob), type, quality);
   });
 }

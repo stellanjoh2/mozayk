@@ -160,6 +160,8 @@ type ControlsPanelProps = {
   onExportPngFrame: () => void;
   onExportPngTransparent: () => void;
   onExportPngSequence: () => void;
+  onExportJpgFrame: () => void;
+  onExportJpgSequence: () => void;
   onExportMp4: () => void;
   onGifPresetChange: (preset: GifExportPreset) => void;
   onGifFrameDelayChange: (delayCs: number) => void;
@@ -213,6 +215,8 @@ export function ControlsPanel({
   onExportPngFrame,
   onExportPngTransparent,
   onExportPngSequence,
+  onExportJpgFrame,
+  onExportJpgSequence,
   onExportMp4,
   onGifPresetChange,
   onGifFrameDelayChange,
@@ -1409,6 +1413,37 @@ export function ControlsPanel({
           onClick={onExportPngSequence}
         >
           Export PNG Sequence (ZIP)
+        </button>
+      </section>
+
+      <section className="panel-section">
+        <h2>JPG</h2>
+        <label className="control-row">
+          <span className="control-row__label">
+            <HintLabel hint="Same sizes as PNG · no transparency">
+              Resolution
+            </HintLabel>
+          </span>
+          <UiSelect
+            value={exportPreset}
+            options={Object.entries(EXPORT_PRESETS).map(([key, preset]) => ({
+              value: key,
+              label: preset.label,
+            }))}
+            onChange={(preset) =>
+              onExportPresetChange(preset as ExportPreset)
+            }
+          />
+        </label>
+        <button type="button" className="panel-btn" onClick={onExportJpgFrame}>
+          Export JPG Frame
+        </button>
+        <button
+          type="button"
+          className="panel-btn panel-btn--ghost"
+          onClick={onExportJpgSequence}
+        >
+          Export JPG Sequence (ZIP)
         </button>
       </section>
 

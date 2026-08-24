@@ -39,30 +39,57 @@ export async function loadTextureOverlayForFrame(
   }
 }
 
+export type StillImageFormat = "png" | "jpg";
+
+const JPEG_QUALITY = 0.92;
+
+function stillImageEncode(format: StillImageFormat): {
+  type: string;
+  quality?: number;
+  ext: StillImageFormat;
+  label: string;
+} {
+  if (format === "jpg") {
+    return {
+      type: "image/jpeg",
+      quality: JPEG_QUALITY,
+      ext: "jpg",
+      label: "JPG",
+    };
+  }
+  return { type: "image/png", ext: "png", label: "PNG" };
+}
+
 export async function exportCurrentFrame(
   frame: Frame,
   orientation: Orientation,
   preset: ExportPreset,
   frameIndex: number,
+  format: StillImageFormat = "png",
 ): Promise<void> {
+  const encode = stillImageEncode(format);
   const [width, height] = getExportSize(orientation, preset);
   const [sourceImage, backgroundImage, textureOverlayImage] = await Promise.all([
     loadSourceImageForFrame(frame),
     loadBackgroundImageForFrame(frame),
     loadTextureOverlayForFrame(frame),
   ]);
-  const blob = await renderMosaicToBlob({
-    orientation,
-    settings: frame.settings,
-    blocks: frame.blocks,
-    width,
-    height,
-    sourceImage,
-    backgroundImage,
-    textureOverlayImage,
-  });
-  if (!blob) throw new Error("PNG export failed");
-  downloadBlob(blob, mosaicFrameFileName(frameIndex, "png"));
+  const blob = await renderMosaicToBlob(
+    {
+      orientation,
+      settings: frame.settings,
+      blocks: frame.blocks,
+      width,
+      height,
+      sourceImage,
+      backgroundImage,
+      textureOverlayImage,
+    },
+    encode.type,
+    encode.quality,
+  );
+  if (!blob) throw new Error(`${encode.label} export failed`);
+  downloadBlob(blob, mosaicFrameFileName(frameIndex, encode.ext));
 }
 
 export async function exportCurrentFrameTransparent(
@@ -97,7 +124,9 @@ export async function exportAllFrames(
   frames: Frame[],
   orientation: Orientation,
   preset: ExportPreset,
+  format: StillImageFormat = "png",
 ): Promise<void> {
+  const encode = stillImageEncode(format);
   const [width, height] = getExportSize(orientation, preset);
   const files: Record<string, Uint8Array> = {};
 
@@ -107,21 +136,27 @@ export async function exportAllFrames(
       loadBackgroundImageForFrame(frames[i]),
       loadTextureOverlayForFrame(frames[i]),
     ]);
-    const blob = await renderMosaicToBlob({
-      orientation,
-      settings: frames[i].settings,
-      blocks: frames[i].blocks,
-      width,
-      height,
-      sourceImage,
-      backgroundImage,
-      textureOverlayImage,
-    });
-    if (!blob) throw new Error("PNG export failed");
+    const blob = await renderMosaicToBlob(
+      {
+        orientation,
+        settings: frames[i].settings,
+        blocks: frames[i].blocks,
+        width,
+        height,
+        sourceImage,
+        backgroundImage,
+        textureOverlayImage,
+      },
+      encode.type,
+      encode.quality,
+    );
+    if (!blob) throw new Error(`${encode.label} export failed`);
     const buffer = new Uint8Array(await blob.arrayBuffer());
-    files[mosaicFrameFileName(i, "png")] = buffer;
+    files[mosaicFrameFileName(i, encode.ext)] = buffer;
   }
 
   const zipped = zipSync(files);
-  downloadBlob(new Blob([zipped], { type: "application/zip" }), "mozayk_sequence.zip");
+  const zipName =
+    format === "jpg" ? "mozayk_jpg_sequence.zip" : "mozayk_sequence.zip";
+  downloadBlob(new Blob([zipped], { type: "application/zip" }), zipName);
 }

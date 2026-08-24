@@ -128,4 +128,4 @@ npm run lint
 
 ## License
 
-The Mozayk application source is available on GitHub. Third-party dependencies carry their own licenses — see [CREDITS.md](./CREDITS.md) for details.
+Mozayk source is all rights reserved; third-party libraries have their own licenses — see [CREDITS.md](./CREDITS.md) for details.

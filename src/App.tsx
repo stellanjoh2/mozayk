@@ -1536,6 +1536,22 @@ export default function App() {
             exportAllFrames(frames, orientation, exportPreset),
           )
         }
+        onExportJpgFrame={() =>
+          void runExport(() =>
+            exportCurrentFrame(
+              activeFrame,
+              orientation,
+              exportPreset,
+              activeIndex,
+              "jpg",
+            ),
+          )
+        }
+        onExportJpgSequence={() =>
+          void runExport(() =>
+            exportAllFrames(frames, orientation, exportPreset, "jpg"),
+          )
+        }
         onExportMp4={() =>
           void runExport(async () => {
             setExportingLabel("Exporting…");
