@@ -21,6 +21,7 @@ import {
   gridOverlayPathData,
   resolveGridCrossesStyle,
   resolveGridOverlayStyle,
+  scaledOverlayLineWidth,
   type GridOverlayStyle,
 } from "./gridOverlay";
 import { largestRingRadius, ringInnerRadius } from "./ringGeometry";
@@ -237,6 +238,8 @@ function strokeOverlayPath(
   ctx: CanvasRenderingContext2D,
   style: GridOverlayStyle,
   d: string,
+  width: number,
+  height: number,
 ): void {
   ctx.save();
   ctx.globalAlpha = style.opacity;
@@ -244,7 +247,7 @@ function strokeOverlayPath(
     ctx.globalCompositeOperation = style.blendMode;
   }
   ctx.strokeStyle = style.color;
-  ctx.lineWidth = style.lineWidth;
+  ctx.lineWidth = scaledOverlayLineWidth(style.lineWidth, width, height);
   ctx.stroke(new Path2D(d));
   ctx.restore();
 }
@@ -259,7 +262,13 @@ function drawGridOverlay(
   const lines = resolveGridOverlayStyle(settings);
   if (lines) {
     const grid = gridOverlayDimensions(orientation, width, height, lines);
-    strokeOverlayPath(ctx, lines, gridOverlayPathData(grid, lines.chaos, settings.gridOverlaySeed ?? 0));
+    strokeOverlayPath(
+      ctx,
+      lines,
+      gridOverlayPathData(grid, lines.chaos, settings.gridOverlaySeed ?? 0),
+      width,
+      height,
+    );
   }
 
   const crosses = resolveGridCrossesStyle(settings);
@@ -274,6 +283,8 @@ function drawGridOverlay(
         crosses.size,
         settings.gridCrossesSeed ?? 0,
       ),
+      width,
+      height,
     );
   }
 }

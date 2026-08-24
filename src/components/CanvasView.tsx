@@ -99,7 +99,7 @@ type CanvasViewProps = {
   isInspecting?: boolean;
   fillStage?: boolean;
   pieceEditingEnabled?: boolean;
-  /** Timeline is playing — use a cheaper 1080p preview, skip grid blur. */
+  /** Timeline is playing — skip grid blur (CSS blur at 4K/30fps OOMs the GPU). */
   playing?: boolean;
   shortcutLegend?: { text: string; id: number } | null;
   onToggleInspect?: () => void;
@@ -171,9 +171,9 @@ export function CanvasView({
           typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1,
         )
       : nativeSize;
-  // Playback stays on the 1080p grid. Display-matching can pick 1440p/2160p
-  // on Retina, and CSS blur at that size crashes the GPU at 30fps.
-  const [width, height] = isInspecting || playing ? nativeSize : workingSize;
+  // Inspect is 1:1 1080p. Playback keeps the paused preview size so overlay
+  // strokes don't jump; skipGridBlur is what keeps 4K/30fps from OOMing.
+  const [width, height] = isInspecting ? nativeSize : workingSize;
   const fitScale =
     isInspecting || stageSize.width <= 0
       ? 1

@@ -11,6 +11,7 @@ import {
   gridOverlayPathData,
   resolveGridCrossesStyle,
   resolveGridOverlayStyle,
+  scaledOverlayLineWidth,
   type GridOverlayStyle,
 } from "./gridOverlay";
 import { blockCornerRadiusPx } from "./cornerRadius";
@@ -155,12 +156,18 @@ function svgBackground(
   return `<rect width="${width}" height="${height}" fill="${fill}"/>`;
 }
 
-function svgOverlayPath(style: GridOverlayStyle, d: string): string {
+function svgOverlayPath(
+  style: GridOverlayStyle,
+  d: string,
+  width: number,
+  height: number,
+): string {
   const blend =
     style.blendMode !== "normal"
       ? ` style="mix-blend-mode:${style.blendMode}"`
       : "";
-  return `<path d="${d}" fill="none" stroke="${style.color}" stroke-width="${style.lineWidth}" stroke-opacity="${style.opacity}"${blend}/>`;
+  const stroke = scaledOverlayLineWidth(style.lineWidth, width, height);
+  return `<path d="${d}" fill="none" stroke="${style.color}" stroke-width="${stroke}" stroke-opacity="${style.opacity}"${blend}/>`;
 }
 
 function svgGridOverlay(
@@ -178,6 +185,8 @@ function svgGridOverlay(
       svgOverlayPath(
         lines,
         gridOverlayPathData(grid, lines.chaos, settings.gridOverlaySeed ?? 0),
+        width,
+        height,
       ),
     );
   }
@@ -194,6 +203,8 @@ function svgGridOverlay(
           crosses.size,
           settings.gridCrossesSeed ?? 0,
         ),
+        width,
+        height,
       ),
     );
   }

@@ -26,17 +26,34 @@ export {
   resolveGridOverlayStroke,
 } from "./gridOverlayParams";
 
+/** Overlay stroke/size are specified at 1080p so preview and export match. */
+const OVERLAY_PX_REFERENCE_EDGE = 1080;
+
+export function overlayPxScale(width: number, height: number): number {
+  const edge = Math.min(width, height);
+  if (!Number.isFinite(edge) || edge <= 0) return 1;
+  return edge / OVERLAY_PX_REFERENCE_EDGE;
+}
+
+export function scaledOverlayLineWidth(
+  lineWidth: number,
+  width: number,
+  height: number,
+): number {
+  return lineWidth * overlayPxScale(width, height);
+}
+
 export type GridOverlayStyle = {
   density: Density;
   color: string;
-  /** Stroke width in px (1, 2, or 4). */
+  /** Stroke width in 1080p px (1, 2, or 4). */
   lineWidth: GridOverlayStroke;
   /** 0–1 */
   opacity: number;
   blendMode: GridBlendMode;
   /** 0–100; 0 = perfect square hatch */
   chaos: number;
-  /** Cross arm span in px. Unused for lines. */
+  /** Cross arm span in 1080p px. Unused for lines. */
   size?: number;
 };
 
@@ -253,7 +270,7 @@ export function gridOverlayPathData(
   return brokenGridPathData(grid, Math.min(100, chaos), instanceSeed);
 }
 
-/** Pluses on interior hatch intersections. Size is full arm span in px. */
+/** Pluses on interior hatch intersections. Size is full arm span in 1080p px. */
 export function gridCrossesPathData(
   grid: GridDimensions,
   chaos = 0,
@@ -261,7 +278,8 @@ export function gridCrossesPathData(
   instanceSeed = 0,
 ): string {
   const { columns, rows, width, height } = grid;
-  const half = resolveGridCrossSize(size) / 2;
+  const half =
+    (resolveGridCrossSize(size) * overlayPxScale(width, height)) / 2;
   const t = Math.min(100, Math.max(0, chaos)) / 100;
   const rng =
     t > 0
