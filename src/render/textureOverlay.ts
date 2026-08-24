@@ -26,6 +26,14 @@ export const TEXTURE_OVERLAY_BLEND_LABELS: Record<
 export const TEXTURE_OVERLAY_OPACITY_DEFAULT = 40;
 export const TEXTURE_OVERLAY_TINT_DEFAULT = "#ffffff";
 
+/** Omitted flag keeps legacy behaviour: on whenever a texture is uploaded. */
+export function isTextureOverlayEnabled(
+  settings: FrameSettings,
+  hasTexture: boolean,
+): boolean {
+  return settings.textureOverlayEnabled ?? hasTexture;
+}
+
 function clampInt(
   value: unknown,
   min: number,
@@ -121,6 +129,8 @@ export function applyTextureOverlay(
   width: number,
   height: number,
 ): void {
+  if (!isTextureOverlayEnabled(settings, true)) return;
+
   const { width: imageWidth, height: imageHeight } = imageIntrinsicSize(image);
   if (imageWidth <= 0 || imageHeight <= 0) return;
 

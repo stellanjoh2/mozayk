@@ -1,6 +1,7 @@
 import type { GridBlendMode, GridOverlayStroke } from "../types";
 
 export const GRID_OVERLAY_STROKES: readonly GridOverlayStroke[] = [1, 2, 4];
+export const GRID_OVERLAY_STROKE_DEFAULT: GridOverlayStroke = 1;
 
 export const GRID_BLEND_MODES: readonly GridBlendMode[] = [
   "normal",
@@ -16,7 +17,7 @@ export const GRID_BLEND_LABELS: Record<GridBlendMode, string> = {
 
 export function resolveGridOverlayStroke(
   value: unknown,
-  fallback: GridOverlayStroke = 2,
+  fallback: GridOverlayStroke = GRID_OVERLAY_STROKE_DEFAULT,
 ): GridOverlayStroke {
   const n = Number(value);
   return GRID_OVERLAY_STROKES.includes(n as GridOverlayStroke)

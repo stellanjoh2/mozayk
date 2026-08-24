@@ -821,21 +821,39 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
   color: var(--muted);
 }
 
-.panel-section:has(.headline-toggle) > :not(.headline-toggle),
-.panel-section:has(.headline-toggle-with-pause) > :not(.headline-toggle-with-pause) {
-  transition: opacity 0.18s var(--ui-ease);
-}
-
-.panel-section.is-off:has(.headline-toggle) > :not(.headline-toggle),
-.panel-section.is-off:has(.headline-toggle-with-pause)
-  > :not(.headline-toggle-with-pause) {
-  opacity: 0.4;
+.collapsible-controls {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  visibility: hidden;
   pointer-events: none;
+  transition:
+    grid-template-rows var(--panel-slide-duration) var(--panel-slide-ease),
+    opacity 0.22s var(--panel-slide-ease),
+    visibility 0s linear var(--panel-slide-duration);
 }
 
-.panel-section.is-off > .headline-toggle,
-.panel-section.is-off > .headline-toggle-with-pause {
+.collapsible-controls.is-open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  visibility: visible;
   pointer-events: auto;
+  transition:
+    grid-template-rows var(--panel-slide-duration) var(--panel-slide-ease),
+    opacity 0.28s var(--panel-slide-ease) 0.06s,
+    visibility 0s;
+}
+
+.collapsible-controls__inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .collapsible-controls,
+  .collapsible-controls.is-open {
+    transition: none;
+  }
 }
 
 .panel-hint {
@@ -1606,6 +1624,11 @@ html.normal-hover .button-row--choice button.is-active:hover::before {
   transition: opacity 0.18s var(--ui-ease);
 }
 
+.panel-section > :last-child,
+.collapsible-controls__inner > :last-child {
+  margin-bottom: 0;
+}
+
 .control-row__label {
   display: flex;
   align-items: center;
@@ -1885,6 +1908,7 @@ html.normal-hover .ui-select__option.is-active:not(.is-disabled)::before {
 
 .control-row--toggle {
   grid-template-columns: 1fr auto;
+  grid-template-rows: minmax(var(--settings-label-h), auto);
   align-items: center;
 }
 
@@ -1904,6 +1928,17 @@ html.normal-hover .ui-select__option.is-active:not(.is-disabled)::before {
   justify-content: space-between;
   gap: 12px;
   margin: 0 0 var(--settings-row-gap);
+  transition: margin-bottom var(--panel-slide-duration) var(--panel-slide-ease);
+}
+
+.headline-toggle.is-off {
+  margin-bottom: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .headline-toggle {
+    transition: none;
+  }
 }
 
 .headline-toggle--sub {

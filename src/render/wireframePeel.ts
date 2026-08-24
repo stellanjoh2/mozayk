@@ -12,6 +12,7 @@ import type {
 } from "../types";
 import { blockCornerRadiusPx } from "./cornerRadius";
 import { resolveGridOverlayStroke } from "./gridOverlayParams";
+import { isExtrasEnabled } from "./bonusFx";
 import { insetCrossRects, insetPixelRect } from "./shapeGap";
 
 export const WIREFRAME_PEEL_AMOUNT_DEFAULT = 50;
@@ -43,7 +44,8 @@ export function peeledBlockSet(
   blocks: readonly MosaicBlock[],
   settings: FrameSettings,
 ): ReadonlySet<MosaicBlock> {
-  if (!settings.wireframePeel || blocks.length === 0) return NONE;
+  if (!isExtrasEnabled(settings) || !settings.wireframePeel || blocks.length === 0)
+    return NONE;
 
   const amount = resolveWireframePeelAmount(settings.wireframePeelAmount);
   if (amount <= 0) return NONE;

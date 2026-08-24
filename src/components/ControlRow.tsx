@@ -1,4 +1,4 @@
-import { useLayoutEffect, useState } from "react";
+import { useLayoutEffect, useState, type ReactNode } from "react";
 
 type SliderRowProps = {
   label: string;
@@ -123,12 +123,33 @@ export function ToggleRow({ label, hint, checked, onChange }: ToggleRowProps) {
   );
 }
 
+export function CollapsibleControls({
+  open,
+  children,
+}: {
+  open: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className={
+        open ? "collapsible-controls is-open" : "collapsible-controls"
+      }
+      inert={!open}
+      aria-hidden={!open}
+    >
+      <div className="collapsible-controls__inner">{children}</div>
+    </div>
+  );
+}
+
 type HeadlineToggleProps = {
   title: string;
   hint?: string;
   level?: 2 | 3;
   checked: boolean;
   onChange: (checked: boolean) => void;
+  children?: ReactNode;
 };
 
 export function HeadlineToggle({
@@ -137,27 +158,33 @@ export function HeadlineToggle({
   level = 2,
   checked,
   onChange,
+  children,
 }: HeadlineToggleProps) {
   const Tag = level === 3 ? "h3" : "h2";
   return (
-    <div
-      className={[
-        level === 3
-          ? "headline-toggle headline-toggle--sub"
-          : "headline-toggle",
-        checked ? "" : "is-off",
-      ]
-        .filter(Boolean)
-        .join(" ")}
-    >
-      <Tag className={level === 3 ? "export-group__title" : undefined}>
-        <HintLabel hint={hint}>{title}</HintLabel>
-      </Tag>
-      <SwitchControl
-        checked={checked}
-        onChange={onChange}
-        ariaLabel={`Activate ${title}`}
-      />
-    </div>
+    <>
+      <div
+        className={[
+          level === 3
+            ? "headline-toggle headline-toggle--sub"
+            : "headline-toggle",
+          checked ? "" : "is-off",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
+        <Tag className={level === 3 ? "export-group__title" : undefined}>
+          <HintLabel hint={hint}>{title}</HintLabel>
+        </Tag>
+        <SwitchControl
+          checked={checked}
+          onChange={onChange}
+          ariaLabel={`Activate ${title}`}
+        />
+      </div>
+      {children != null ? (
+        <CollapsibleControls open={checked}>{children}</CollapsibleControls>
+      ) : null}
+    </>
   );
 }

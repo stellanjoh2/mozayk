@@ -15,6 +15,7 @@ import {
   type GridOverlayStyle,
 } from "./gridOverlay";
 import { blockCornerRadiusPx } from "./cornerRadius";
+import { isExtrasEnabled } from "./bonusFx";
 import type { RenderOptions } from "./renderFrame";
 import { largestRingRadius, ringInnerRadius } from "./ringGeometry";
 import {
@@ -231,6 +232,9 @@ export function renderMosaicToSvg(options: SvgRenderOptions): string {
   } = options;
   const grid = getGridDimensions(orientation, settings.density, width, height);
 
+  const extrasOn = isExtrasEnabled(settings);
+  const cornerRadius = extrasOn ? (settings.cornerRadius ?? 0) : 0;
+  const shapeGap = extrasOn ? (settings.shapeGap ?? 0) : 0;
   const fillRadius = largestRingRadius(blocks, grid);
   const peeled = peeledBlockSet(blocks, settings);
   const peelStroke = resolveWireframePeelStroke(settings.wireframePeelStroke);
@@ -243,16 +247,16 @@ export function renderMosaicToSvg(options: SvgRenderOptions): string {
             grid,
             peelStroke,
             `wp${index}`,
-            settings.cornerRadius,
-            settings.shapeGap,
+            cornerRadius,
+            shapeGap,
           )
         : svgBlock(
             block,
             grid,
             settings.ringThickness,
             fillRadius,
-            settings.cornerRadius ?? 0,
-            settings.shapeGap ?? 0,
+            cornerRadius,
+            shapeGap,
           ),
     )
     .join("\n  ");

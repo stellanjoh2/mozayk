@@ -20,6 +20,7 @@ import {
   getCachedSourceImage,
 } from "../import/imageSource";
 import { renderMosaic } from "../render/renderFrame";
+import { isExtrasEnabled } from "../render/bonusFx";
 import { isGridBlurActive } from "../render/gridBlur";
 import { renderPieceOverlay, heldPiecePulseOpacity, hoverBlinkVisible, selectionPulseOpacity } from "../render/pieceOverlay";
 import {
@@ -469,6 +470,7 @@ export function CanvasView({
       "(prefers-reduced-motion: reduce)",
     ).matches;
 
+    const extrasOn = isExtrasEnabled(frame.settings);
     renderPieceOverlay(overlay, grid, {
       dropZoneLoops: isDraggingPiece ? dropZoneLoops : [],
       displayScale,
@@ -478,8 +480,8 @@ export function CanvasView({
         (reduceMotion ||
           getNormalHoverEffects() ||
           hoverBlinkVisible(pulsePhase)),
-      cornerRadius: frame.settings.cornerRadius,
-      shapeGap: frame.settings.shapeGap,
+      cornerRadius: extrasOn ? frame.settings.cornerRadius : 0,
+      shapeGap: extrasOn ? frame.settings.shapeGap : 0,
     });
   }, [
     grid,
@@ -490,6 +492,7 @@ export function CanvasView({
     pulsePhase,
     frame.settings.cornerRadius,
     frame.settings.shapeGap,
+    frame.settings.extrasEnabled,
     width,
     height,
     stageSize.width,

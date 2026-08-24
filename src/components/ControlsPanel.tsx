@@ -47,7 +47,9 @@ import {
   TEXTURE_OVERLAY_BLEND_MODES,
   TEXTURE_OVERLAY_OPACITY_DEFAULT,
   TEXTURE_OVERLAY_TINT_DEFAULT,
+  isTextureOverlayEnabled,
 } from "../render/textureOverlay";
+import { isExtrasEnabled } from "../render/bonusFx";
 import {
   WIREFRAME_PEEL_AMOUNT_DEFAULT,
   WIREFRAME_PEEL_STROKE_DEFAULT,
@@ -267,6 +269,11 @@ export function ControlsPanel({
     cross: false,
   };
   const anyShapeActive = shapes.sphere || shapes.ring || shapes.triangle || shapes.cross;
+  const textureOverlayOn = isTextureOverlayEnabled(
+    settings,
+    Boolean(frame.textureOverlay),
+  );
+  const extrasOn = isExtrasEnabled(settings);
   const toggleShape = (key: keyof typeof shapes) => {
     const next = !shapes[key];
     playUiSound(next ? "ok" : "close");
@@ -837,14 +844,11 @@ export function ControlsPanel({
           hint="Grid drawn over the mosaic"
           checked={Boolean(settings.gridOverlay)}
           onChange={(gridOverlay) => onSettingsChange({ gridOverlay }, false)}
-        />
-        <label
-          className={`control-row${settings.gridOverlay ? "" : " control-row--muted"}`}
         >
+        <label className="control-row">
           <span className="control-row__label">Grid Density</span>
           <UiSelect
             value={settings.gridOverlayDensity ?? 1}
-            disabled={!settings.gridOverlay}
             options={OVERLAY_DENSITY_SELECT_OPTIONS}
             onChange={(gridOverlayDensity) =>
               onSettingsChange(
@@ -856,13 +860,10 @@ export function ControlsPanel({
             }
           />
         </label>
-        <div
-          className={`control-row${settings.gridOverlay ? "" : " control-row--muted"}`}
-        >
+        <div className="control-row">
           <span className="control-row__label">Colour</span>
           <ColorSwatch
             color={settings.gridOverlayColor ?? "#ffffff"}
-            disabled={!settings.gridOverlay}
             onChange={(gridOverlayColor) =>
               onSettingsChange({ gridOverlayColor }, false)
             }
@@ -878,7 +879,6 @@ export function ControlsPanel({
           max={GRID_OVERLAY_STROKES.length - 1}
           step={1}
           formatValue={(i) => `${GRID_OVERLAY_STROKES[i]}px`}
-          disabled={!settings.gridOverlay}
           onChange={(i) =>
             onSettingsChange(
               { gridOverlayStroke: GRID_OVERLAY_STROKES[i] },
@@ -891,7 +891,6 @@ export function ControlsPanel({
           value={settings.gridOverlayOpacity ?? 100}
           min={0}
           max={100}
-          disabled={!settings.gridOverlay}
           onChange={(gridOverlayOpacity) =>
             onSettingsChange({ gridOverlayOpacity }, false)
           }
@@ -902,14 +901,11 @@ export function ControlsPanel({
           value={settings.gridOverlayChaos ?? 0}
           min={0}
           max={100}
-          disabled={!settings.gridOverlay}
           onChange={(gridOverlayChaos) =>
             onSettingsChange({ gridOverlayChaos }, false)
           }
         />
-        <label
-          className={`control-row${settings.gridOverlay ? "" : " control-row--muted"}`}
-        >
+        <label className="control-row">
           <span className="control-row__label">
             <HintLabel hint="How grid strokes mix with colours underneath">
               Blend
@@ -917,7 +913,6 @@ export function ControlsPanel({
           </span>
           <UiSelect
             value={settings.gridOverlayBlend ?? "normal"}
-            disabled={!settings.gridOverlay}
             options={BLEND_SELECT_OPTIONS}
             onChange={(gridOverlayBlend) =>
               onSettingsChange(
@@ -929,6 +924,7 @@ export function ControlsPanel({
             }
           />
         </label>
+        </HeadlineToggle>
       </section>
 
       <section
@@ -941,14 +937,11 @@ export function ControlsPanel({
           hint="Pluses on grid intersections"
           checked={Boolean(settings.gridCrosses)}
           onChange={(gridCrosses) => onSettingsChange({ gridCrosses }, false)}
-        />
-        <label
-          className={`control-row${settings.gridCrosses ? "" : " control-row--muted"}`}
         >
+        <label className="control-row">
           <span className="control-row__label">Grid Density</span>
           <UiSelect
             value={settings.gridCrossesDensity ?? 1}
-            disabled={!settings.gridCrosses}
             options={OVERLAY_DENSITY_SELECT_OPTIONS}
             onChange={(gridCrossesDensity) =>
               onSettingsChange(
@@ -960,13 +953,10 @@ export function ControlsPanel({
             }
           />
         </label>
-        <div
-          className={`control-row${settings.gridCrosses ? "" : " control-row--muted"}`}
-        >
+        <div className="control-row">
           <span className="control-row__label">Colour</span>
           <ColorSwatch
             color={settings.gridCrossesColor ?? "#ffffff"}
-            disabled={!settings.gridCrosses}
             onChange={(gridCrossesColor) =>
               onSettingsChange({ gridCrossesColor }, false)
             }
@@ -982,7 +972,6 @@ export function ControlsPanel({
           max={GRID_OVERLAY_STROKES.length - 1}
           step={1}
           formatValue={(i) => `${GRID_OVERLAY_STROKES[i]}px`}
-          disabled={!settings.gridCrosses}
           onChange={(i) =>
             onSettingsChange(
               { gridCrossesStroke: GRID_OVERLAY_STROKES[i] },
@@ -997,7 +986,6 @@ export function ControlsPanel({
           min={GRID_CROSS_SIZE_MIN}
           max={GRID_CROSS_SIZE_MAX}
           formatValue={(v) => `${v}px`}
-          disabled={!settings.gridCrosses}
           onChange={(gridCrossesSize) =>
             onSettingsChange({ gridCrossesSize }, false)
           }
@@ -1007,7 +995,6 @@ export function ControlsPanel({
           value={settings.gridCrossesOpacity ?? 100}
           min={0}
           max={100}
-          disabled={!settings.gridCrosses}
           onChange={(gridCrossesOpacity) =>
             onSettingsChange({ gridCrossesOpacity }, false)
           }
@@ -1018,14 +1005,11 @@ export function ControlsPanel({
           value={settings.gridCrossesChaos ?? 0}
           min={0}
           max={100}
-          disabled={!settings.gridCrosses}
           onChange={(gridCrossesChaos) =>
             onSettingsChange({ gridCrossesChaos }, false)
           }
         />
-        <label
-          className={`control-row${settings.gridCrosses ? "" : " control-row--muted"}`}
-        >
+        <label className="control-row">
           <span className="control-row__label">
             <HintLabel hint="How crosses mix with colours underneath">
               Blend
@@ -1033,7 +1017,6 @@ export function ControlsPanel({
           </span>
           <UiSelect
             value={settings.gridCrossesBlend ?? "normal"}
-            disabled={!settings.gridCrosses}
             options={BLEND_SELECT_OPTIONS}
             onChange={(gridCrossesBlend) =>
               onSettingsChange(
@@ -1045,6 +1028,7 @@ export function ControlsPanel({
             }
           />
         </label>
+        </HeadlineToggle>
       </section>
 
       <section
@@ -1057,14 +1041,13 @@ export function ControlsPanel({
           hint="Sparse monospace coordinates in cell corners · PNG only"
           checked={Boolean(settings.dataFields)}
           onChange={(dataFields) => onSettingsChange({ dataFields }, false)}
-        />
+        >
         <SliderRow
           label="Spawn rate"
           hint="1 ≈ a few labels · 5 fills the sparse strips"
           value={settings.dataFieldsSpawnRate ?? DATA_FIELDS_SPAWN_DEFAULT}
           min={DATA_FIELDS_SPAWN_MIN}
           max={DATA_FIELDS_SPAWN_MAX}
-          disabled={!settings.dataFields}
           onChange={(dataFieldsSpawnRate) =>
             onSettingsChange({ dataFieldsSpawnRate }, false)
           }
@@ -1076,26 +1059,20 @@ export function ControlsPanel({
           min={DATA_FIELDS_SIZE_MIN}
           max={DATA_FIELDS_SIZE_MAX}
           formatValue={(v) => `${v}×`}
-          disabled={!settings.dataFields}
           onChange={(dataFieldsSize) =>
             onSettingsChange({ dataFieldsSize }, false)
           }
         />
-        <div
-          className={`control-row${settings.dataFields ? "" : " control-row--muted"}`}
-        >
+        <div className="control-row">
           <span className="control-row__label">Colour</span>
           <ColorSwatch
             color={settings.dataFieldsColor ?? DATA_FIELDS_COLOR_DEFAULT}
-            disabled={!settings.dataFields}
             onChange={(dataFieldsColor) =>
               onSettingsChange({ dataFieldsColor }, false)
             }
           />
         </div>
-        <label
-          className={`control-row${settings.dataFields ? "" : " control-row--muted"}`}
-        >
+        <label className="control-row">
           <span className="control-row__label">
             <HintLabel hint="How labels mix with colours underneath">
               Blend
@@ -1103,7 +1080,6 @@ export function ControlsPanel({
           </span>
           <UiSelect
             value={settings.dataFieldsBlend ?? "normal"}
-            disabled={!settings.dataFields}
             options={BLEND_SELECT_OPTIONS}
             onChange={(dataFieldsBlend) =>
               onSettingsChange(
@@ -1115,6 +1091,7 @@ export function ControlsPanel({
             }
           />
         </label>
+        </HeadlineToggle>
       </section>
 
       <section
@@ -1134,14 +1111,11 @@ export function ControlsPanel({
               setHeavyBlurDialogOpen(true);
             }
           }}
-        />
-        <label
-          className={`control-row${settings.gridBlur ? "" : " control-row--muted"}`}
         >
+        <label className="control-row">
           <span className="control-row__label">Grid Density</span>
           <UiSelect
             value={settings.gridBlurDensity ?? (settings.density || 1)}
-            disabled={!settings.gridBlur}
             options={OVERLAY_DENSITY_SELECT_OPTIONS}
             onChange={(gridBlurDensity) =>
               onSettingsChange(
@@ -1159,7 +1133,6 @@ export function ControlsPanel({
           value={settings.gridBlurAmount ?? 50}
           min={0}
           max={100}
-          disabled={!settings.gridBlur}
           onChange={(gridBlurAmount) =>
             onSettingsChange({ gridBlurAmount }, false)
           }
@@ -1170,19 +1143,26 @@ export function ControlsPanel({
           value={settings.gridBlurChaos ?? 50}
           min={0}
           max={100}
-          disabled={!settings.gridBlur}
           onChange={(gridBlurChaos) =>
             onSettingsChange({ gridBlurChaos }, false)
           }
         />
+        </HeadlineToggle>
       </section>
 
       <section
         className={
-          frame.textureOverlay ? "panel-section" : "panel-section is-off"
+          textureOverlayOn ? "panel-section" : "panel-section is-off"
         }
       >
-        <h2>Texture Overlay</h2>
+        <HeadlineToggle
+          title="Texture Overlay"
+          hint="Image blended over the finished mosaic · PNG only"
+          checked={textureOverlayOn}
+          onChange={(textureOverlayEnabled) =>
+            onSettingsChange({ textureOverlayEnabled }, false)
+          }
+        >
         <input
           ref={textureInputRef}
           type="file"
@@ -1267,10 +1247,20 @@ export function ControlsPanel({
             </div>
           </>
         ) : null}
+        </HeadlineToggle>
       </section>
 
-      <section className="panel-section">
-        <h2>Extras</h2>
+      <section
+        className={extrasOn ? "panel-section" : "panel-section is-off"}
+      >
+        <HeadlineToggle
+          title="Extras"
+          hint="Noise, colour grade, gaps, and outlines"
+          checked={extrasOn}
+          onChange={(extrasEnabled) =>
+            onSettingsChange({ extrasEnabled }, false)
+          }
+        >
         <SliderRow
           label="Noise"
           hint="Film grain over the finished image · PNG only"
@@ -1305,12 +1295,6 @@ export function ControlsPanel({
           min={-100}
           max={100}
           onChange={(brightness) => onSettingsChange({ brightness }, false)}
-        />
-        <ToggleRow
-          label="Invert all"
-          hint="Full-frame difference with white · PNG only"
-          checked={Boolean(settings.invert)}
-          onChange={(invert) => onSettingsChange({ invert }, false)}
         />
         <SliderRow
           label="Corner radius"
@@ -1370,6 +1354,13 @@ export function ControlsPanel({
             />
           </>
         ) : null}
+        <ToggleRow
+          label="Invert all"
+          hint="Full-frame difference with white · PNG only"
+          checked={Boolean(settings.invert)}
+          onChange={(invert) => onSettingsChange({ invert }, false)}
+        />
+        </HeadlineToggle>
       </section>
 
       <section className="panel-section">

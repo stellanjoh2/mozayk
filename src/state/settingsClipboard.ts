@@ -279,6 +279,9 @@ export function parseSettingsRecord(
     contrast: clampInt(candidate.contrast, -100, 100, 0),
     brightness: clampInt(candidate.brightness, -100, 100, 0),
     invert: Boolean(candidate.invert),
+    ...(typeof candidate.extrasEnabled === "boolean"
+      ? { extrasEnabled: candidate.extrasEnabled }
+      : {}),
     cornerRadius: clampInt(candidate.cornerRadius, 0, 100, 0),
     shapeGap: clampInt(candidate.shapeGap, 0, 100, 0),
     wireframePeel: Boolean(candidate.wireframePeel),
@@ -302,6 +305,9 @@ export function parseSettingsRecord(
       : DATA_FIELDS_COLOR_DEFAULT,
     dataFieldsBlend: resolveGridBlendMode(candidate.dataFieldsBlend),
     showSourceImage: Boolean(candidate.showSourceImage),
+    ...(typeof candidate.textureOverlayEnabled === "boolean"
+      ? { textureOverlayEnabled: candidate.textureOverlayEnabled }
+      : {}),
     textureOverlayBlend: resolveTextureOverlayBlend(
       candidate.textureOverlayBlend,
     ),

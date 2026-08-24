@@ -115,7 +115,7 @@ export type FrameSettings = {
   gridOverlayDensity?: Density;
   /** Overlay stroke colour (hex). Defaults to white. */
   gridOverlayColor?: string;
-  /** Overlay stroke width in px: 1, 2, or 4. Defaults to 2. */
+  /** Overlay stroke width in px: 1, 2, or 4. Defaults to 1. */
   gridOverlayStroke?: GridOverlayStroke;
   /** Overlay stroke opacity 0–100. Defaults to 100. */
   gridOverlayOpacity?: number;
@@ -129,7 +129,7 @@ export type FrameSettings = {
   gridCrossesDensity?: Density;
   /** Cross stroke colour (hex). Defaults to white. */
   gridCrossesColor?: string;
-  /** Cross stroke width in px: 1, 2, or 4. Defaults to 2. */
+  /** Cross stroke width in px: 1, 2, or 4. Defaults to 1. */
   gridCrossesStroke?: GridOverlayStroke;
   /** How far each plus extends, in px (full span). Defaults to 24. */
   gridCrossesSize?: number;
@@ -157,6 +157,8 @@ export type FrameSettings = {
   brightness?: number;
   /** Invert the finished image (full-frame difference with white). */
   invert?: boolean;
+  /** Master switch for Extras. Defaults on when any extra is non-default. */
+  extrasEnabled?: boolean;
   /** Corner radius for box shapes 0–100. 100 = pill. Defaults to 0. */
   cornerRadius?: number;
   /** Shrink shapes from centre 0–100. 100 = 25% smaller. Defaults to 0. */
@@ -179,6 +181,8 @@ export type FrameSettings = {
   dataFieldsBlend?: GridBlendMode;
   /** Reveal the imported photo in gaps between mosaic shapes. Requires imageSource. */
   showSourceImage?: boolean;
+  /** Draw the local texture overlay. Defaults on when a texture is uploaded. */
+  textureOverlayEnabled?: boolean;
   /** Blend mode for the local texture overlay. Defaults to multiply. */
   textureOverlayBlend?: TextureOverlayBlendMode;
   /** Texture overlay opacity 0–100. Defaults to 40. */

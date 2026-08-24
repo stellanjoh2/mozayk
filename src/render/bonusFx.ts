@@ -114,12 +114,32 @@ function applyNoise(
   ctx.restore();
 }
 
+function hasActiveExtras(settings: FrameSettings): boolean {
+  return (
+    (settings.noiseAmount ?? 0) !== 0 ||
+    (settings.hueShift ?? 0) !== 0 ||
+    (settings.contrast ?? 0) !== 0 ||
+    (settings.brightness ?? 0) !== 0 ||
+    Boolean(settings.invert) ||
+    (settings.cornerRadius ?? 0) !== 0 ||
+    (settings.shapeGap ?? 0) !== 0 ||
+    Boolean(settings.wireframePeel)
+  );
+}
+
+/** Omitted flag keeps extras on when a saved look already uses them. */
+export function isExtrasEnabled(settings: FrameSettings): boolean {
+  return settings.extrasEnabled ?? hasActiveExtras(settings);
+}
+
 export function applyBonusFx(
   ctx: CanvasRenderingContext2D,
   settings: FrameSettings,
   width: number,
   height: number,
 ): void {
+  if (!isExtrasEnabled(settings)) return;
+
   const hue = clampInt(settings.hueShift, -180, 180, 0);
   const contrast = clampInt(settings.contrast, -100, 100, 0);
   const brightness = clampInt(settings.brightness, -100, 100, 0);

@@ -1,5 +1,10 @@
 import type { ComponentProps } from "react";
-import { HeadlineToggle, SliderRow, ToggleRow } from "./ControlRow";
+import {
+  CollapsibleControls,
+  HeadlineToggle,
+  SliderRow,
+  ToggleRow,
+} from "./ControlRow";
 import { PauseButton } from "./PauseButton";
 import { HintLabel } from "./HintLabel";
 import { playUiSound } from "../ui/sounds";
@@ -106,39 +111,45 @@ export function HeadlineToggleWithPause({
   level,
   checked,
   onChange,
+  children,
 }: HeadlineToggleWithPauseProps) {
   const showPause = pauseKey && onToggleRandomizePause;
 
   return (
-    <div
-      className={[
-        "headline-toggle-with-pause",
-        level === 3 ? "headline-toggle-with-pause--sub" : "",
-        checked ? "" : "is-off",
-      ]
-        .filter(Boolean)
-        .join(" ")}
-    >
-      {showPause ? (
-        <PauseButton
-          paused={randomizePaused}
-          hint={pauseHint}
-          ariaLabel={
-            randomizePaused
-              ? `Include ${title} in Randomize All`
-              : `Exclude ${title} from Randomize All`
-          }
-          onToggle={() => onToggleRandomizePause(pauseKey)}
+    <>
+      <div
+        className={[
+          "headline-toggle-with-pause",
+          level === 3 ? "headline-toggle-with-pause--sub" : "",
+          checked ? "" : "is-off",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
+        {showPause ? (
+          <PauseButton
+            paused={randomizePaused}
+            hint={pauseHint}
+            ariaLabel={
+              randomizePaused
+                ? `Include ${title} in Randomize All`
+                : `Exclude ${title} from Randomize All`
+            }
+            onToggle={() => onToggleRandomizePause(pauseKey)}
+          />
+        ) : null}
+        <HeadlineToggle
+          title={title}
+          hint={hint}
+          level={level}
+          checked={checked}
+          onChange={onChange}
         />
+      </div>
+      {children != null ? (
+        <CollapsibleControls open={checked}>{children}</CollapsibleControls>
       ) : null}
-      <HeadlineToggle
-        title={title}
-        hint={hint}
-        level={level}
-        checked={checked}
-        onChange={onChange}
-      />
-    </div>
+    </>
   );
 }
 

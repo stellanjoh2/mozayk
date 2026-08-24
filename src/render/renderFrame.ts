@@ -11,7 +11,7 @@ import type {
   MosaicBlock,
   Orientation,
 } from "../types";
-import { applyBonusFx } from "./bonusFx";
+import { applyBonusFx, isExtrasEnabled } from "./bonusFx";
 import { blockCornerRadiusPx } from "./cornerRadius";
 import { drawDataFields } from "./dataFields";
 import { applyGridBlur } from "./gridBlur";
@@ -306,6 +306,9 @@ export function renderMosaic(
     transparentBackground,
   } = options;
   const grid = getGridDimensions(orientation, settings.density, width, height);
+  const extrasOn = isExtrasEnabled(settings);
+  const cornerRadius = extrasOn ? (settings.cornerRadius ?? 0) : 0;
+  const shapeGap = extrasOn ? (settings.shapeGap ?? 0) : 0;
 
   canvas.width = width;
   canvas.height = height;
@@ -360,8 +363,8 @@ export function renderMosaic(
           block,
           grid,
           peelStroke,
-          settings.cornerRadius,
-          settings.shapeGap,
+          cornerRadius,
+          shapeGap,
         );
       } else {
         drawBlock(
@@ -370,8 +373,8 @@ export function renderMosaic(
           grid,
           settings.ringThickness,
           fillRadius,
-          settings.cornerRadius ?? 0,
-          settings.shapeGap ?? 0,
+          cornerRadius ?? 0,
+          shapeGap ?? 0,
         );
       }
       ctx.save();
@@ -382,8 +385,8 @@ export function renderMosaic(
         grid,
         settings.ringThickness,
         fillRadius,
-        settings.cornerRadius ?? 0,
-        settings.shapeGap ?? 0,
+        cornerRadius ?? 0,
+        shapeGap ?? 0,
       );
       ctx.restore();
       continue;
@@ -403,8 +406,8 @@ export function renderMosaic(
         block,
         grid,
         peelStroke,
-        settings.cornerRadius,
-        settings.shapeGap,
+        cornerRadius,
+        shapeGap,
       );
     } else {
       drawBlock(
@@ -413,8 +416,8 @@ export function renderMosaic(
         grid,
         settings.ringThickness,
         fillRadius,
-        settings.cornerRadius ?? 0,
-        settings.shapeGap ?? 0,
+        cornerRadius ?? 0,
+        shapeGap ?? 0,
       );
     }
     if (isSelected || isDragSource) {
@@ -440,8 +443,8 @@ export function renderMosaic(
           previewBlock,
           grid,
           peelStroke,
-          settings.cornerRadius,
-          settings.shapeGap,
+          cornerRadius,
+          shapeGap,
         );
       } else {
         drawBlock(
@@ -450,8 +453,8 @@ export function renderMosaic(
           grid,
           settings.ringThickness,
           fillRadius,
-          settings.cornerRadius ?? 0,
-          settings.shapeGap ?? 0,
+          cornerRadius ?? 0,
+          shapeGap ?? 0,
         );
       }
       if (dragPreviewPulseOpacity != null) {
