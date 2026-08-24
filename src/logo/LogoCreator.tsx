@@ -22,7 +22,7 @@ import {
 } from "./logoReveal";
 import { paintLogoWithBrandTokens } from "./paintLogo";
 import { CaretIcon, LoopIcon, PlayIcon, StopIcon } from "../ui/icons";
-import { playUiSound } from "../ui/sounds";
+import { playUiSound, triggerShortcutButton } from "../ui/sounds";
 import "./LogoCreator.css";
 
 /** Must match --brand-blue / --brand-purple / --brand-orange in App.css */
@@ -320,23 +320,23 @@ export function LogoCreator() {
       if (typingInField(event.target)) return;
       if (event.code === "Space") {
         event.preventDefault();
-        playUiSound(playingRef.current ? "close" : "push");
+        if (!event.repeat) triggerShortcutButton("Space");
         togglePlay();
       } else if (event.code === "KeyQ") {
         event.preventDefault();
-        playUiSound("push");
+        if (!event.repeat) triggerShortcutButton("KeyQ");
         randomizeLayout();
       } else if (event.code === "KeyW") {
         event.preventDefault();
-        playUiSound("push");
+        if (!event.repeat) triggerShortcutButton("KeyW");
         randomizeColours();
       } else if (event.code === "KeyE") {
         event.preventDefault();
-        playUiSound("ok");
+        if (!event.repeat) triggerShortcutButton("KeyE");
         restoreColours();
       } else if (event.code === "KeyL" && !event.repeat) {
         event.preventDefault();
-        playUiSound(loopRef.current ? "close" : "ok");
+        triggerShortcutButton("KeyL");
         toggleLoop();
       } else if (event.code === "KeyH" && !event.repeat) {
         event.preventDefault();
@@ -415,7 +415,7 @@ export function LogoCreator() {
         inert={uiHidden}
       >
         <div className="logo-creator__dock-group">
-          <button type="button" aria-keyshortcuts="q" onClick={randomizeLayout}>
+          <button type="button" aria-keyshortcuts="q" data-shortcut="KeyQ" onClick={randomizeLayout}>
             Randomize Layout
           </button>
           <div className="logo-creator__swatches" role="group" aria-label="Logotype colours">
@@ -434,10 +434,10 @@ export function LogoCreator() {
               />
             ))}
           </div>
-          <button type="button" aria-keyshortcuts="w" onClick={randomizeColours}>
+          <button type="button" aria-keyshortcuts="w" data-shortcut="KeyW" onClick={randomizeColours}>
             Randomize Colours
           </button>
-          <button type="button" aria-keyshortcuts="e" data-ui-sound="ok" onClick={restoreColours}>
+          <button type="button" aria-keyshortcuts="e" data-shortcut="KeyE" data-ui-sound="ok" onClick={restoreColours}>
             Restore
           </button>
         </div>
@@ -450,6 +450,7 @@ export function LogoCreator() {
             aria-label={playing ? "Stop" : "Play"}
             title={playing ? "Stop" : "Play"}
             aria-keyshortcuts="Space"
+            data-shortcut="Space"
             data-ui-sound={playing ? "close" : "push"}
             onClick={togglePlay}
           >
@@ -462,6 +463,7 @@ export function LogoCreator() {
             aria-label="Loop"
             title="Loop"
             aria-keyshortcuts="l"
+            data-shortcut="KeyL"
             data-ui-sound={looping ? "close" : "ok"}
             onClick={toggleLoop}
           >

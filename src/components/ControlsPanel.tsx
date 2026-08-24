@@ -549,6 +549,7 @@ export function ControlsPanel({
           type="button"
           className="panel-btn has-hint"
           data-hint="Keeps your current slider settings"
+          data-shortcut="KeyQ"
           onClick={onRandomizeLayout}
         >
           Randomize Layout
@@ -557,6 +558,7 @@ export function ControlsPanel({
           type="button"
           className="panel-btn panel-btn--ghost has-hint"
           data-hint="Also randomizes all sliders"
+          data-shortcut="KeyW"
           onClick={onRandomizeAll}
         >
           Randomize All
@@ -760,7 +762,12 @@ export function ControlsPanel({
         >
           Copy Palette to Clipboard
         </button>
-        <button type="button" className="panel-btn" onClick={onRandomizeCurrentColors}>
+        <button
+          type="button"
+          className="panel-btn"
+          data-shortcut="KeyE"
+          onClick={onRandomizeCurrentColors}
+        >
           Randomize Current Colours
         </button>
         <button type="button" className="panel-btn panel-btn--ghost" onClick={onRandomizeNewColors}>
@@ -1532,6 +1539,9 @@ export function ControlsPanel({
 
       <section className="panel-section">
         <h2>SVG</h2>
+        <p className="export-group__meta">
+          Shapes and grids · no blur, noise, or texture
+        </p>
         <button
           type="button"
           className="panel-btn has-hint"

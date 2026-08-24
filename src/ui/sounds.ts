@@ -309,17 +309,70 @@ function onButtonHover(event: MouseEvent): void {
 //   playUiSound("hoverBlink");
 // }
 
+const SHORTCUT_PRESS_MS = 120;
+const shortcutPressTimers = new Map<string, number>();
+
+function playButtonCue(btn: Element): void {
+  if (btn instanceof HTMLButtonElement && btn.disabled) return;
+  const cue = btn instanceof HTMLElement ? btn.dataset.uiSound : undefined;
+  if (cue && cue in FILES) {
+    playUiSound(cue as UiSound);
+    return;
+  }
+  playUiSound("push");
+}
+
+function shortcutButton(code: string): HTMLElement | null {
+  const el = document.querySelector(`[data-shortcut="${CSS.escape(code)}"]`);
+  if (!(el instanceof HTMLElement)) return null;
+  if (el instanceof HTMLButtonElement && el.disabled) return null;
+  return el;
+}
+
+function setShortcutPressed(code: string, pressed: boolean): void {
+  const el = shortcutButton(code);
+  if (!el) return;
+  el.classList.toggle("is-pressed", pressed);
+}
+
+/** Press-flash a shortcut's button and play the same cue a pointer click would. */
+export function triggerShortcutButton(
+  code: string,
+  fallbackSound: UiSound = "push",
+): void {
+  const btn = shortcutButton(code);
+  if (!btn) {
+    playUiSound(fallbackSound);
+    return;
+  }
+  playButtonCue(btn);
+
+  const prev = shortcutPressTimers.get(code);
+  if (prev !== undefined) window.clearTimeout(prev);
+
+  const arm = () => setShortcutPressed(code, true);
+  arm();
+  requestAnimationFrame(() => {
+    arm();
+    requestAnimationFrame(() => {
+      arm();
+      shortcutPressTimers.set(
+        code,
+        window.setTimeout(() => {
+          setShortcutPressed(code, false);
+          shortcutPressTimers.delete(code);
+        }, SHORTCUT_PRESS_MS),
+      );
+    });
+  });
+}
+
 function onPanelBtnClick(event: Event): void {
   const el = event.target;
   if (!(el instanceof Element)) return;
   const btn = el.closest(".panel-btn, .palette-panel__close, .logo-creator__dock button, .logo-creator__swatch");
   if (btn instanceof HTMLButtonElement && !btn.disabled) {
-    const cue = btn.dataset.uiSound;
-    if (cue && cue in FILES) {
-      playUiSound(cue as UiSound);
-      return;
-    }
-    playUiSound("push");
+    playButtonCue(btn);
     return;
   }
 

@@ -847,6 +847,7 @@ export function CanvasView({
           <button
             type="button"
             className={`canvas-stage-control-btn${isInspecting ? " is-active" : ""}`}
+            data-shortcut="Escape"
             onClick={() => {
               playUiSound("push");
               onToggleInspect?.();
@@ -1765,6 +1766,7 @@ export function Timeline({
         <button
           type="button"
           className={`timeline__btn${playing ? " is-active" : ""}`}
+          data-shortcut="Space"
           onClick={() => {
             playUiSound("push");
             onTogglePlay();

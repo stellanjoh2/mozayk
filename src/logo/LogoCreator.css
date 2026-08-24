@@ -126,19 +126,22 @@ body,
 }
 
 .logo-creator__dock button.is-on,
-.logo-creator__dock button:active:not(:disabled) {
+.logo-creator__dock button:active:not(:disabled),
+.logo-creator__dock button.is-pressed:not(:disabled) {
   background: #ff5300;
   color: #0f0f0f;
 }
 
 .logo-creator__dock button.is-on:hover,
-.logo-creator__dock button:active:not(:disabled):hover {
+.logo-creator__dock button:active:not(:disabled):hover,
+.logo-creator__dock button.is-pressed:not(:disabled):hover {
   color: #0f0f0f;
 }
 
 .logo-creator__dock button.is-on::before,
 .logo-creator__dock button.is-on:hover::before,
-.logo-creator__dock button:active:not(:disabled)::before {
+.logo-creator__dock button:active:not(:disabled)::before,
+.logo-creator__dock button.is-pressed:not(:disabled)::before {
   opacity: 0;
 }
 

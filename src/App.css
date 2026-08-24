@@ -1562,6 +1562,29 @@ html.normal-hover .button-row--choice button.is-active:hover::before {
     color 0s;
 }
 
+.panel-btn.is-pressed:not(:disabled),
+.button-row button.is-pressed:not(:disabled):not(.is-active),
+.timeline__controls > button.is-pressed:not(:disabled),
+.canvas-stage-control-btn.is-pressed:not(:disabled),
+.frame-context-menu__item.is-pressed:not(:disabled) {
+  background: var(--brand);
+  color: var(--on-brand);
+  box-shadow: var(--glow-brand);
+  transition:
+    background 0s,
+    color 0s;
+}
+
+.panel-btn.is-pressed:not(:disabled)::before,
+.button-row button.is-pressed:not(:disabled):not(.is-active)::before,
+.timeline__controls > button.is-pressed:not(:disabled)::before,
+.canvas-stage-control-btn.is-pressed:not(:disabled)::before,
+.frame-context-menu__item.is-pressed:not(:disabled)::before {
+  animation: none;
+  opacity: 0;
+  transition: none;
+}
+
 .canvas-stage-control-btn {
   width: var(--icon-btn-size);
   height: var(--icon-btn-size);

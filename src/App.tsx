@@ -104,6 +104,7 @@ import {
 } from "./project/mzkFormat";
 import { stepDensity } from "./grid/density";
 import { getShortcutLegendEnabled } from "./ui/shortcutLegend";
+import { triggerShortcutButton } from "./ui/sounds";
 import type { Frame, FrameSettings, Orientation } from "./types";
 
 import "./App.css";
@@ -1297,6 +1298,7 @@ export default function App() {
 
       if (event.key === "Escape" && inspectingRef.current) {
         event.preventDefault();
+        if (!event.repeat) triggerShortcutButton("Escape");
         setInspecting(false);
         flashLegend("Inspect off");
         return;
@@ -1310,6 +1312,7 @@ export default function App() {
         flashLegend(leaving ? "Fullscreen off" : "Fullscreen");
       } else if (event.code === "Space" || key === " ") {
         event.preventDefault();
+        if (!event.repeat) triggerShortcutButton("Space");
         const next = !playingRef.current;
         togglePlay();
         flashLegend(next ? "Play" : "Stop");
@@ -1345,14 +1348,17 @@ export default function App() {
         }
       } else if (!mod && event.code === "KeyQ") {
         event.preventDefault();
+        if (!event.repeat) triggerShortcutButton("KeyQ");
         randomizeLayout();
         flashLegend("Randomize layout");
       } else if (!mod && event.code === "KeyW") {
         event.preventDefault();
+        if (!event.repeat) triggerShortcutButton("KeyW");
         randomizeAll();
         flashLegend("Randomize all");
       } else if (!mod && event.code === "KeyE") {
         event.preventDefault();
+        if (!event.repeat) triggerShortcutButton("KeyE");
         randomizeCurrentColors();
         flashLegend("Randomize colours");
       }
