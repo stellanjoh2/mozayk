@@ -27,7 +27,7 @@ import {
   buildDropZoneLoops,
   findDropTargets,
   hitTestBlock,
-  slotMatchesTarget,
+  pickDropTarget,
   type GridSlot,
 } from "../layout/blockPlacement";
 import {
@@ -147,6 +147,7 @@ export function CanvasView({
   const dropBlinkRafRef = useRef<number | null>(null);
   const dragPointerIdRef = useRef<number | null>(null);
   const dragStartRef = useRef<{ x: number; y: number } | null>(null);
+  const grabOffsetRef = useRef({ col: 0, row: 0 });
   const selectedBlockIndexRef = useRef<number | null>(null);
   const isDraggingPieceRef = useRef(false);
   const dropTargetsRef = useRef<GridSlot[]>([]);
@@ -535,10 +536,15 @@ export function CanvasView({
     if (!cell) return null;
     const block = blocksRef.current[blockIndex];
     if (!block) return null;
-    return (
-      targets.find((target) =>
-        slotMatchesTarget(target, cell.col, cell.row, block.width, block.height),
-      ) ?? null
+    const grab = grabOffsetRef.current;
+    return pickDropTarget(
+      targets,
+      cell.col,
+      cell.row,
+      block.width,
+      block.height,
+      grab.col,
+      grab.row,
     );
   };
 
@@ -611,6 +617,11 @@ export function CanvasView({
     event.preventDefault();
     dragPointerIdRef.current = event.pointerId;
     dragStartRef.current = { x: event.clientX, y: event.clientY };
+    const hitBlock = frame.blocks[hitIndex];
+    grabOffsetRef.current = {
+      col: cell.col - hitBlock.col,
+      row: cell.row - hitBlock.row,
+    };
 
     if (selectedBlockIndexRef.current === hitIndex) {
       const targets = findDropTargets(

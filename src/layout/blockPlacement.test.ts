@@ -3,10 +3,12 @@ import {
   findDropTargets,
   hitTestBlock,
   moveBlock,
+  pickDropTarget,
   relocateBlock,
   slotMatchesTarget,
   swapPartnerIndex,
   buildDropZoneLoops,
+  type GridSlot,
 } from "./blockPlacement";
 import type { MosaicBlock } from "../types";
 
@@ -48,6 +50,36 @@ function run(): void {
   assert(
     !slotMatchesTarget({ col: 2, row: 2 }, 1, 2, 2, 2),
     "outside slot rejected",
+  );
+
+  const overlapping: GridSlot[] = [
+    { col: 0, row: 0 },
+    { col: 1, row: 0 },
+    { col: 2, row: 0 },
+  ];
+  assert(
+    pickDropTarget(overlapping, 1, 0, 2, 2)?.col === 1,
+    "overlap picks nearest origin, not first match",
+  );
+  assert(
+    pickDropTarget(overlapping, 2, 0, 2, 2)?.col === 2,
+    "right edge of merged band lands on right slot",
+  );
+  assert(
+    pickDropTarget(overlapping, 0, 0, 2, 2)?.col === 0,
+    "left edge still lands on left slot",
+  );
+  assert(
+    pickDropTarget(overlapping, 1, 1, 2, 2)?.col === 1,
+    "bottom of overlap still prefers the nearer origin",
+  );
+  assert(
+    pickDropTarget(overlapping, 2, 0, 2, 2, 1, 0)?.col === 1,
+    "grab offset keeps the grabbed cell under the cursor",
+  );
+  assert(
+    pickDropTarget(overlapping, 4, 0, 2, 2) == null,
+    "cursor outside every slot is not a drop",
   );
 
   const packed: MosaicBlock[] = [

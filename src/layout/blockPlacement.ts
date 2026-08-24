@@ -204,6 +204,35 @@ export function slotMatchesTarget(
   );
 }
 
+/** Closest slot origin to (cursor − grab) among slots that contain the cursor. */
+export function pickDropTarget(
+  targets: GridSlot[],
+  cursorCol: number,
+  cursorRow: number,
+  width: number,
+  height: number,
+  grabCol = 0,
+  grabRow = 0,
+): GridSlot | null {
+  const intendedCol = cursorCol - grabCol;
+  const intendedRow = cursorRow - grabRow;
+  let best: GridSlot | null = null;
+  let bestDist = Infinity;
+  for (const target of targets) {
+    if (!slotMatchesTarget(target, cursorCol, cursorRow, width, height)) {
+      continue;
+    }
+    const dCol = target.col - intendedCol;
+    const dRow = target.row - intendedRow;
+    const dist = dCol * dCol + dRow * dRow;
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = target;
+    }
+  }
+  return best;
+}
+
 export type GridCorner = { col: number; row: number };
 
 type GridEdge = {
