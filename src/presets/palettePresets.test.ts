@@ -47,6 +47,19 @@ function run(): void {
     );
   }
 
+  const gbc = PALETTE_PRESETS.find((preset) => preset.id === "gameboy-color");
+  assert(Boolean(gbc), "gameboy-color preset should exist");
+  const gbcChromatic = gbc!.colors.filter((hex) => {
+    const r = Number.parseInt(hex.slice(1, 3), 16);
+    const g = Number.parseInt(hex.slice(3, 5), 16);
+    const b = Number.parseInt(hex.slice(5, 7), 16);
+    return Math.max(r, g, b) - Math.min(r, g, b) > 80;
+  });
+  assert(
+    gbcChromatic.length >= 3,
+    "Game Boy Color should be RGB hues from CGB palettes, not a greenscale",
+  );
+
   const midnight = PALETTE_PRESETS.find((preset) => preset.id === "midnight-bloom");
   assert(Boolean(midnight), "midnight-bloom preset should exist");
   const midnightPreview = sortColorsForPreview(midnight!.colors);

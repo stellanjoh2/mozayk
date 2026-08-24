@@ -207,7 +207,8 @@ export const RETRO_PALETTE_PRESETS: PalettePreset[] = [
     id: "gameboy-color",
     label: "Game Boy Color",
     category: "retro",
-    colors: ["#C4CFA1", "#8B956D", "#4D533C", "#1F1F1F", "#306230"],
+    // Native CGB RGB555 (Pokémon Crystal overworld objects), not DMG greenscale.
+    colors: ["#FFFFFF", "#FF9C52", "#FF3908", "#524AFF", "#39BD18"],
   },
   {
     id: "ega-bright",
