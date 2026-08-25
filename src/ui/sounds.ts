@@ -291,6 +291,7 @@ function shouldPlayHover(el: HTMLElement): boolean {
 }
 
 function onButtonHover(event: MouseEvent): void {
+  if (document.querySelector(".live-show")) return;
   const target = event.target;
   if (!(target instanceof Element)) return;
   const el = target.closest(HOVER_SELECTOR);
@@ -399,6 +400,7 @@ function snapshotRangeValue(el: HTMLInputElement): void {
 }
 
 function playRangeSliderSound(el: HTMLInputElement): void {
+  if (el.closest(".live-show")) return;
   const value = Number(el.value);
   const prev = lastRangeValues.get(el);
   lastRangeValues.set(el, value);
