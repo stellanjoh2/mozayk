@@ -281,7 +281,6 @@ body {
 
   .panel-hint,
   .shortcut-list__keys kbd,
-  .panel-credit,
   .export-group__title,
   .export-group__meta,
   .video-import-dialog__fps-label,
@@ -673,7 +672,9 @@ html.normal-hover .palette-gallery__item:hover .palette-gallery__label {
 }
 
 html.normal-hover .controls-panel__tab:hover:not(.is-active),
-html.normal-hover .headline-disclosure:hover {
+html.normal-hover .headline-disclosure:hover,
+html.normal-hover .panel-credit__author:hover,
+html.normal-hover .panel-credit a:hover {
   animation: none;
   opacity: 1;
 }
@@ -912,7 +913,7 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
   padding-top: 32px;
   border-top: 1px solid var(--panel-border);
   color: var(--muted);
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.45;
   text-align: center;
 }
@@ -921,12 +922,28 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
   margin: 0;
 }
 
-.panel-credit a {
+.panel-credit__social {
   display: inline-flex;
-  vertical-align: middle;
-  margin-left: 8px;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+}
+
+.panel-credit a {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
   color: inherit;
   text-decoration: none;
+}
+
+.panel-credit a::before {
+  content: "";
+  position: absolute;
+  inset: -12px;
 }
 
 .panel-credit__author {
@@ -947,17 +964,40 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
 }
 
 .panel-credit__author:hover {
-  color: color-mix(in srgb, var(--chrome) 82%, white);
+  color: #fff;
+  text-decoration-color: #fff;
+  animation: hover-plate-blink calc(4s / 30) linear infinite;
 }
 
-.panel-credit svg {
+.panel-credit svg,
+.panel-credit__icon {
   display: block;
-  width: 14px;
-  height: 14px;
+  width: 24px;
+  height: 24px;
+}
+
+.panel-credit__icon--x {
+  background-color: currentColor;
+  -webkit-mask-image: url("./assets/X-logo.svg");
+  mask-image: url("./assets/X-logo.svg");
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
 }
 
 .panel-credit a:hover {
   color: var(--text);
+  animation: hover-plate-blink calc(4s / 30) linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel-credit__author:hover,
+  .panel-credit a:hover {
+    animation: none;
+  }
 }
 
 .import-file-input {
