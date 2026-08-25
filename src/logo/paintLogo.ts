@@ -141,22 +141,43 @@ function occupancy(el: Element): Set<number> {
   return cells;
 }
 
-function shareEdge(a: Set<number>, b: Set<number>): boolean {
-  const [small, large] = a.size <= b.size ? [a, b] : [b, a];
-  for (const key of small) {
-    const ix = Math.floor(key / PACK);
-    const iy = key - ix * PACK;
-    if (
-      large.has(key) ||
-      large.has((ix + 1) * PACK + iy) ||
-      large.has((ix - 1) * PACK + iy) ||
-      large.has(ix * PACK + iy + 1) ||
-      large.has(ix * PACK + iy - 1)
-    ) {
-      return true;
+function adjacency(cells: Set<number>[]): number[][] {
+  const n = cells.length;
+  const at = new Map<number, number[]>();
+  for (let i = 0; i < n; i++) {
+    for (const key of cells[i]) {
+      const list = at.get(key);
+      if (list) list.push(i);
+      else at.set(key, [i]);
     }
   }
-  return false;
+  const adj = Array.from({ length: n }, () => [] as number[]);
+  const linked = Array.from({ length: n }, () => new Set<number>());
+  const link = (i: number, j: number) => {
+    if (i === j || linked[i].has(j)) return;
+    linked[i].add(j);
+    linked[j].add(i);
+    adj[i].push(j);
+    adj[j].push(i);
+  };
+  for (let i = 0; i < n; i++) {
+    for (const key of cells[i]) {
+      const ix = Math.floor(key / PACK);
+      const iy = key - ix * PACK;
+      for (const nkey of [
+        key,
+        (ix + 1) * PACK + iy,
+        (ix - 1) * PACK + iy,
+        ix * PACK + iy + 1,
+        ix * PACK + iy - 1,
+      ]) {
+        const hits = at.get(nkey);
+        if (!hits) continue;
+        for (const j of hits) link(i, j);
+      }
+    }
+  }
+  return adj;
 }
 
 function boxCenter(box: Box): { cx: number; cy: number } {
@@ -164,7 +185,7 @@ function boxCenter(box: Box): { cx: number; cy: number } {
 }
 
 /** Split mosaic parts into letterforms by centre-x gutters between glyphs. */
-function letterClusters(boxes: Box[]): number[][] {
+function letterClusters(boxes: Box[], unitSize: number): number[][] {
   const indexed = boxes
     .map((box, i) => ({ i, cx: boxCenter(box).cx }))
     .sort((a, b) => a.cx - b.cx);
@@ -174,7 +195,7 @@ function letterClusters(boxes: Box[]): number[][] {
   let maxCx = indexed[0].cx;
   for (let k = 1; k < indexed.length; k++) {
     const gap = indexed[k].cx - maxCx;
-    if (gap > GRID + 0.5) {
+    if (gap > unitSize + 0.5) {
       letters.push(cur);
       cur = [indexed[k].i];
       maxCx = indexed[k].cx;
@@ -187,28 +208,33 @@ function letterClusters(boxes: Box[]): number[][] {
   return letters;
 }
 
-function axisAlignedNeighbor(boxes: Box[], i: number, j: number): boolean {
+function axisAlignedNeighbor(boxes: Box[], i: number, j: number, unitSize: number): boolean {
   const a = boxCenter(boxes[i]);
   const b = boxCenter(boxes[j]);
   const dx = Math.abs(a.cx - b.cx);
   const dy = Math.abs(a.cy - b.cy);
-  return (dy < 1 && Math.abs(dx - GRID) < 1) || (dx < 1 && Math.abs(dy - GRID) < 1);
+  return (dy < 1 && Math.abs(dx - unitSize) < 1) || (dx < 1 && Math.abs(dy - unitSize) < 1);
 }
 
 /**
- * At most one same-colour run per letter (ideally one): a collinear chain of
- * 2–4 edge-adjacent tiles that collapse into a single rect after colouring.
+ * Collinear same-colour tiles that collapse into one rect.
+ * Coarse: one run of 2–4 cells per letter.
+ * Subdivided: a few runs of 2–4 cells (occasionally a bit longer), not 1×1 and not full-letter bars.
  */
-function pickSameColorRuns(adj: number[][], boxes: Box[]): number[][] {
+function pickSameColorRuns(adj: number[][], boxes: Box[], unitSize: number): number[][] {
+  const subdivided = unitSize < GRID - 0.5;
+  const minLen = 2;
+  const maxLen = subdivided ? 6 : 4;
+  const runsWanted = subdivided ? 3 : 1;
   const runs: number[][] = [];
-  for (const letter of letterClusters(boxes)) {
+  for (const letter of letterClusters(boxes, unitSize)) {
     const set = new Set(letter);
     const axisAdj = new Map<number, number[]>();
     for (const i of letter) axisAdj.set(i, []);
     for (const i of letter) {
       for (const j of adj[i]) {
         if (!set.has(j) || j <= i) continue;
-        if (!axisAlignedNeighbor(boxes, i, j)) continue;
+        if (!axisAlignedNeighbor(boxes, i, j, unitSize)) continue;
         axisAdj.get(i)!.push(j);
         axisAdj.get(j)!.push(i);
       }
@@ -217,14 +243,14 @@ function pickSameColorRuns(adj: number[][], boxes: Box[]): number[][] {
     const candidates: number[][] = [];
     const seen = new Set<string>();
     const dfs = (path: number[]) => {
-      if (path.length >= 2 && path.length <= 4) {
+      if (path.length >= minLen && path.length <= maxLen) {
         const key = [...path].sort((a, b) => a - b).join(",");
         if (!seen.has(key)) {
           seen.add(key);
           candidates.push([...path]);
         }
       }
-      if (path.length === 4) return;
+      if (path.length === maxLen) return;
       const last = path[path.length - 1];
       for (const next of axisAdj.get(last) ?? []) {
         if (path.includes(next)) continue;
@@ -241,10 +267,20 @@ function pickSameColorRuns(adj: number[][], boxes: Box[]): number[][] {
     for (const start of letter) dfs([start]);
     if (candidates.length === 0) continue;
 
-    const lengths = [...new Set(candidates.map((r) => r.length))];
-    const len = lengths[Math.floor(Math.random() * lengths.length)];
-    const pool = candidates.filter((r) => r.length === len);
-    runs.push(pool[Math.floor(Math.random() * pool.length)]);
+    const used = new Set<number>();
+    for (let n = 0; n < runsWanted; n++) {
+      const available = candidates.filter((r) => r.every((i) => !used.has(i)));
+      if (available.length === 0) break;
+      const lengths = [...new Set(available.map((r) => r.length))];
+      const short = lengths.filter((len) => len <= 4);
+      const poolLens =
+        subdivided && short.length > 0 && Math.random() < 0.85 ? short : lengths;
+      const len = poolLens[Math.floor(Math.random() * poolLens.length)]!;
+      const pool = available.filter((r) => r.length === len);
+      const picked = pool[Math.floor(Math.random() * pool.length)]!;
+      runs.push(picked);
+      for (const i of picked) used.add(i);
+    }
   }
   return runs;
 }
@@ -284,12 +320,14 @@ function colorGraph(adj: number[][], runs: number[][] = []): number[] {
     return used;
   };
 
-  for (let attempt = 0; attempt < 48; attempt++) {
+  for (let attempt = 0; attempt < (n > 140 ? 0 : 48); attempt++) {
     const remaining = [...quota];
     const colors = new Array<number>(n).fill(-1);
     const order = shuffle([...Array(n).keys()]);
+    let steps = 0;
     const solve = (i: number): boolean => {
       if (i === n) return true;
+      if (++steps > 12_000) return false;
       const v = order[i];
       if (colors[v] >= 0) return solve(i + 1);
       const members = membersOf(v);
@@ -329,8 +367,11 @@ function colorGraph(adj: number[][], runs: number[][] = []): number[] {
   return colors;
 }
 
-function isUnitCell(box: { minX: number; minY: number; maxX: number; maxY: number }): boolean {
-  return Math.abs(box.maxX - box.minX - GRID) < 0.2 && Math.abs(box.maxY - box.minY - GRID) < 0.2;
+function isUnitCell(box: Box, unitSize = GRID): boolean {
+  return (
+    Math.abs(box.maxX - box.minX - unitSize) < 0.2 &&
+    Math.abs(box.maxY - box.minY - unitSize) < 0.2
+  );
 }
 
 function near(a: number, b: number): boolean {
@@ -435,16 +476,45 @@ function makeUnitModule(doc: Document, shape: UnitShape, box: Box): Element {
   return el;
 }
 
-function morphUnitModules(svg: Element): void {
-  const doc = svg.ownerDocument;
-  if (!doc) return;
+function unitSlots(svg: Element, unitSize: number): { el: Element; box: Box }[] {
   const slots: { el: Element; box: Box }[] = [];
   for (const el of svg.querySelectorAll(PART_SELECTOR)) {
     const box = bbox(el);
-    if (!isUnitCell(box)) continue;
+    if (!isUnitCell(box, unitSize)) continue;
     slots.push({ el, box });
   }
-  const shapes = unitShapeBag(slots.length, collectTriangleCorners(slots));
+  return slots;
+}
+
+function quadrantBoxes(box: Box): Box[] {
+  const midX = (box.minX + box.maxX) / 2;
+  const midY = (box.minY + box.maxY) / 2;
+  return [
+    { minX: box.minX, minY: box.minY, maxX: midX, maxY: midY },
+    { minX: midX, minY: box.minY, maxX: box.maxX, maxY: midY },
+    { minX: box.minX, minY: midY, maxX: midX, maxY: box.maxY },
+    { minX: midX, minY: midY, maxX: box.maxX, maxY: box.maxY },
+  ];
+}
+
+function subdivideUnitCells(svg: Element, slots: { el: Element; box: Box }[]): void {
+  const doc = svg.ownerDocument;
+  if (!doc) return;
+  for (const { el, box } of slots) {
+    const parent = el.parentNode;
+    if (!parent) continue;
+    for (const quad of quadrantBoxes(box)) {
+      parent.insertBefore(makeUnitModule(doc, { kind: "square", corner: "tr" }, quad), el);
+    }
+    el.remove();
+  }
+}
+
+function morphUnitModules(svg: Element, unitSize: number, triangleCorners: Corner[]): void {
+  const doc = svg.ownerDocument;
+  if (!doc) return;
+  const slots = unitSlots(svg, unitSize);
+  const shapes = unitShapeBag(slots.length, triangleCorners);
   slots.forEach((slot, i) => {
     slot.el.replaceWith(makeUnitModule(doc, shapes[i], slot.box));
   });
@@ -482,7 +552,10 @@ function mergeColorRuns(
   }
 }
 
-export function paintLogoWithBrandTokens(svgMarkup: string): string {
+export function paintLogoWithBrandTokens(
+  svgMarkup: string,
+  options?: { subdivide?: boolean },
+): string {
   const doc = new DOMParser().parseFromString(svgMarkup, "image/svg+xml");
   const svg = doc.documentElement;
   if (svg.querySelector("parsererror")) return svgMarkup;
@@ -491,21 +564,19 @@ export function paintLogoWithBrandTokens(svgMarkup: string): string {
   const defs = svg.querySelector("defs");
   if (defs && defs.childElementCount === 0) defs.remove();
 
-  morphUnitModules(svg);
+  const subdivide = Boolean(options?.subdivide);
+  const coarse = unitSlots(svg, GRID);
+  const triangleCorners = collectTriangleCorners(coarse);
+  if (subdivide) subdivideUnitCells(svg, coarse);
+  const unitSize = subdivide ? GRID / 2 : GRID;
+  morphUnitModules(svg, unitSize, triangleCorners);
 
   const parts = [...svg.querySelectorAll(PART_SELECTOR)];
   const cells = parts.map(occupancy);
   const boxes = parts.map(bbox);
-  const adj = parts.map(() => [] as number[]);
-  for (let i = 0; i < parts.length; i++) {
-    for (let j = i + 1; j < parts.length; j++) {
-      if (!shareEdge(cells[i], cells[j])) continue;
-      adj[i].push(j);
-      adj[j].push(i);
-    }
-  }
+  const adj = adjacency(cells);
 
-  const runs = pickSameColorRuns(adj, boxes);
+  const runs = pickSameColorRuns(adj, boxes, unitSize);
   const colors = colorGraph(adj, runs);
   parts.forEach((el, i) => {
     el.removeAttribute("class");

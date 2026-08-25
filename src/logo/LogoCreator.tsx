@@ -102,14 +102,17 @@ export function LogoCreator() {
   const [openMenu, setOpenMenu] = useState<null | "speed" | "export">(null);
   const [openColor, setOpenColor] = useState<number | null>(null);
   const [uiHidden, setUiHidden] = useState(false);
+  const [subdivided, setSubdivided] = useState(false);
   const [exporting, setExporting] = useState(false);
   const speedMenuRef = useRef<HTMLDivElement>(null);
   const exportRef = useRef<HTMLDivElement>(null);
   const playingRef = useRef(false);
   const uiHiddenRef = useRef(false);
+  const subdividedRef = useRef(false);
   speedRef.current = speed;
   playingRef.current = playing;
   uiHiddenRef.current = uiHidden;
+  subdividedRef.current = subdivided;
 
   const markStyle = useMemo(
     () =>
@@ -121,6 +124,7 @@ export function LogoCreator() {
       }) as CSSProperties,
     [colors],
   );
+  const markHtml = useMemo(() => ({ __html: markup }), [markup]);
 
   const clearRevealTimers = () => {
     for (const id of timersRef.current) window.clearTimeout(id);
@@ -162,9 +166,19 @@ export function LogoCreator() {
     pausePlayback();
   };
 
+  const paintLogo = () =>
+    paintLogoWithBrandTokens(logoSvg, { subdivide: subdividedRef.current });
+
   const randomizeLayout = () => {
     if (playingRef.current || loopRef.current) stopPlayback();
-    setMarkup(paintLogoWithBrandTokens(logoSvg));
+    setMarkup(paintLogo());
+  };
+  const toggleSubdivide = () => {
+    if (playingRef.current || loopRef.current) stopPlayback();
+    const next = !subdividedRef.current;
+    subdividedRef.current = next;
+    setSubdivided(next);
+    setMarkup(paintLogoWithBrandTokens(logoSvg, { subdivide: next }));
   };
   const randomizeColours = () => {
     if (playingRef.current) pausePlayback();
@@ -195,7 +209,7 @@ export function LogoCreator() {
   const nextLoopLayout = (): string => {
     const pool = loopPoolRef.current;
     if (pool.length < LOOP_POOL_MAX) {
-      const generated = paintLogoWithBrandTokens(logoSvg);
+      const generated = paintLogo();
       pool.push(generated);
       loopPoolIndexRef.current = pool.length - 1;
       return generated;
@@ -326,6 +340,10 @@ export function LogoCreator() {
         event.preventDefault();
         if (!event.repeat) triggerShortcutButton("KeyQ");
         randomizeLayout();
+      } else if (event.code === "KeyS") {
+        event.preventDefault();
+        if (!event.repeat) triggerShortcutButton("KeyS");
+        toggleSubdivide();
       } else if (event.code === "KeyW") {
         event.preventDefault();
         if (!event.repeat) triggerShortcutButton("KeyW");
@@ -406,7 +424,7 @@ export function LogoCreator() {
         style={markStyle}
         role="img"
         aria-label="mozayk logotype"
-        dangerouslySetInnerHTML={{ __html: markup }}
+        dangerouslySetInnerHTML={markHtml}
       />
       <nav
         className="logo-creator__dock"
@@ -417,6 +435,17 @@ export function LogoCreator() {
         <div className="logo-creator__dock-group">
           <button type="button" aria-keyshortcuts="q" data-shortcut="KeyQ" onClick={randomizeLayout}>
             Randomize Layout
+          </button>
+          <button
+            type="button"
+            className={subdivided ? "is-on" : undefined}
+            aria-pressed={subdivided}
+            aria-keyshortcuts="s"
+            data-shortcut="KeyS"
+            data-ui-sound={subdivided ? "close" : "ok"}
+            onClick={toggleSubdivide}
+          >
+            Subdivide
           </button>
           <div className="logo-creator__swatches" role="group" aria-label="Logotype colours">
             {colors.map((color, i) => (
