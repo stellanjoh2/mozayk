@@ -198,6 +198,8 @@ export type FrameSettings = {
   textureOverlayOpacity?: number;
   /** Multiply tint applied to the texture before blending (hex). Defaults to white. */
   textureOverlayTint?: string;
+  /** Hue rotation for the texture overlay only, in degrees −180–180. Defaults to 0. */
+  textureOverlayHue?: number;
   /** Imported image layouts are reshuffled instead of procedurally regenerated. */
   layoutSource?: LayoutSource;
   /** Pause icon — skip these controls in Randomize All and keep their instance on Apply Look. */

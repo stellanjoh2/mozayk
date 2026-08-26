@@ -20,6 +20,7 @@ function sampleFrame(id: string): Frame {
       fillAmount: 77,
       colors: ["#ff3355", "#22cc88"],
       colorAmounts: [60, 40],
+      textureOverlayHue: 45,
     },
     blocks: [
       { col: 0, row: 0, width: 4, height: 2, shape: "block", color: "#ff3355" },
@@ -73,6 +74,10 @@ function run(): void {
   assert(
     parsed.frames[0].textureOverlay?.dataUrl === "data:image/png;base64,tex",
     "texture overlay survives round-trip",
+  );
+  assert(
+    parsed.frames[0].settings.textureOverlayHue === 45,
+    "texture overlay hue survives round-trip",
   );
   assert(
     parsed.frames[0].backgroundImage?.name === "bg.png",

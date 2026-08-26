@@ -20,6 +20,7 @@ import {
 import {
   TEXTURE_OVERLAY_OPACITY_DEFAULT,
   resolveTextureOverlayBlend,
+  resolveTextureOverlayHue,
 } from "../render/textureOverlay";
 import { WIREFRAME_PEEL_STROKE_DEFAULT } from "../render/wireframePeel";
 import {
@@ -324,6 +325,7 @@ export function parseSettingsRecord(
     textureOverlayTint: isValidHex(String(candidate.textureOverlayTint ?? ""))
       ? normalizeHex(String(candidate.textureOverlayTint))
       : undefined,
+    textureOverlayHue: resolveTextureOverlayHue(candidate.textureOverlayHue),
     ...(layoutSource ? { layoutSource } : {}),
     ...(parseRandomizePaused(candidate.randomizePaused)
       ? { randomizePaused: parseRandomizePaused(candidate.randomizePaused) }

@@ -84,6 +84,7 @@ type ToggleRowProps = {
   hint?: string;
   checked: boolean;
   onChange: (checked: boolean) => void;
+  shortcut?: string;
 };
 
 function SwitchControl({
@@ -112,9 +113,23 @@ function SwitchControl({
   );
 }
 
-export function ToggleRow({ label, hint, checked, onChange }: ToggleRowProps) {
+export function ToggleRow({
+  label,
+  hint,
+  checked,
+  onChange,
+  shortcut,
+}: ToggleRowProps) {
   return (
-    <label className="control-row control-row--toggle">
+    <label
+      className="control-row control-row--toggle"
+      data-shortcut={shortcut}
+      aria-keyshortcuts={
+        shortcut?.startsWith("Key")
+          ? shortcut.slice(3).toLowerCase()
+          : shortcut
+      }
+    >
       <span className="control-row__label">
         <HintLabel hint={hint}>{label}</HintLabel>
       </span>

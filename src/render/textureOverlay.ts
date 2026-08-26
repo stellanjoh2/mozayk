@@ -25,6 +25,7 @@ export const TEXTURE_OVERLAY_BLEND_LABELS: Record<
 
 export const TEXTURE_OVERLAY_OPACITY_DEFAULT = 40;
 export const TEXTURE_OVERLAY_TINT_DEFAULT = "#ffffff";
+export const TEXTURE_OVERLAY_HUE_DEFAULT = 0;
 
 /** Omitted flag keeps legacy behaviour: on whenever a texture is uploaded. */
 export function isTextureOverlayEnabled(
@@ -55,6 +56,10 @@ export function resolveTextureOverlayBlend(
     return value as TextureOverlayBlendMode;
   }
   return "multiply";
+}
+
+export function resolveTextureOverlayHue(value: unknown): number {
+  return clampInt(value, -180, 180, TEXTURE_OVERLAY_HUE_DEFAULT);
 }
 
 function context2d(
@@ -96,17 +101,26 @@ function drawCoverNoClear(
   ctx.drawImage(image, sx, sy, sw, sh, 0, 0, width, height);
 }
 
-/** Build a cover-cropped, optionally tinted texture at target size. */
+/** Build a cover-cropped, optionally hue-shifted and tinted texture at target size. */
 function prepareTextureLayer(
   image: HTMLImageElement,
   tint: string | null,
+  hue: number,
   width: number,
   height: number,
 ): HTMLCanvasElement | null {
   const ctx = context2d(width, height);
   if (!ctx) return null;
 
+  if (hue !== 0) {
+    try {
+      ctx.filter = `hue-rotate(${hue}deg)`;
+    } catch {
+      /* keep the unshifted texture */
+    }
+  }
   drawCoverNoClear(ctx, image, width, height);
+  ctx.filter = "none";
 
   if (tint && tint.toLowerCase() !== TEXTURE_OVERLAY_TINT_DEFAULT) {
     ctx.globalCompositeOperation = "multiply";
@@ -121,7 +135,7 @@ function prepareTextureLayer(
 /**
  * Full-frame texture overlay after mosaic FX, before colour-grade extras
  * (canvas / PNG only). Cover-crops like the source photo, then blends
- * with opacity + optional tint.
+ * with opacity + optional hue and tint.
  */
 export function applyTextureOverlay(
   ctx: CanvasRenderingContext2D,
@@ -145,13 +159,14 @@ export function applyTextureOverlay(
   if (opacity <= 0) return;
 
   const blend = resolveTextureOverlayBlend(settings.textureOverlayBlend);
+  const hue = resolveTextureOverlayHue(settings.textureOverlayHue);
   const rawTint = settings.textureOverlayTint;
   const tint =
     typeof rawTint === "string" && isValidHex(rawTint)
       ? normalizeHex(rawTint)
       : null;
 
-  const layer = prepareTextureLayer(image, tint, width, height);
+  const layer = prepareTextureLayer(image, tint, hue, width, height);
   if (!layer) return;
 
   ctx.save();

@@ -209,6 +209,32 @@ function run(): void {
     roundTrip.settings.transparentBackground === true,
     "transparent toggle survives round-trip",
   );
+
+  const textureHue = parseSettingsClipboard(
+    JSON.stringify({
+      density: 5,
+      colors: ["#ffffff"],
+      textureOverlayHue: 75,
+    }),
+  );
+  assert(textureHue !== null, "texture overlay hue should parse");
+  assert(textureHue.settings.textureOverlayHue === 75, "texture overlay hue kept");
+
+  const textureHueRoundTrip = parseSettingsClipboard(
+    serializeSettingsClipboard(
+      {
+        ...createDefaultSettings(),
+        textureOverlayHue: -90,
+      },
+      sampleBlocks(),
+      "landscape",
+    ),
+  );
+  assert(textureHueRoundTrip !== null, "texture overlay hue round-trip should parse");
+  assert(
+    textureHueRoundTrip.settings.textureOverlayHue === -90,
+    "texture overlay hue survives round-trip",
+  );
 }
 
 run();

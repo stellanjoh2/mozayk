@@ -105,7 +105,7 @@ import {
 import { stepDensity } from "./grid/density";
 import { recordVisualExported } from "./stats/beacon";
 import { getShortcutLegendEnabled } from "./ui/shortcutLegend";
-import { triggerShortcutButton } from "./ui/sounds";
+import { playUiSound, triggerShortcutButton } from "./ui/sounds";
 import type { Frame, FrameSettings, Orientation } from "./types";
 
 import "./App.css";
@@ -1367,6 +1367,15 @@ export default function App() {
         if (!event.repeat) triggerShortcutButton("KeyE");
         randomizeCurrentColors();
         flashLegend("Randomize colours");
+      } else if (!mod && (event.code === "KeyI" || key === "i")) {
+        event.preventDefault();
+        if (event.repeat) return;
+        const frame = framesRef.current[activeIndexRef.current];
+        if (!frame) return;
+        const next = !frame.settings.invert;
+        handleSettingsChange({ invert: next }, false);
+        playUiSound(next ? "ok" : "close");
+        flashLegend(next ? "Invert all" : "Invert all off");
       }
     };
 
@@ -1384,6 +1393,7 @@ export default function App() {
     randomizeLayout,
     randomizeAll,
     randomizeCurrentColors,
+    handleSettingsChange,
   ]);
 
   return (

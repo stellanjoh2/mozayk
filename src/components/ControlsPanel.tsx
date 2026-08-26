@@ -48,6 +48,7 @@ import {
 import {
   TEXTURE_OVERLAY_BLEND_LABELS,
   TEXTURE_OVERLAY_BLEND_MODES,
+  TEXTURE_OVERLAY_HUE_DEFAULT,
   TEXTURE_OVERLAY_OPACITY_DEFAULT,
   TEXTURE_OVERLAY_TINT_DEFAULT,
   isTextureOverlayEnabled,
@@ -1302,6 +1303,17 @@ export function ControlsPanel({
                 onSettingsChange({ textureOverlayOpacity }, false)
               }
             />
+            <SliderRow
+              label="Hue"
+              hint="Rotate colours of this texture only · PNG only"
+              value={settings.textureOverlayHue ?? TEXTURE_OVERLAY_HUE_DEFAULT}
+              min={-180}
+              max={180}
+              formatValue={(v) => `${v}°`}
+              onChange={(textureOverlayHue) =>
+                onSettingsChange({ textureOverlayHue }, false)
+              }
+            />
             <div className="control-row">
               <span className="control-row__label">
                 <HintLabel hint="Multiply tint on the texture before blending · white leaves it unchanged">
@@ -1344,7 +1356,7 @@ export function ControlsPanel({
           }
         />
         <SliderRow
-          label="Hue"
+          label="Master Hue"
           hint="Rotate colours of the finished image · PNG only"
           value={settings.hueShift ?? 0}
           min={-180}
@@ -1430,6 +1442,7 @@ export function ControlsPanel({
           label="Invert all"
           hint="Full-frame difference with white · PNG only"
           checked={Boolean(settings.invert)}
+          shortcut="KeyI"
           onChange={(invert) => onSettingsChange({ invert }, false)}
         />
         </HeadlineToggle>
@@ -1865,6 +1878,12 @@ export function ControlsPanel({
               <kbd>E</kbd>
             </p>
             <p className="shortcut-list__desc">Randomize current colours</p>
+          </li>
+          <li className="shortcut-list__row">
+            <p className="shortcut-list__keys">
+              <kbd>I</kbd>
+            </p>
+            <p className="shortcut-list__desc">Invert all</p>
           </li>
           <li className="shortcut-list__row">
             <p className="shortcut-list__keys">
