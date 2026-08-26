@@ -21,10 +21,12 @@ type FrameContextMenuProps = {
   x: number;
   y: number;
   canPaste: boolean;
+  canApplyStyleToAll: boolean;
   canDuplicate: boolean;
   canDelete: boolean;
   onCopyStyle: () => void;
   onPasteStyle: () => void;
+  onApplyStyleToAll: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
   onClose: () => void;
@@ -34,10 +36,12 @@ export function FrameContextMenu({
   x,
   y,
   canPaste,
+  canApplyStyleToAll,
   canDuplicate,
   canDelete,
   onCopyStyle,
   onPasteStyle,
+  onApplyStyleToAll,
   onDuplicate,
   onDelete,
   onClose,
@@ -190,6 +194,15 @@ export function FrameContextMenu({
         onClick={() => runThenClose(onPasteStyle)}
       >
         Paste Style
+      </button>
+      <button
+        type="button"
+        role="menuitem"
+        className="frame-context-menu__item"
+        disabled={!canApplyStyleToAll}
+        onClick={() => runThenClose(onApplyStyleToAll)}
+      >
+        Apply Style to All Frames
       </button>
       <div className="frame-context-menu__rule" role="separator" />
       <button

@@ -100,8 +100,10 @@ type CanvasViewProps = {
   isInspecting?: boolean;
   fillStage?: boolean;
   pieceEditingEnabled?: boolean;
-  /** Timeline is playing — skip grid blur (CSS blur at 4K/30fps OOMs the GPU). */
+  /** Timeline is playing — skip grid blur unless high quality mode is on. */
   playing?: boolean;
+  /** Keep Gaussian blur during playback (can OOM the GPU tab). */
+  highQualityMode?: boolean;
   shortcutLegend?: { text: string; id: number } | null;
   onToggleInspect?: () => void;
   onMoveBlock?: (blockIndex: number, toCol: number, toRow: number) => void;
@@ -118,6 +120,7 @@ export function CanvasView({
   fillStage = false,
   pieceEditingEnabled = false,
   playing = false,
+  highQualityMode = false,
   shortcutLegend = null,
   onToggleInspect,
   onMoveBlock,
@@ -174,7 +177,7 @@ export function CanvasView({
         )
       : nativeSize;
   // Inspect is 1:1 1080p. Playback keeps the paused preview size so overlay
-  // strokes don't jump; skipGridBlur is what keeps 4K/30fps from OOMing.
+  // strokes don't jump; skipGridBlur (unless high quality) keeps 4K/30fps from OOMing.
   const [width, height] = isInspecting ? nativeSize : workingSize;
   const fitScale =
     isInspecting || stageSize.width <= 0
@@ -401,7 +404,7 @@ export function CanvasView({
           dropBlinkT,
           showDensityGrid: isDraggingPiece,
           displayScale,
-          skipGridBlur: playing,
+          skipGridBlur: playing && !highQualityMode,
         });
       } catch (error) {
         console.error(error);
@@ -447,6 +450,7 @@ export function CanvasView({
     pieceDropBlink,
     dropBlinkT,
     playing,
+    highQualityMode,
   ]);
 
   useLayoutEffect(() => {
@@ -1237,6 +1241,7 @@ type TimelineProps = {
   activeIndex: number;
   orientation: Orientation;
   playing: boolean;
+  highQualityMode?: boolean;
   playbackFps: number;
   onPlaybackFpsChange: (fps: number) => void;
   onSelect: (index: number) => void;
@@ -1246,6 +1251,7 @@ type TimelineProps = {
   onRemove: (index: number) => void;
   onCopyStyle: (index: number) => void;
   onPasteStyle: (index: number) => void;
+  onApplyStyleToAll: (index: number) => void;
   canPasteStyle: boolean;
   canAddFrame: boolean;
   onTogglePlay: () => void;
@@ -1256,6 +1262,7 @@ export function Timeline({
   activeIndex,
   orientation,
   playing,
+  highQualityMode = false,
   playbackFps,
   onPlaybackFpsChange,
   onSelect,
@@ -1265,6 +1272,7 @@ export function Timeline({
   onRemove,
   onCopyStyle,
   onPasteStyle,
+  onApplyStyleToAll,
   canPasteStyle,
   canAddFrame,
   onTogglePlay,
@@ -1763,7 +1771,10 @@ export function Timeline({
   const draggedFrame = dragIndex !== null ? frames[dragIndex] : null;
   const activeFrame = frames[activeIndex];
   const showBlurPlaybackNote =
-    playing && activeFrame != null && isGridBlurActive(activeFrame.settings);
+    playing &&
+    !highQualityMode &&
+    activeFrame != null &&
+    isGridBlurActive(activeFrame.settings);
   const visualItems = buildVisualStripItems(
     frames.length,
     dragIndex,
@@ -1988,6 +1999,7 @@ export function Timeline({
           x={menu.x}
           y={menu.y}
           canPaste={canPasteStyle}
+          canApplyStyleToAll={frames.length > 1}
           canDuplicate={canAddFrame}
           canDelete={frames.length > 1}
           onCopyStyle={() => {
@@ -1997,6 +2009,10 @@ export function Timeline({
           onPasteStyle={() => {
             playUiSound("ok");
             onPasteStyle(menu.index);
+          }}
+          onApplyStyleToAll={() => {
+            playUiSound("ok");
+            onApplyStyleToAll(menu.index);
           }}
           onDuplicate={() => {
             handleDuplicateClick(menu.index);

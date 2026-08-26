@@ -1,5 +1,6 @@
 import { normalizeHex } from "../colorMath";
 import { getGridDimensions, gridEdge } from "../grid/gridMath";
+import { overlayPxScale } from "./gridOverlay";
 import { resolveGridBlendMode } from "./gridOverlayParams";
 import type {
   DataFieldsValueType,
@@ -171,10 +172,12 @@ function drawLabelRtl(
   cellLeft: number,
   cellTop: number,
   scale: number,
+  padX: number,
+  padY: number,
 ): void {
   const totalW = glyphWidth(label, scale);
-  let x = cellLeft + PAD_X + totalW - GLYPH_W * scale;
-  const y = cellTop + PAD_Y;
+  let x = cellLeft + padX + totalW - GLYPH_W * scale;
+  const y = cellTop + padY;
   const step = glyphAdvance(scale);
   for (let i = 0; i < label.length; i++) {
     drawGlyph(ctx, label[i], Math.round(x), Math.round(y), scale);
@@ -249,7 +252,11 @@ export function drawDataFields(
   );
   if (spawnRate <= 0) return;
 
-  const scale = resolveDataFieldsSize(settings.dataFieldsSize);
+  const px = overlayPxScale(width, height);
+  // Size is specified at 1080p, same as grid overlay strokes.
+  const scale = resolveDataFieldsSize(settings.dataFieldsSize) * px;
+  const padX = PAD_X * px;
+  const padY = PAD_Y * px;
   const valueType = resolveDataFieldsValueType(settings.dataFieldsValueType);
   const color = normalizeHex(
     settings.dataFieldsColor,
@@ -304,6 +311,8 @@ export function drawDataFields(
       x,
       y,
       scale,
+      padX,
+      padY,
     );
   }
 

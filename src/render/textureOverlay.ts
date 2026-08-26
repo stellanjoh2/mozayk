@@ -119,8 +119,9 @@ function prepareTextureLayer(
 }
 
 /**
- * Full-frame texture overlay after mosaic FX (canvas / PNG only).
- * Cover-crops like the source photo, then blends with opacity + optional tint.
+ * Full-frame texture overlay after mosaic FX, before colour-grade extras
+ * (canvas / PNG only). Cover-crops like the source photo, then blends
+ * with opacity + optional tint.
  */
 export function applyTextureOverlay(
   ctx: CanvasRenderingContext2D,

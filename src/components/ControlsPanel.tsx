@@ -152,6 +152,8 @@ type ControlsPanelProps = {
   gifFrameDelayCs: number;
   playbackFps: number;
   frameCount: number;
+  highQualityMode: boolean;
+  onHighQualityModeChange: (enabled: boolean) => void;
   onSettingsChange: (patch: Partial<FrameSettings>, immediateLayout?: boolean) => void;
   onRandomizeLayout: () => void;
   onRandomizeAll: () => void;
@@ -198,6 +200,9 @@ type ControlsPanelProps = {
 
 type PanelTab = "create" | "export" | "settings";
 
+/** One blur-crash FYI per tab session, even if Settings remounts. */
+let highQualityModeWarned = false;
+
 type ExportFormat = "png" | "jpg" | "mp4" | "gif" | "svg";
 
 const EXPORT_OPEN_DEFAULT: Record<ExportFormat, boolean> = {
@@ -217,6 +222,8 @@ export function ControlsPanel({
   gifFrameDelayCs,
   playbackFps,
   frameCount,
+  highQualityMode,
+  onHighQualityModeChange,
   onSettingsChange,
   onRandomizeLayout,
   onRandomizeAll,
@@ -282,6 +289,7 @@ export function ControlsPanel({
   const [chromeColor, setChromeColorOn] = useState(getChromeColor);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [heavyBlurDialogOpen, setHeavyBlurDialogOpen] = useState(false);
+  const [highQualityDialogOpen, setHighQualityDialogOpen] = useState(false);
   const [themesOpen, setThemesOpen] = useState(false);
   const [themesAnimating, setThemesAnimating] = useState(false);
   const shapes = settings.shapes ?? {
@@ -436,6 +444,18 @@ export function ControlsPanel({
         setHeavyBlurDialogOpen(false);
       }}
       onCancel={() => setHeavyBlurDialogOpen(false)}
+    />
+    <ConfirmDialog
+      open={highQualityDialogOpen}
+      title="Save your project"
+      message="Blur during sequence playback can crash the browser. Please save now just in case."
+      confirmLabel="Save"
+      cancelLabel="OK"
+      onConfirm={() => {
+        onSaveProject();
+        setHighQualityDialogOpen(false);
+      }}
+      onCancel={() => setHighQualityDialogOpen(false)}
     />
     <aside ref={panelRef} className="controls-panel">
       <div className="controls-panel__zoom">
@@ -1147,7 +1167,11 @@ export function ControlsPanel({
       >
         <HeadlineToggle
           title="Grid Blur"
-          hint="Gaussian blur over the finished mosaic · skipped during playback"
+          hint={
+            highQualityMode
+              ? "Gaussian blur over the finished mosaic"
+              : "Gaussian blur over the finished mosaic · skipped during playback"
+          }
           checked={Boolean(settings.gridBlur)}
           onChange={(gridBlur) => {
             onSettingsChange({ gridBlur }, false);
@@ -1682,6 +1706,26 @@ export function ControlsPanel({
             Paste Settings
           </button>
         </div>
+      </section>
+
+      <section
+        className={
+          highQualityMode ? "panel-section" : "panel-section is-off"
+        }
+      >
+        <h2>Playback</h2>
+        <ToggleRow
+          label="High Quality Mode"
+          hint="Keep blur on during sequence playback"
+          checked={highQualityMode}
+          onChange={(next) => {
+            onHighQualityModeChange(next);
+            if (next && !highQualityModeWarned) {
+              highQualityModeWarned = true;
+              setHighQualityDialogOpen(true);
+            }
+          }}
+        />
       </section>
 
       <section className={`panel-section${soundsOn ? "" : " is-off"}`}>

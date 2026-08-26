@@ -146,7 +146,7 @@ export type FrameSettings = {
   gridCrossesChaos?: number;
   /** Blend mode for crosses over the mosaic. Defaults to normal. */
   gridCrossesBlend?: GridBlendMode;
-  /** Final Gaussian blur over the finished mosaic. Skipped during live playback. */
+  /** Final Gaussian blur over the finished mosaic. Skipped during live playback unless high quality mode is on. */
   gridBlur?: boolean;
   /** Blur grid density — independent of layout density. */
   gridBlurDensity?: Density;

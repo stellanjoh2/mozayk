@@ -181,6 +181,7 @@ export default function App() {
   ]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
+  const [highQualityMode, setHighQualityMode] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [exportPreset, setExportPreset] = useState<ExportPreset>("1080p");
   const [mp4Preset, setMp4Preset] = useState<ExportPreset>("1080p");
@@ -765,12 +766,15 @@ export default function App() {
     setToast("Settings pasted");
   }, [pushUndoCheckpoint, updateActiveFrame]);
 
-  const handleApplyLookToAllFrames = useCallback(() => {
+  const handleApplyLookToAllFrames = useCallback((sourceIndex?: number) => {
     if (framesRef.current.length <= 1) return;
     pushUndoCheckpoint();
-    const sourceIndex = activeIndexRef.current;
     setFrames((prev) =>
-      applyLookToAllFrames(prev, sourceIndex, orientationRef.current),
+      applyLookToAllFrames(
+        prev,
+        sourceIndex ?? activeIndexRef.current,
+        orientationRef.current,
+      ),
     );
     setToast("Look applied to all frames");
   }, [pushUndoCheckpoint]);
@@ -1446,10 +1450,12 @@ export default function App() {
         gifFrameDelayCs={gifFrameDelayCs}
         playbackFps={playbackFps}
         frameCount={frames.length}
+        highQualityMode={highQualityMode}
+        onHighQualityModeChange={setHighQualityMode}
         onSettingsChange={handleSettingsChange}
         onRandomizeLayout={randomizeLayout}
         onRandomizeAll={randomizeAll}
-        onApplyLookToAllFrames={handleApplyLookToAllFrames}
+        onApplyLookToAllFrames={() => handleApplyLookToAllFrames()}
         onCopySettings={() => void handleCopySettings()}
         onPasteSettings={() => void handlePasteSettings()}
         onCopyPalette={() => void handleCopyPalette()}
@@ -1630,6 +1636,7 @@ export default function App() {
           fillStage={isMobileGate}
           pieceEditingEnabled={!playing && !viewOriginal}
           playing={playing}
+          highQualityMode={highQualityMode}
           shortcutLegend={shortcutLegend}
           onToggleInspect={isMobileGate ? undefined : toggleInspect}
           onMoveBlock={handleMoveBlock}
@@ -1641,6 +1648,7 @@ export default function App() {
           activeIndex={activeIndex}
           orientation={orientation}
           playing={playing}
+          highQualityMode={highQualityMode}
           playbackFps={playbackFps}
           onPlaybackFpsChange={setPlaybackFps}
           onSelect={setActiveIndex}
@@ -1650,6 +1658,7 @@ export default function App() {
           onRemove={handleRemoveFrame}
           onCopyStyle={handleCopyStyle}
           onPasteStyle={handlePasteStyle}
+          onApplyStyleToAll={handleApplyLookToAllFrames}
           canPasteStyle={canPasteStyle}
           canAddFrame={frames.length < MAX_FRAMES}
           onTogglePlay={togglePlay}

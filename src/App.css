@@ -3149,7 +3149,7 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
   z-index: 220;
   display: flex;
   flex-direction: column;
-  min-width: 228px;
+  min-width: 260px;
   height: 0;
   overflow: hidden;
   background: var(--glass);

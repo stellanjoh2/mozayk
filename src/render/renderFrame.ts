@@ -487,8 +487,6 @@ export function renderMosaic(
       !transparentBackground,
     );
   }
-  applyBonusFx(ctx, settings, width, height);
-
   if (textureOverlayImage) {
     try {
       applyTextureOverlay(
@@ -502,6 +500,8 @@ export function renderMosaic(
       console.error(error);
     }
   }
+
+  applyBonusFx(ctx, settings, width, height);
 
   return grid;
 }

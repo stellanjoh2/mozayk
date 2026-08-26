@@ -1,7 +1,9 @@
 import {
   dataFieldLabel,
+  resolveDataFieldsSize,
   resolveDataFieldsValueType,
 } from "./dataFields";
+import { overlayPxScale } from "./gridOverlay";
 
 function assert(condition: boolean, message: string): void {
   if (!condition) throw new Error(message);
@@ -41,6 +43,11 @@ function run(): void {
   const hex = dataFieldLabel("hex", 3, 2, 16, 9, 7);
   assert(/^[0-9A-F]{3}$/.test(hex), "hex is three uppercase digits");
   assert(hex === dataFieldLabel("hex", 3, 2, 16, 9, 7), "hex is stable");
+
+  const size = resolveDataFieldsSize(3);
+  assert(size * overlayPxScale(1920, 1080) === 3, "size 3 is 3px at 1080p");
+  assert(size * overlayPxScale(3840, 2160) === 6, "size 3 is 6px at 2160p");
+  assert(size * overlayPxScale(1280, 720) === 2, "size 3 is 2px at 720p");
 }
 
 run();

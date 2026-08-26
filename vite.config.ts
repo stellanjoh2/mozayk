@@ -24,4 +24,7 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ["gifski-wasm"],
   },
+  worker: {
+    format: "es",
+  },
 });
