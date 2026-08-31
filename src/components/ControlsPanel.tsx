@@ -1807,7 +1807,7 @@ export function ControlsPanel({
         </div>
         <div className="control-row">
           <span className="control-row__label">Colour</span>
-          <div className="button-row button-row--choice">
+          <div className="button-row button-row--3 button-row--choice">
             {CHROME_COLORS.map((id) => (
               <button
                 key={id}

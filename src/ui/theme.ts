@@ -6,12 +6,13 @@ export const CHROME_APPEARANCE_LABELS: Record<ChromeAppearance, string> = {
   light: "Light",
 };
 
-export const CHROME_COLORS = ["orange", "purple"] as const;
+export const CHROME_COLORS = ["orange", "purple", "orby"] as const;
 export type ChromeColor = (typeof CHROME_COLORS)[number];
 
 export const CHROME_COLOR_LABELS: Record<ChromeColor, string> = {
   orange: "Orange",
   purple: "Purple",
+  orby: "Orby",
 };
 
 const THEME_KEY = "mozayk-chrome-theme";

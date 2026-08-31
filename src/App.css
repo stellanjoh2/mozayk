@@ -12,20 +12,23 @@
   --logo-fill-3: var(--brand-orange);
   --logo-fill-4: #ffffff;
 
-  /* Chrome accent — UI highlight. Colour setting remaps this; logo slots stay put.
+  /* Chrome accent — UI highlight. Colour setting remaps this; logo slots stay
+     put except Orby, which remaps the three chromatics.
      --brand is the quiet primary (white on dark) so chrome stays behind the artwork.
      --brand-green is toggles only.
+     --chrome-fill is the solid plate on active choice buttons; --on-chrome sits on it.
      Piece-edit guides (--piece-guide*) follow --chrome so new UI colours inherit. */
   --chrome: var(--brand-orange);
+  --chrome-fill: var(--chrome);
   --glow-blur-tight: 10px;
   --glow-blur-wide: 22px;
   --glow-mix-tight: 22%;
   --glow-mix-wide: 14%;
   --glow-outer:
     0 0 var(--glow-blur-tight)
-      color-mix(in srgb, var(--chrome) var(--glow-mix-tight), transparent),
+      color-mix(in srgb, var(--chrome-fill) var(--glow-mix-tight), transparent),
     0 0 var(--glow-blur-wide)
-      color-mix(in srgb, var(--chrome) var(--glow-mix-wide), transparent);
+      color-mix(in srgb, var(--chrome-fill) var(--glow-mix-wide), transparent);
   --glow-brand:
     0 0 var(--glow-blur-tight)
       color-mix(in srgb, var(--brand) var(--glow-mix-tight), transparent),
@@ -43,6 +46,7 @@
   --brand: #ffffff;
   --brand-rgb: 255, 255, 255;
   --on-brand: #0f0f0f;
+  --on-chrome: var(--on-brand);
   --ink: #ffffff;
 
   /* Surfaces */
@@ -123,6 +127,25 @@ html[data-theme="light"] {
 
 html[data-chrome="purple"] {
   --chrome: var(--brand-purple);
+}
+
+/* Homage to Orby — https://github.com/stellanjoh2/orby */
+html[data-chrome="orby"] {
+  --orby-lime: #c4ff00;
+  --orby-purple: #3b00ff;
+  --orby-pink: #ff00c4;
+  --chrome: var(--orby-lime);
+  --chrome-fill: var(--orby-lime);
+  --brand-green: var(--orby-lime);
+  --on-chrome: #0f0f0f;
+  --logo-fill-1: var(--orby-purple);
+  --logo-fill-2: var(--orby-pink);
+  --logo-fill-3: var(--orby-lime);
+}
+
+html[data-theme="light"][data-chrome="orby"] {
+  /* Lime on white fails as type; purple is the readable Orby chromatic. */
+  --chrome: var(--orby-purple);
 }
 
 * {
@@ -1613,9 +1636,9 @@ html.normal-hover .button-row--choice button.is-active:hover::before {
 .timeline__controls > button.is-active,
 .canvas-stage-control-btn.is-active {
   --hover-plate-on: var(--brand);
-  --hover-plate-off: var(--chrome);
-  background: var(--chrome);
-  color: var(--on-brand);
+  --hover-plate-off: var(--chrome-fill);
+  background: var(--chrome-fill);
+  color: var(--on-chrome);
   box-shadow: var(--glow-outer);
   transition:
     background 0s,

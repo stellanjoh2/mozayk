@@ -40,7 +40,7 @@
         if (t !== "dark" && t !== "light") {
           t = localStorage.getItem("mozayk-light-theme") === "1" ? "light" : "dark";
         }
-        if (c !== "orange" && c !== "purple") c = "orange";
+        if (c !== "orange" && c !== "purple" && c !== "orby") c = "orange";
         document.documentElement.setAttribute("data-theme", t);
         document.documentElement.setAttribute("data-chrome", c);
       } catch (e) {}
