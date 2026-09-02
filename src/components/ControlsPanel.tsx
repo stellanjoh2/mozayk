@@ -1895,7 +1895,7 @@ export function ControlsPanel({
       </section>
 
       <section className="panel-section">
-        <h2>Brand</h2>
+        <h2>Extras</h2>
         <a
           className="panel-btn"
           href={`${import.meta.env.BASE_URL}logo.html`}
@@ -1903,6 +1903,14 @@ export function ControlsPanel({
           rel="noopener noreferrer"
         >
           Mozayk Logotype Creator
+        </a>
+        <a
+          className="panel-btn"
+          href={`${import.meta.env.BASE_URL}gallery.html`}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Gallery
         </a>
       </section>
       </>
