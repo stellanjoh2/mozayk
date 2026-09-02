@@ -17,7 +17,7 @@ import {
 import { createBentPanel, bendExisting } from "./bentPlane";
 import { FisheyePass } from "./fisheye";
 import { floorY, itemSize, ringRadius, slotAngles } from "./layout";
-import { kindFromSrc, loadMedia, type LoadedMedia } from "./media";
+import { kindFromSrc, loadMedia, previewSrc, type LoadedMedia } from "./media";
 import { createPanelMaterial, setPanelCorners, setPanelSaturation } from "./panelMaterial";
 import {
   DEFAULT_SETTINGS,
@@ -147,6 +147,8 @@ export class RingGallery {
   private capturing = false;
   private ro: ResizeObserver;
   private stepBlend = { t: 0 };
+  private fullJobs: { floor: number; run: () => Promise<void> }[] = [];
+  private drainingFull = false;
 
   constructor(el: HTMLElement, options: GalleryOptions = {}) {
     this.el = el;
@@ -598,31 +600,80 @@ export class RingGallery {
     }
   }
 
-  private async loadPanel(
+  private loadPanel(
     floor: Floor,
     index: number,
     item: GalleryItem,
     gen: number,
-  ): Promise<void> {
-    try {
-      const kind = kindFromSrc(item.src, item.kind);
-      const media = await loadMedia(item.src, kind);
-      const panel = floor.panels[index];
-      if (this.disposed || !panel || panel.loadGen !== gen) {
-        media.dispose();
-        return;
+  ): void {
+    const floorIndex = Math.max(0, this.floors.indexOf(floor));
+    const still = previewSrc(item.src);
+    const previewTask = still
+      ? loadMedia(still, "image")
+          .then((media) => {
+            if (!this.panelCurrent(floor, index, gen)) {
+              media.dispose();
+              return;
+            }
+            this.attachMedia(floor.panels[index], media);
+          })
+          .catch(() => {})
+      : Promise.resolve();
+
+    this.enqueueFullLoad(floorIndex, async () => {
+      await previewTask;
+      try {
+        const media = await loadMedia(item.src, kindFromSrc(item.src, item.kind));
+        if (!this.panelCurrent(floor, index, gen)) {
+          media.dispose();
+          return;
+        }
+        this.attachMedia(floor.panels[index], media);
+      } catch {
+        /* keep preview or empty plate */
       }
-      panel.media?.dispose();
-      panel.media = media;
-      media.texture.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
-      panel.mesh.material.map = media.texture;
-      panel.mesh.material.color.set(0xffffff);
-      panel.mesh.material.needsUpdate = true;
-      const { width, height } = itemSize(this.settings.ratio);
-      media.applyFit(width / height);
-    } catch {
-      /* keep empty plate */
+    });
+  }
+
+  private panelCurrent(floor: Floor, index: number, gen: number): boolean {
+    const panel = floor.panels[index];
+    return !this.disposed && !!panel && panel.loadGen === gen;
+  }
+
+  private attachMedia(panel: Panel, media: LoadedMedia): void {
+    panel.media?.dispose();
+    panel.media = media;
+    media.texture.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
+    panel.mesh.material.map = media.texture;
+    panel.mesh.material.color.set(0xffffff);
+    panel.mesh.material.needsUpdate = true;
+    const { width, height } = itemSize(this.settings.ratio);
+    media.applyFit(width / height);
+  }
+
+  private enqueueFullLoad(floor: number, run: () => Promise<void>): void {
+    this.fullJobs.push({ floor, run });
+    if (this.drainingFull) return;
+    this.drainingFull = true;
+    queueMicrotask(() => {
+      void this.drainFullLoads();
+    });
+  }
+
+  private async drainFullLoads(): Promise<void> {
+    const jobs = this.fullJobs.splice(0);
+    const floors = [...new Set(jobs.map((job) => job.floor))].sort((a, b) => a - b);
+    for (const floor of floors) {
+      if (this.disposed) break;
+      await Promise.all(
+        jobs.filter((job) => job.floor === floor).map((job) => job.run()),
+      );
     }
+    if (this.fullJobs.length && !this.disposed) {
+      await this.drainFullLoads();
+      return;
+    }
+    this.drainingFull = false;
   }
 
   private clearFloors(): void {

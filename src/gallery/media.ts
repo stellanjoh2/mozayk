@@ -25,6 +25,22 @@ export function kindFromSrc(src: string, fallback?: MediaKind): MediaKind {
   return "image";
 }
 
+/** Tiny still next to a gallery asset: `gallery/floor1/x.gif` → `gallery/preview/floor1/x.jpg`. */
+export function previewSrc(src: string): string | null {
+  if (src.startsWith("blob:") || src.startsWith("data:")) return null;
+  const q = src.indexOf("?");
+  const path = q < 0 ? src : src.slice(0, q);
+  const marker = "/gallery/";
+  const i = path.indexOf(marker);
+  if (i < 0) return null;
+  const rest = path.slice(i + marker.length);
+  if (!rest || rest.startsWith("preview/")) return null;
+  const dot = rest.lastIndexOf(".");
+  if (dot < 0) return null;
+  const next = `${path.slice(0, i + marker.length)}preview/${rest.slice(0, dot)}.jpg`;
+  return q < 0 ? next : `${next}${src.slice(q)}`;
+}
+
 export type LoadedMedia = {
   texture: Texture;
   tick: ((dt: number) => void) | null;
