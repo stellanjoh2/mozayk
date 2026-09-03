@@ -50,7 +50,24 @@ export type TextureOverlayBlendMode =
   | "hard-light"
   | "screen"
   | "difference";
-export type ShapeType = "block" | "sphere" | "ring" | "triangle" | "cross";
+export type ShapeType =
+  | "block"
+  | "sphere"
+  | "ring"
+  | "triangle"
+  | "cross"
+  | "clover"
+  | "arrows"
+  | "spots"
+  | "arcs"
+  | "quads"
+  | "checks"
+  | "wedges"
+  | "ex"
+  | "star"
+  | "bloom"
+  | "flower"
+  | "blossom";
 export type LayoutSource = "procedural" | "imported";
 
 export const RANDOMIZE_PAUSE_KEYS = [
@@ -75,6 +92,30 @@ export type ShapePalette = {
   triangle: boolean;
   /** Plus-shaped cross inscribed in the cell. */
   cross: boolean;
+  /** Four circular petals meeting at the centre. */
+  clover: boolean;
+  /** Four arrows pointing to the cell corners. */
+  arrows: boolean;
+  /** Four circular spots in the cell corners. */
+  spots: boolean;
+  /** Four thick quarter-ring arcs in the cell corners. */
+  arcs: boolean;
+  /** Four circles filling a 2×2 grid. */
+  quads: boolean;
+  /** Checkerboard of squares. */
+  checks: boolean;
+  /** Four right triangles, one per quadrant. */
+  wedges: boolean;
+  /** Thick X (saltire) inscribed in the cell. */
+  ex: boolean;
+  /** Eight-pointed star. */
+  star: boolean;
+  /** Scalloped eight-petal bloom. */
+  bloom: boolean;
+  /** Four-lobe flower with a centre hole. */
+  flower: boolean;
+  /** Four-lobe flower with a hole in each lobe. */
+  blossom: boolean;
 };
 
 export type MosaicBlock = {

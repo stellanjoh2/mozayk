@@ -42,6 +42,18 @@ const SHAPE_TYPES = new Set<ShapeType>([
   "ring",
   "triangle",
   "cross",
+  "clover",
+  "arrows",
+  "spots",
+  "arcs",
+  "quads",
+  "checks",
+  "wedges",
+  "ex",
+  "star",
+  "bloom",
+  "flower",
+  "blossom",
 ]);
 
 export type SettingsClipboardPayload = {
@@ -158,7 +170,24 @@ function parseColors(value: unknown): string[] {
 
 function parseShapePalette(value: unknown): ShapePalette {
   if (!value || typeof value !== "object") {
-    return { sphere: true, ring: true, triangle: true, cross: true };
+    return {
+      sphere: true,
+      ring: true,
+      triangle: true,
+      cross: true,
+      clover: true,
+      arrows: true,
+      spots: true,
+      arcs: true,
+      quads: true,
+      checks: true,
+      wedges: true,
+      ex: true,
+      star: true,
+      bloom: true,
+      flower: true,
+      blossom: true,
+    };
   }
   const record = value as Record<string, unknown>;
   return {
@@ -166,6 +195,18 @@ function parseShapePalette(value: unknown): ShapePalette {
     ring: Boolean(record.ring),
     triangle: Boolean(record.triangle),
     cross: Boolean(record.cross),
+    clover: Boolean(record.clover),
+    arrows: Boolean(record.arrows),
+    spots: Boolean(record.spots),
+    arcs: Boolean(record.arcs),
+    quads: Boolean(record.quads),
+    checks: Boolean(record.checks),
+    wedges: Boolean(record.wedges),
+    ex: Boolean(record.ex),
+    star: Boolean(record.star),
+    bloom: Boolean(record.bloom),
+    flower: Boolean(record.flower),
+    blossom: Boolean(record.blossom),
   };
 }
 

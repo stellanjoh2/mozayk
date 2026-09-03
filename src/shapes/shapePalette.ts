@@ -9,14 +9,31 @@ export const OPTIONAL_SHAPES: OptionalShape[] = [
   "ring",
   "triangle",
   "cross",
+  "clover",
+  "arrows",
+  "spots",
+  "arcs",
+  "quads",
+  "checks",
+  "wedges",
+  "ex",
+  "star",
+  "bloom",
+  "flower",
+  "blossom",
 ];
+
+export function anyOptionalShapeEnabled(
+  shapes: FrameSettings["shapes"],
+): boolean {
+  return OPTIONAL_SHAPES.some((shape) => shapes[shape]);
+}
 
 export function getShapePool(settings: FrameSettings): ShapeType[] {
   const pool: ShapeType[] = ["block"];
-  if (settings.shapes.sphere) pool.push("sphere");
-  if (settings.shapes.ring) pool.push("ring");
-  if (settings.shapes.triangle) pool.push("triangle");
-  if (settings.shapes.cross) pool.push("cross");
+  for (const shape of OPTIONAL_SHAPES) {
+    if (settings.shapes[shape]) pool.push(shape);
+  }
   return pool;
 }
 

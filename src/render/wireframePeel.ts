@@ -10,6 +10,11 @@ import type {
   GridOverlayStroke,
   MosaicBlock,
 } from "../types";
+import {
+  isGalleryShape,
+  strokeGalleryShapeInside,
+  svgGalleryShape,
+} from "../shapes/galleryShapes";
 import { blockCornerRadiusPx } from "./cornerRadius";
 import { resolveGridOverlayStroke } from "./gridOverlayParams";
 import { isExtrasEnabled } from "./bonusFx";
@@ -194,6 +199,11 @@ export function drawBlockInnerStroke(
     return;
   }
 
+  if (isGalleryShape(block.shape)) {
+    strokeGalleryShapeInside(ctx, block.shape, rect, color, stroke);
+    return;
+  }
+
   if (drawW <= 0 || drawH <= 0) return;
   const radius = Math.min(
     blockCornerRadiusPx(raw.width, raw.height, cornerRadius),
@@ -340,6 +350,17 @@ export function svgWireframeBlock(
       color,
       stroke,
     );
+  }
+
+  if (isGalleryShape(block.shape)) {
+    const inner = svgGalleryShape(block.shape, {
+      x,
+      y,
+      width: drawW,
+      height: drawH,
+    });
+    if (!inner) return "";
+    return svgClippedStroke(clipId, inner, color, stroke);
   }
 
   if (drawW <= 0 || drawH <= 0) return "";

@@ -86,6 +86,7 @@ function run(): void {
   assert(legacy.settings.randomWidth === true, "omitted randomWidth defaults on");
   assert(legacy.settings.randomHeight === true, "omitted randomHeight defaults on");
   assert(legacy.settings.shapes.sphere === true, "omitted shapes default to the mix palette");
+  assert(legacy.settings.shapes.clover === true, "omitted shapes include later gallery extras");
   assert(legacy.settings.wireframePeel === false, "omitted wireframe peel defaults off");
   assert(legacy.settings.wireframePeelStroke === 1, "omitted wireframe peel stroke defaults to 1px");
   assert(legacy.settings.cornerRadius === 0, "omitted corner radius defaults to 0");

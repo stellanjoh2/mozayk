@@ -59,6 +59,13 @@ import {
   WIREFRAME_PEEL_STROKE_DEFAULT,
 } from "../render/wireframePeel";
 import {
+  GALLERY_SHAPE_PATHS,
+  GALLERY_SHAPE_VIEWBOX,
+  type GalleryShape,
+} from "../shapes/galleryShapes";
+import { anyOptionalShapeEnabled } from "../shapes/shapePalette";
+import { createDefaultShapePalette } from "../state/frameUtils";
+import {
   ORIENTATION_LABELS,
   ORIENTATIONS,
   type DataFieldsValueType,
@@ -143,6 +150,18 @@ const DATA_FIELDS_VALUE_SELECT_OPTIONS = DATA_FIELDS_VALUE_TYPES.map(
     label: DATA_FIELDS_VALUE_TYPE_LABELS[type],
   }),
 );
+
+function GalleryShapeIcon({ shape }: { shape: GalleryShape }) {
+  return (
+    <svg
+      className="shape-icon"
+      viewBox={`0 0 ${GALLERY_SHAPE_VIEWBOX} ${GALLERY_SHAPE_VIEWBOX}`}
+      aria-hidden="true"
+    >
+      <path fill="currentColor" fillRule="evenodd" d={GALLERY_SHAPE_PATHS[shape]} />
+    </svg>
+  );
+}
 
 type ControlsPanelProps = {
   frame: Frame;
@@ -293,13 +312,11 @@ export function ControlsPanel({
   const [highQualityDialogOpen, setHighQualityDialogOpen] = useState(false);
   const [themesOpen, setThemesOpen] = useState(false);
   const [themesAnimating, setThemesAnimating] = useState(false);
-  const shapes = settings.shapes ?? {
-    sphere: false,
-    ring: false,
-    triangle: false,
-    cross: false,
+  const shapes = {
+    ...createDefaultShapePalette(),
+    ...settings.shapes,
   };
-  const anyShapeActive = shapes.sphere || shapes.ring || shapes.triangle || shapes.cross;
+  const anyShapeActive = anyOptionalShapeEnabled(shapes);
   const textureOverlayOn = isTextureOverlayEnabled(
     settings,
     Boolean(frame.textureOverlay),
@@ -661,6 +678,26 @@ export function ControlsPanel({
           </button>
           <button
             type="button"
+            aria-label="Spots"
+            aria-pressed={Boolean(shapes.spots)}
+            className={shapes.spots ? "is-active" : ""}
+            onClick={() => toggleShape("spots")}
+          >
+            <GalleryShapeIcon shape="spots" />
+          </button>
+          <button
+            type="button"
+            aria-label="Quads"
+            aria-pressed={Boolean(shapes.quads)}
+            className={shapes.quads ? "is-active" : ""}
+            onClick={() => toggleShape("quads")}
+          >
+            <GalleryShapeIcon shape="quads" />
+          </button>
+        </div>
+        <div className="button-row button-row--4 button-row--shape-icons">
+          <button
+            type="button"
             aria-label="Triangles"
             aria-pressed={Boolean(shapes.triangle)}
             className={shapes.triangle ? "is-active" : ""}
@@ -669,6 +706,15 @@ export function ControlsPanel({
             <svg className="shape-icon" viewBox="0 0 24 24" aria-hidden="true">
               <polygon points="2,2 22,2 22,22" fill="currentColor" />
             </svg>
+          </button>
+          <button
+            type="button"
+            aria-label="Wedges"
+            aria-pressed={Boolean(shapes.wedges)}
+            className={shapes.wedges ? "is-active" : ""}
+            onClick={() => toggleShape("wedges")}
+          >
+            <GalleryShapeIcon shape="wedges" />
           </button>
           <button
             type="button"
@@ -683,6 +729,91 @@ export function ControlsPanel({
                 d="M9 2h6v7h7v6h-7v7H9v-7H2V9h7V2z"
               />
             </svg>
+          </button>
+          <button
+            type="button"
+            aria-label="Checks"
+            aria-pressed={Boolean(shapes.checks)}
+            className={shapes.checks ? "is-active" : ""}
+            onClick={() => toggleShape("checks")}
+          >
+            <GalleryShapeIcon shape="checks" />
+          </button>
+        </div>
+        <div className="button-row button-row--4 button-row--shape-icons">
+          <button
+            type="button"
+            aria-label="Clovers"
+            aria-pressed={Boolean(shapes.clover)}
+            className={shapes.clover ? "is-active" : ""}
+            onClick={() => toggleShape("clover")}
+          >
+            <GalleryShapeIcon shape="clover" />
+          </button>
+          <button
+            type="button"
+            aria-label="Arrows"
+            aria-pressed={Boolean(shapes.arrows)}
+            className={shapes.arrows ? "is-active" : ""}
+            onClick={() => toggleShape("arrows")}
+          >
+            <GalleryShapeIcon shape="arrows" />
+          </button>
+          <button
+            type="button"
+            aria-label="Xs"
+            aria-pressed={Boolean(shapes.ex)}
+            className={shapes.ex ? "is-active" : ""}
+            onClick={() => toggleShape("ex")}
+          >
+            <GalleryShapeIcon shape="ex" />
+          </button>
+          <button
+            type="button"
+            aria-label="Arcs"
+            aria-pressed={Boolean(shapes.arcs)}
+            className={shapes.arcs ? "is-active" : ""}
+            onClick={() => toggleShape("arcs")}
+          >
+            <GalleryShapeIcon shape="arcs" />
+          </button>
+        </div>
+        <div className="button-row button-row--4 button-row--shape-icons">
+          <button
+            type="button"
+            aria-label="Stars"
+            aria-pressed={Boolean(shapes.star)}
+            className={shapes.star ? "is-active" : ""}
+            onClick={() => toggleShape("star")}
+          >
+            <GalleryShapeIcon shape="star" />
+          </button>
+          <button
+            type="button"
+            aria-label="Blooms"
+            aria-pressed={Boolean(shapes.bloom)}
+            className={shapes.bloom ? "is-active" : ""}
+            onClick={() => toggleShape("bloom")}
+          >
+            <GalleryShapeIcon shape="bloom" />
+          </button>
+          <button
+            type="button"
+            aria-label="Flowers"
+            aria-pressed={Boolean(shapes.flower)}
+            className={shapes.flower ? "is-active" : ""}
+            onClick={() => toggleShape("flower")}
+          >
+            <GalleryShapeIcon shape="flower" />
+          </button>
+          <button
+            type="button"
+            aria-label="Blossoms"
+            aria-pressed={Boolean(shapes.blossom)}
+            className={shapes.blossom ? "is-active" : ""}
+            onClick={() => toggleShape("blossom")}
+          >
+            <GalleryShapeIcon shape="blossom" />
           </button>
         </div>
         <SliderRow

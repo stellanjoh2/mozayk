@@ -555,7 +555,10 @@ export default function App() {
       let settings: FrameSettings = {
         ...frame.settings,
         scaleBlend: frame.settings.scaleBlend ?? 3,
-        shapes: frame.settings.shapes ?? createDefaultShapePalette(),
+        shapes: {
+          ...createDefaultShapePalette(),
+          ...frame.settings.shapes,
+        },
         ringThickness: frame.settings.ringThickness ?? 45,
         colors: [...frame.settings.colors],
         colorAmounts: colorAmountsForSettings(frame.settings),

@@ -1599,6 +1599,10 @@ html.normal-hover .button-row--choice button.is-active:hover::before {
   grid-template-columns: repeat(4, 1fr);
 }
 
+.button-row--shape-icons + .button-row--shape-icons {
+  margin-top: calc(8px - var(--settings-row-gap));
+}
+
 .button-row--shape-icons button {
   aspect-ratio: 1;
   display: flex;

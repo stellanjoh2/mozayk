@@ -19,6 +19,10 @@ import { isExtrasEnabled } from "./bonusFx";
 import type { RenderOptions } from "./renderFrame";
 import { largestRingRadius, ringInnerRadius } from "./ringGeometry";
 import {
+  isGalleryShape,
+  svgGalleryShape,
+} from "../shapes/galleryShapes";
+import {
   insetCrossRects,
   insetPixelRect,
   shapeGapInsetPx,
@@ -122,6 +126,14 @@ function svgBlock(
       `<rect x="${horizontal.x}" y="${horizontal.y}" width="${horizontal.width}" height="${horizontal.height}" fill="${block.color}"/>`,
       `<rect x="${vertical.x}" y="${vertical.y}" width="${vertical.width}" height="${vertical.height}" fill="${block.color}"/>`,
     ].join("");
+  }
+
+  if (isGalleryShape(block.shape)) {
+    return svgGalleryShape(
+      block.shape,
+      { x, y, width: drawW, height: drawH },
+      ` fill="${block.color}"`,
+    );
   }
 
   const radius = Math.min(

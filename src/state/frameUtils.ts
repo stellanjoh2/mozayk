@@ -32,6 +32,7 @@ import {
 } from "../import/imageImport";
 import type { ImageImportResult } from "../import/imageImport";
 import { getCachedSourceImage } from "../import/imageSource";
+import { OPTIONAL_SHAPES } from "../shapes/shapePalette";
 import type { SettingsClipboard } from "./settingsClipboard";
 import type { PalettePreset } from "../presets/palettePresets";
 import type {
@@ -86,7 +87,24 @@ function withDerivedLayout(
 }
 
 export function createDefaultShapePalette(): FrameSettings["shapes"] {
-  return { sphere: false, ring: false, triangle: false, cross: false };
+  return {
+    sphere: false,
+    ring: false,
+    triangle: false,
+    cross: false,
+    clover: false,
+    arrows: false,
+    spots: false,
+    arcs: false,
+    quads: false,
+    checks: false,
+    wedges: false,
+    ex: false,
+    star: false,
+    bloom: false,
+    flower: false,
+    blossom: false,
+  };
 }
 
 export function equalColorAmounts(count: number): number[] {
@@ -273,11 +291,8 @@ function shapeSettingsChanged(from: FrameSettings, to: FrameSettings): boolean {
   if (from.shapeMix !== to.shapeMix) return true;
   const fromShapes = from.shapes ?? createDefaultShapePalette();
   const toShapes = to.shapes ?? createDefaultShapePalette();
-  return (
-    fromShapes.sphere !== toShapes.sphere ||
-    fromShapes.ring !== toShapes.ring ||
-    fromShapes.triangle !== toShapes.triangle ||
-    fromShapes.cross !== toShapes.cross
+  return OPTIONAL_SHAPES.some(
+    (shape) => fromShapes[shape] !== toShapes[shape],
   );
 }
 

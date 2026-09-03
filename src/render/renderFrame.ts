@@ -26,6 +26,10 @@ import {
 } from "./gridOverlay";
 import { largestRingRadius, ringInnerRadius } from "./ringGeometry";
 import {
+  fillGalleryShape,
+  isGalleryShape,
+} from "../shapes/galleryShapes";
+import {
   insetCrossRects,
   insetPixelRect,
   shapeGapInsetPx,
@@ -189,6 +193,11 @@ function drawBlock(
       horizontal.height,
     );
     ctx.fillRect(vertical.x, vertical.y, vertical.width, vertical.height);
+    return;
+  }
+
+  if (isGalleryShape(block.shape)) {
+    fillGalleryShape(ctx, block.shape, rect, block.color);
     return;
   }
 
