@@ -1910,7 +1910,7 @@ export function ControlsPanel({
           target="_blank"
           rel="noopener noreferrer"
         >
-          Gallery
+          Launch Gallery
         </a>
       </section>
       </>

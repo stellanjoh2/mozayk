@@ -110,7 +110,7 @@ export class RingGallery {
   private facedIndex = -1;
   private onSelect: ((index: number, ring?: number) => void) | null = null;
 
-  private autoRotate = false;
+  private autoRotate = true;
   private autoSpeed = 1;
   private aligning = false;
   private keySpin = 0;
