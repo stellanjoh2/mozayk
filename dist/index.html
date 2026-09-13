@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/mozayk/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>mozayk</title>
+    <meta
+      name="description"
+      content="Browser-based mosaic generator for abstract grid compositions, animation, and image-driven layouts."
+    />
+    <link rel="canonical" href="https://stellanjoh2.github.io/mozayk/" />
+    <meta property="og:title" content="mozayk" />
+    <meta
+      property="og:description"
+      content="Browser-based mosaic generator for abstract grid compositions, animation, and image-driven layouts."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://stellanjoh2.github.io/mozayk/" />
+    <meta
+      property="og:image"
+      content="https://stellanjoh2.github.io/mozayk/share-image.jpg"
+    />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="mozayk mosaic generator" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:image"
+      content="https://stellanjoh2.github.io/mozayk/share-image.jpg"
+    />
+    <script>
+      try {
+        var t = localStorage.getItem("mozayk-chrome-theme");
+        var c = localStorage.getItem("mozayk-chrome-color");
+        if (t === "pink" || t === "purple") {
+          if (!c) c = "purple";
+          t = "dark";
+        }
+        if (t !== "dark" && t !== "light") {
+          t = localStorage.getItem("mozayk-light-theme") === "1" ? "light" : "dark";
+        }
+        if (c !== "orange" && c !== "purple" && c !== "orby") c = "orange";
+        document.documentElement.setAttribute("data-theme", t);
+        document.documentElement.setAttribute("data-chrome", c);
+      } catch (e) {}
+    </script>
+    <script type="module" crossorigin src="/mozayk/assets/main-DkAa68ev.js"></script>
+    <link rel="modulepreload" crossorigin href="/mozayk/assets/jsx-runtime-CB-XP10L.js">
+    <link rel="modulepreload" crossorigin href="/mozayk/assets/sounds-Rz78j7cB.js">
+    <link rel="modulepreload" crossorigin href="/mozayk/assets/paintLogo-CA9qNhoo.js">
+    <link rel="modulepreload" crossorigin href="/mozayk/assets/preload-helper-rI0Ag0bH.js">
+    <link rel="modulepreload" crossorigin href="/mozayk/assets/gsap-DWxn8li7.js">
+    <link rel="modulepreload" crossorigin href="/mozayk/assets/galleryShapes-ac8c5IMM.js">
+    <link rel="modulepreload" crossorigin href="/mozayk/assets/cursors-KBRUDm2F.js">
+    <link rel="modulepreload" crossorigin href="/mozayk/assets/scrollbar-BHfdPkZn.js">
+    <link rel="stylesheet" crossorigin href="/mozayk/assets/sounds-DrwKqici.css">
+    <link rel="stylesheet" crossorigin href="/mozayk/assets/preload-helper-pU_Dxnf3.css">
+    <link rel="stylesheet" crossorigin href="/mozayk/assets/main-5GxBc0O0.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

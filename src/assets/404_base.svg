@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 135 45">
+  <defs>
+    <style>
+      .st0 {
+        fill: #010101;
+      }
+    </style>
+  </defs>
+  <!-- First "4" -->
+  <rect class="st0" x="18" y="0" width="9" height="9"/>
+  <rect class="st0" x="18" y="9" width="9" height="9"/>
+  <rect class="st0" x="18" y="18" width="9" height="9"/>
+  <rect class="st0" x="0" y="18" width="9" height="9"/>
+  <rect class="st0" x="9" y="18" width="9" height="9"/>
+  <rect class="st0" x="18" y="27" width="9" height="9"/>
+  <rect class="st0" x="18" y="36" width="9" height="9"/>
+  
+  <!-- First "0" -->
+  <rect class="st0" x="36" y="0" width="9" height="9"/>
+  <rect class="st0" x="45" y="0" width="9" height="9"/>
+  <rect class="st0" x="36" y="9" width="9" height="9"/>
+  <rect class="st0" x="54" y="9" width="9" height="9"/>
+  <rect class="st0" x="36" y="18" width="9" height="9"/>
+  <rect class="st0" x="54" y="18" width="9" height="9"/>
+  <rect class="st0" x="36" y="27" width="9" height="9"/>
+  <rect class="st0" x="54" y="27" width="9" height="9"/>
+  <rect class="st0" x="36" y="36" width="9" height="9"/>
+  <rect class="st0" x="45" y="36" width="9" height="9"/>
+  
+  <!-- Second "4" -->
+  <rect class="st0" x="81" y="0" width="9" height="9"/>
+  <rect class="st0" x="81" y="9" width="9" height="9"/>
+  <rect class="st0" x="81" y="18" width="9" height="9"/>
+  <rect class="st0" x="63" y="18" width="9" height="9"/>
+  <rect class="st0" x="72" y="18" width="9" height="9"/>
+  <rect class="st0" x="81" y="27" width="9" height="9"/>
+  <rect class="st0" x="81" y="36" width="9" height="9"/>
+  
+  <!-- Second "0" -->
+  <rect class="st0" x="99" y="0" width="9" height="9"/>
+  <rect class="st0" x="108" y="0" width="9" height="9"/>
+  <rect class="st0" x="99" y="9" width="9" height="9"/>
+  <rect class="st0" x="117" y="9" width="9" height="9"/>
+  <rect class="st0" x="99" y="18" width="9" height="9"/>
+  <rect class="st0" x="117" y="18" width="9" height="9"/>
+  <rect class="st0" x="99" y="27" width="9" height="9"/>
+  <rect class="st0" x="117" y="27" width="9" height="9"/>
+  <rect class="st0" x="99" y="36" width="9" height="9"/>
+  <rect class="st0" x="108" y="36" width="9" height="9"/>
+</svg>
