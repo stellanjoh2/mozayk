@@ -35,8 +35,8 @@ type EmitterSettings = {
 };
 
 const DEFAULT_SETTINGS: EmitterSettings = {
-  particleCount: 18,
-  particleSize: 104,
+  particleCount: 24,
+  particleSize: 120,
   randomness: 1,
   rotationSpeed: 1.9,
   rotationRandomness: 0.87,
