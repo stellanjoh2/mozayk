@@ -34,13 +34,13 @@ type EmitterSettings = {
 };
 
 const DEFAULT_SETTINGS: EmitterSettings = {
-  particleCount: 17,
+  particleCount: 31,
   particleSize: 104,
   randomness: 0.44,
-  rotationSpeed: 2.3,
+  rotationSpeed: 1.9,
   rotationRandomness: 0.87,
-  gravity: 1250,
-  blastRadius: 660,
+  gravity: 2300,
+  blastRadius: 1000,
   scrollSpeed: 84,
   buttonSize: 0.75,
 };
