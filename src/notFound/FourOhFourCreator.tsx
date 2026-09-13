@@ -4,7 +4,6 @@ import { paintLogoWithBrandTokens } from "../logo/paintLogo";
 import {
   LOGO_WHITE,
   logoPieces,
-  PIECE_SELECTOR,
   setPieceVisible,
   type Speed,
   SPEEDS,
@@ -49,14 +48,6 @@ export function FourOhFourCreator({ className }: { className?: string }) {
     if (loopTimerRef.current == null) return;
     window.clearTimeout(loopTimerRef.current);
     loopTimerRef.current = null;
-  };
-
-  const showAllPieces = () => {
-    const svg = markRef.current?.querySelector("svg");
-    if (!svg) return;
-    for (const el of svg.querySelectorAll(PIECE_SELECTOR)) {
-      setPieceVisible(el as SVGElement, true);
-    }
   };
 
   const paintFourOhFour = () => paintLogoWithBrandTokens(fourOhFourBaseSvg);
