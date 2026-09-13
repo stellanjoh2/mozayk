@@ -1,0 +1,199 @@
+:root {
+  --bg: #0e0e0e;
+  --text: rgba(255, 255, 255, 0.92);
+  --muted: rgba(255, 255, 255, 0.45);
+  --chrome: #ff5300;
+  --panel: #131313;
+  --font-ui:
+    "Bitcount Grid Single Variable",
+    "Bitcount Grid Single",
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    monospace;
+  --ui-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  color-scheme: dark;
+  font-family: var(--font-ui);
+}
+
+.not-found {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.not-found__blend {
+  position: absolute;
+  inset: 0;
+}
+
+.not-found__canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.not-found__stack {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  pointer-events: none;
+  mix-blend-mode: difference;
+}
+
+.not-found__mark {
+  /* Font size = fraction of viewport height */
+  width: auto;
+  height: calc(var(--nf-font-size, 1) * 100vh);
+  max-height: 90vh;
+}
+
+.not-found__mark svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.not-found__cta {
+  position: absolute;
+  /* Park in a “0” hole — offset uses one unit “404” width at current font size. */
+  left: calc(
+    50% + (var(--nf-cta-at, 0.5) - 0.5) * var(--nf-font-size, 1) * 100vh *
+      var(--nf-unit-aspect, 2)
+  );
+  top: 50%;
+  z-index: 2;
+  transform: translate(-50%, -50%);
+  appearance: none;
+  pointer-events: auto;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* Optical: Bitcount ink sits left in its cells, so equal pad looks left-heavy. */
+  padding: calc(28px * var(--nf-button-scale, 1))
+    calc(44px * var(--nf-button-scale, 1))
+    calc(28px * var(--nf-button-scale, 1))
+    calc(56px * var(--nf-button-scale, 1));
+  border: none;
+  background: var(--chrome);
+  color: #000;
+  font: inherit;
+  font-size: calc(44px * var(--nf-button-scale, 1));
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.not-found__cta:hover {
+  filter: brightness(1.08);
+}
+
+.not-found__dev {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 10;
+  box-sizing: border-box;
+  width: min(280px, calc(100vw - 32px));
+  padding: 14px 16px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.3;
+  pointer-events: auto;
+}
+
+.not-found__dev-title {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 400;
+  color: #fff;
+}
+
+.not-found__dev-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 12px;
+  margin: 0 0 10px;
+  align-items: baseline;
+}
+
+.not-found__dev-row:last-child {
+  margin-bottom: 0;
+}
+
+.not-found__dev-row label {
+  grid-column: 1 / -1;
+  color: var(--muted);
+}
+
+.not-found__dev-row input[type="range"] {
+  grid-column: 1 / -1;
+  width: 100%;
+  margin: 0;
+  accent-color: var(--chrome);
+}
+
+.not-found__dev-text {
+  box-sizing: border-box;
+  grid-column: 1 / -1;
+  width: 100%;
+  margin: 0;
+  padding: 6px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+
+.not-found__dev-text:focus {
+  outline: 1px solid var(--chrome);
+  border-color: var(--chrome);
+}
+
+.not-found__dev-value {
+  grid-column: 2;
+  grid-row: 1;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.not-found__dev-copy {
+  appearance: none;
+  display: block;
+  width: 100%;
+  margin: 12px 0 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.not-found__dev-copy:hover {
+  border-color: var(--chrome);
+  color: #fff;
+}

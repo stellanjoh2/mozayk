@@ -1,0 +1,164 @@
+:root {
+  --bg: #0e0e0e;
+  --text: rgba(255, 255, 255, 0.92);
+  --muted: rgba(255, 255, 255, 0.45);
+  --font-ui:
+    "Bitcount Grid Single Variable",
+    "Bitcount Grid Single",
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    monospace;
+  --ui-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --scrollbar-thumb: color-mix(in srgb, var(--text) 18%, transparent);
+  --scrollbar-thumb-hover: color-mix(in srgb, var(--text) 32%, transparent);
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  color-scheme: dark;
+  font-family: var(--font-ui);
+}
+
+.stats-page {
+  box-sizing: border-box;
+  width: min(100%, 1056px);
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: 64px 32px;
+  text-align: left;
+}
+
+.stats-page__home,
+.stats-page h1,
+.stats-page__label,
+.stats-page__value,
+.stats-page__disclaimer,
+.stats-page__meta {
+  margin: 0;
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+.stats-page__home {
+  margin-bottom: 1.15em;
+  font-size: calc(48px * 2 / 3);
+}
+
+.stats-page h1 {
+  margin: 0 0 1.15em;
+  font-size: 48px;
+  color: #ffffff;
+}
+
+.stats-page__totals {
+  display: flex;
+  flex-direction: column;
+  gap: 1.6em;
+  margin: 0 0 1.6em;
+}
+
+.stats-page__row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2em;
+}
+
+.stats-page__label,
+.stats-page__value,
+.stats-page__disclaimer {
+  font-size: 48px;
+  color: #ffffff;
+}
+
+.stats-page__value {
+  font-variant-numeric: tabular-nums;
+}
+
+.stats-page__disclaimer {
+  margin: 1.6em 0 0;
+  overflow-wrap: break-word;
+}
+
+.stats-page__disclaimer code {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+.stats-page__meta {
+  margin: 1.15em 0 0;
+  font-size: calc(48px * 2 / 3);
+  color: var(--muted);
+}
+
+.stats-page a {
+  color: inherit;
+  text-underline-offset: 0.12em;
+}
+
+.typewriter-reveal {
+  position: relative;
+  display: block;
+}
+
+.typewriter-reveal__ghost {
+  visibility: hidden;
+  pointer-events: none;
+  white-space: pre-wrap;
+}
+
+.typewriter-reveal__live {
+  position: absolute;
+  inset: 0;
+  white-space: pre-wrap;
+}
+
+.typewriter-reveal__caret {
+  display: inline-block;
+  width: 0.55em;
+  height: 0.9em;
+  margin-left: 2px;
+  background: currentColor;
+  vertical-align: -0.12em;
+  animation: typewriter-reveal-caret-blink 0.64s steps(1) infinite;
+}
+
+@keyframes typewriter-reveal-caret-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.stats-page a:hover {
+  animation: hover-plate-blink calc(4s / 30) linear infinite;
+}
+
+@keyframes hover-plate-blink {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  50.001%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stats-page a:hover {
+    animation: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .stats-page {
+    padding: 48px 20px;
+  }
+}

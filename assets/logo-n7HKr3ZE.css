@@ -1,0 +1,258 @@
+:root {
+  --panel: #131313;
+  --panel-border: rgba(255, 255, 255, 0.1);
+  --text: rgba(255, 255, 255, 0.92);
+  --muted: rgba(255, 255, 255, 0.45);
+  --fill-faint: color-mix(in srgb, var(--text) 6%, transparent);
+  --fill-strong: color-mix(in srgb, var(--text) 22%, transparent);
+  --control-radius: 0;
+  --settings-label-h: 20px;
+  --panel-label-size: 16px;
+  --ui-compact-zoom: 1;
+  --cursor-default: default;
+  --cursor-crosshair: crosshair;
+  --cursor-text: text;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  background: #000;
+  color-scheme: dark;
+  font-family:
+    "Bitcount Grid Single Variable",
+    "Bitcount Grid Single",
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    monospace;
+}
+
+.logo-creator {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  background: #000;
+  color: #fff;
+  font-family:
+    "Bitcount Grid Single Variable",
+    "Bitcount Grid Single",
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    monospace;
+}
+
+.logo-creator__mark {
+  width: 80vw;
+}
+
+.logo-creator__mark svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: hidden;
+}
+
+.logo-creator__dock {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 28px 40px;
+  padding: 22px 32px 56px;
+  transition: transform 0.45s cubic-bezier(0.83, 0, 0.17, 1);
+}
+
+.logo-creator__dock-group {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 8px 28px;
+}
+
+.logo-creator__dock-group--playback {
+  gap: 8px;
+}
+
+.logo-creator__dock-divider {
+  align-self: stretch;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.logo-creator__dock button {
+  --hover-plate-on: rgba(255, 255, 255, 0.2);
+  position: relative;
+  isolation: isolate;
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 10px 12px;
+  color: rgba(255, 255, 255, 0.42);
+  font: inherit;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.logo-creator__dock button::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--hover-plate-on);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.logo-creator__dock button:hover {
+  color: #fff;
+}
+
+.logo-creator__dock button:hover::before {
+  opacity: 1;
+}
+
+.logo-creator__dock button.is-on,
+.logo-creator__dock button:active:not(:disabled),
+.logo-creator__dock button.is-pressed:not(:disabled) {
+  background: #ff5300;
+  color: #0f0f0f;
+}
+
+.logo-creator__dock button.is-on:hover,
+.logo-creator__dock button:active:not(:disabled):hover,
+.logo-creator__dock button.is-pressed:not(:disabled):hover {
+  color: #0f0f0f;
+}
+
+.logo-creator__dock button.is-on::before,
+.logo-creator__dock button.is-on:hover::before,
+.logo-creator__dock button:active:not(:disabled)::before,
+.logo-creator__dock button.is-pressed:not(:disabled)::before {
+  opacity: 0;
+}
+
+.logo-creator__dock .logo-creator__icon-btn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-creator__dock .logo-creator__icon-btn svg {
+  display: block;
+  width: 24px;
+  height: 24px;
+}
+
+.logo-creator__swatches {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logo-creator__dock .logo-creator__swatch {
+  --swatch: #000;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: var(--swatch);
+}
+
+.logo-creator__dock .logo-creator__swatch:active:not(:disabled) {
+  background: var(--swatch);
+  color: transparent;
+}
+
+.logo-creator__dock .logo-creator__swatch::before {
+  display: none;
+}
+
+.logo-creator__dock .logo-creator__swatch:hover,
+.logo-creator__dock .logo-creator__swatch:focus-visible {
+  color: transparent;
+  outline: 1px solid rgba(255, 255, 255, 0.35);
+  outline-offset: 3px;
+}
+
+.logo-creator.is-ui-hidden .logo-creator__dock {
+  transform: translateY(100%);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logo-creator__dock {
+    transition: none;
+  }
+}
+
+.logo-creator__dock .logo-creator__speed-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.logo-creator__speed-value {
+  display: grid;
+  justify-items: start;
+}
+
+.logo-creator__speed-value > * {
+  grid-area: 1 / 1;
+}
+
+.logo-creator__speed-sizer {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.logo-creator__dock .logo-creator__speed-btn svg {
+  display: block;
+  width: 8px;
+  height: 8px;
+}
+
+.logo-creator__dock button:focus-visible {
+  color: #fff;
+  outline: 1px solid rgba(255, 255, 255, 0.35);
+  outline-offset: 4px;
+}
+
+.logo-creator__dock button.is-on:focus-visible {
+  color: #0f0f0f;
+}
+
+.logo-creator__pop {
+  position: relative;
+}
+
+.logo-creator__pop-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  display: flex;
+  flex-direction: column;
+  min-width: max(100%, 12em);
+  background: #1a1a1a;
+}
+
+.logo-creator__pop-menu button {
+  width: 100%;
+}
