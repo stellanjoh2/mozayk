@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { BrandLogo } from "../components/BrandLogo";
+import { FourOhFourMark, useFourOhFourMetrics } from "./FourOhFourMark";
 import {
   GALLERY_SHAPE_PATHS,
   GALLERY_SHAPE_VIEWBOX,
@@ -13,7 +13,7 @@ const SHAPES = [
   "spots",
   "arcs",
   "quads",
-  "wedges",
+  "bloom",
   "star",
   "flower",
 ] as const satisfies readonly GalleryShape[];
@@ -29,26 +29,20 @@ type EmitterSettings = {
   rotationRandomness: number;
   gravity: number;
   blastRadius: number;
-  logoSize: number;
-  headlineSize: number;
-  headlineLineHeight: number;
+  scrollSpeed: number;
   buttonSize: number;
-  headlineButtonGap: number;
 };
 
 const DEFAULT_SETTINGS: EmitterSettings = {
-  particleCount: 60,
+  particleCount: 17,
   particleSize: 104,
-  randomness: 0.89,
-  rotationSpeed: 2.6,
+  randomness: 0.44,
+  rotationSpeed: 2.3,
   rotationRandomness: 0.87,
-  gravity: 1800,
-  blastRadius: 1070,
-  logoSize: 460,
-  headlineSize: 0.8,
-  headlineLineHeight: 0.78,
-  buttonSize: 0.5,
-  headlineButtonGap: 92,
+  gravity: 1250,
+  blastRadius: 660,
+  scrollSpeed: 84,
+  buttonSize: 0.75,
 };
 
 type Particle = {
@@ -64,6 +58,13 @@ type Particle = {
   life: number;
 };
 
+type ButtonBounds = {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+};
+
 type SimState = {
   particles: Particle[];
   mouseX: number;
@@ -74,6 +75,7 @@ type SimState = {
   height: number;
   dpr: number;
   settings: EmitterSettings;
+  button: ButtonBounds | null;
 };
 
 function pick<T>(items: readonly T[]): T {
@@ -96,7 +98,6 @@ function spawnParticle(state: SimState): Particle {
     blastRadius * (1 - forceSpread * 0.5 + Math.random() * forceSpread);
   const spinSign = Math.random() < 0.5 ? -1 : 1;
   const maxSpin = 2.5 * rotationSpeed;
-  // Higher randomness → spins can drop toward zero (slow) up to full speed.
   const minSpin = maxSpin * (1 - rotR);
   const spinMag = minSpin + Math.random() * (maxSpin - minSpin);
   const sizeJitter = particleSize * r * 0.85;
@@ -115,10 +116,73 @@ function spawnParticle(state: SimState): Particle {
   };
 }
 
+function collideParticleWithButton(
+  p: Particle,
+  button: ButtonBounds,
+  gravity: number,
+): void {
+  const r = p.size * 0.38;
+  const closestX = Math.max(button.left, Math.min(button.right, p.x));
+  const closestY = Math.max(button.top, Math.min(button.bottom, p.y));
+  let dx = p.x - closestX;
+  let dy = p.y - closestY;
+  const distSq = dx * dx + dy * dy;
+  if (distSq >= r * r) return;
+
+  let nx: number;
+  let ny: number;
+  let depth: number;
+
+  if (distSq < 1e-8) {
+    // Center inside the rect — push out along the shallowest axis.
+    const left = p.x - button.left;
+    const right = button.right - p.x;
+    const top = p.y - button.top;
+    const bottom = button.bottom - p.y;
+    const minX = Math.min(left, right);
+    const minY = Math.min(top, bottom);
+    if (minX < minY) {
+      nx = left < right ? -1 : 1;
+      ny = 0;
+      depth = r + minX;
+    } else {
+      nx = 0;
+      ny = top < bottom ? -1 : 1;
+      depth = r + minY;
+    }
+  } else {
+    const dist = Math.sqrt(distSq);
+    nx = dx / dist;
+    ny = dy / dist;
+    depth = r - dist;
+  }
+
+  // Clear the surface with padding so the next frame doesn't re-stick.
+  p.x += nx * (depth + 4);
+  p.y += ny * (depth + 4);
+
+  // Strip inward speed, then kick hard outward — strength tracks gravity.
+  const vn = p.vx * nx + p.vy * ny;
+  if (vn < 0) {
+    p.vx -= vn * nx;
+    p.vy -= vn * ny;
+  }
+  const kick = gravity * 0.5625 * (0.95 + Math.random() * 0.35);
+  p.vx += kick * nx;
+  p.vy += kick * ny;
+
+  // Scatter sideways so they don't stack on the same bounce line.
+  const tx = -ny;
+  const ty = nx;
+  const scatter = (Math.random() * 2 - 1) * kick * 0.45;
+  p.vx += scatter * tx;
+  p.vy += scatter * ty;
+}
+
 function updateParticles(state: SimState, dt: number): void {
   const { gravity, particleCount } = state.settings;
-  // Strong damping so the initial blast fades, then gravity owns the fall.
-  const damp = Math.exp(-3.4 * dt);
+  // Light drag so bounce arcs keep sideways speed instead of stalling into a vertical drop.
+  const damp = Math.exp(-1.0 * dt);
 
   if (state.hasMouse) {
     state.spawnAcc += particleCount * dt;
@@ -130,6 +194,7 @@ function updateParticles(state: SimState, dt: number): void {
 
   const next: Particle[] = [];
   const margin = 80;
+  const button = state.button;
   for (const p of state.particles) {
     p.vx *= damp;
     p.vy *= damp;
@@ -138,6 +203,7 @@ function updateParticles(state: SimState, dt: number): void {
     p.y += p.vy * dt;
     p.rotation += p.spin * dt;
     p.life += dt;
+    if (button) collideParticleWithButton(p, button, gravity);
     if (
       p.y < state.height + margin &&
       p.x > -margin &&
@@ -161,11 +227,16 @@ function shapePath(shape: GalleryShape): Path2D {
   return path;
 }
 
+/** Seconds for a newly spawned shape to grow from 0 → full size. */
+const SPAWN_SCALE_DURATION = 0.25;
+
 function drawParticles(ctx: CanvasRenderingContext2D, state: SimState): void {
   ctx.clearRect(0, 0, state.width, state.height);
   const half = GALLERY_SHAPE_VIEWBOX / 2;
   for (const p of state.particles) {
-    const scale = p.size / GALLERY_SHAPE_VIEWBOX;
+    const birth = Math.min(1, p.life / SPAWN_SCALE_DURATION);
+    const scale = (p.size / GALLERY_SHAPE_VIEWBOX) * birth;
+    if (scale <= 0) continue;
     ctx.save();
     ctx.translate(p.x, p.y);
     ctx.rotate(p.rotation);
@@ -187,15 +258,10 @@ function formatValue(key: keyof EmitterSettings, value: number): string {
     case "rotationRandomness":
       return value.toFixed(2);
     case "rotationSpeed":
-    case "headlineSize":
     case "buttonSize":
       return value.toFixed(1);
-    case "headlineLineHeight":
-      return value.toFixed(2);
-    case "headlineButtonGap":
-      return `${Math.round(value)}px`;
-    case "logoSize":
-      return `${Math.round(value)}px`;
+    case "scrollSpeed":
+      return `${Math.round(value)}px/s`;
     case "gravity":
       return `${Math.round(value)}`;
     case "blastRadius":
@@ -223,32 +289,18 @@ const SLIDERS: {
   },
   { key: "gravity", label: "Gravity", min: 200, max: 4000, step: 50 },
   { key: "blastRadius", label: "Initial blast", min: 40, max: 1200, step: 10 },
-  { key: "logoSize", label: "Logo size", min: 80, max: 900, step: 10 },
-  { key: "headlineSize", label: "Headline size", min: 0.25, max: 2, step: 0.05 },
-  {
-    key: "headlineLineHeight",
-    label: "Headline line height",
-    min: 0.7,
-    max: 1.4,
-    step: 0.01,
-  },
+  { key: "scrollSpeed", label: "Scroll speed", min: 0, max: 200, step: 1 },
   { key: "buttonSize", label: "Button size", min: 0.25, max: 2, step: 0.05 },
-  {
-    key: "headlineButtonGap",
-    label: "Headline → button gap",
-    min: 0,
-    max: 160,
-    step: 1,
-  },
 ];
 
 export function NotFoundPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const ctaRef = useRef<HTMLAnchorElement>(null);
+  const metrics = useFourOhFourMetrics();
   const [devOpen, setDevOpen] = useState(false);
   const [copyLabel, setCopyLabel] = useState("Copy settings");
-  const [headlineMessage, setHeadlineMessage] = useState(
-    "I'm sorry this page doesn't even exist",
-  );
+  const [buttonLabel, setButtonLabel] = useState("Oops, go back home");
   const [settings, setSettings] = useState<EmitterSettings>(DEFAULT_SETTINGS);
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
@@ -288,6 +340,22 @@ export function NotFoundPage() {
       height: 0,
       dpr: 1,
       settings: settingsRef.current,
+      button: null,
+    };
+
+    const syncButtonBounds = () => {
+      const cta = ctaRef.current;
+      if (!cta) {
+        state.button = null;
+        return;
+      }
+      const rect = cta.getBoundingClientRect();
+      state.button = {
+        left: rect.left,
+        top: rect.top,
+        right: rect.right,
+        bottom: rect.bottom,
+      };
     };
 
     const resize = () => {
@@ -299,6 +367,7 @@ export function NotFoundPage() {
       canvas.style.width = `${state.width}px`;
       canvas.style.height = `${state.height}px`;
       ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
+      syncButtonBounds();
     };
 
     const onPointerMove = (event: PointerEvent) => {
@@ -311,7 +380,6 @@ export function NotFoundPage() {
       state.hasMouse = false;
     };
 
-    // Seed a few particles so the page isn't empty before first move.
     state.hasMouse = true;
     for (let i = 0; i < 12; i++) state.particles.push(spawnParticle(state));
 
@@ -323,12 +391,25 @@ export function NotFoundPage() {
 
     let frame = 0;
     let last = performance.now();
+    let scrollX = 0;
     const tick = (now: number) => {
       const dt = Math.min(0.033, (now - last) / 1000);
       last = now;
       state.settings = settingsRef.current;
+      syncButtonBounds();
       updateParticles(state, dt);
       drawParticles(ctx, state);
+
+      const track = trackRef.current;
+      if (track) {
+        scrollX += state.settings.scrollSpeed * dt;
+        const loop = track.scrollWidth / 2;
+        if (loop > 0) {
+          scrollX %= loop;
+          track.style.transform = `translate3d(${-scrollX}px, 0, 0)`;
+        }
+      }
+
       frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);
@@ -347,11 +428,14 @@ export function NotFoundPage() {
       className="not-found"
       style={
         {
-          "--nf-headline-scale": String(settings.headlineSize),
-          "--nf-headline-lh": String(settings.headlineLineHeight),
           "--nf-button-scale": String(settings.buttonSize),
-          "--nf-headline-button-gap": String(settings.headlineButtonGap),
-          "--nf-logo-size": String(settings.logoSize),
+          ...(metrics
+            ? {
+                "--nf-mark-aspect": String(metrics.aspect),
+                "--nf-unit-aspect": String(metrics.unitAspect),
+                "--nf-cta-at": String(metrics.ctaAt),
+              }
+            : null),
         } as CSSProperties
       }
     >
@@ -361,26 +445,44 @@ export function NotFoundPage() {
           className="not-found__canvas"
           aria-hidden="true"
         />
-        <div className="not-found__center">
-          <BrandLogo className="not-found__logo" />
-          <h1 className="not-found__title">{headlineMessage}</h1>
-          <a className="not-found__cta" href={import.meta.env.BASE_URL}>
-            Go to Mozayk
-          </a>
-        </div>
+        {metrics ? (
+          <div className="not-found__stack" aria-hidden="true">
+            <div className="not-found__stack-track" ref={trackRef}>
+              <div className="not-found__stack-line">
+                <FourOhFourMark
+                  viewBox={metrics.viewBox}
+                  text={metrics.text}
+                />
+              </div>
+              <div className="not-found__stack-line">
+                <FourOhFourMark
+                  viewBox={metrics.viewBox}
+                  text={metrics.text}
+                />
+              </div>
+            </div>
+          </div>
+        ) : null}
+        <a
+          ref={ctaRef}
+          className="not-found__cta"
+          href={import.meta.env.BASE_URL}
+        >
+          {buttonLabel}
+        </a>
       </div>
 
       {devOpen ? (
         <aside className="not-found__dev" aria-label="Emitter dev menu">
           <p className="not-found__dev-title">Emitter</p>
           <div className="not-found__dev-row">
-            <label htmlFor="nf-headline-message">404 message</label>
+            <label htmlFor="nf-button-label">Button label</label>
             <input
-              id="nf-headline-message"
+              id="nf-button-label"
               className="not-found__dev-text"
               type="text"
-              value={headlineMessage}
-              onChange={(event) => setHeadlineMessage(event.target.value)}
+              value={buttonLabel}
+              onChange={(event) => setButtonLabel(event.target.value)}
             />
           </div>
           {SLIDERS.map(({ key, label, min, max, step }) => (
@@ -407,7 +509,9 @@ export function NotFoundPage() {
             type="button"
             className="not-found__dev-copy"
             onClick={() => {
-              const escaped = headlineMessage.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+              const escaped = buttonLabel
+                .replace(/\\/g, "\\\\")
+                .replace(/"/g, '\\"');
               const lines = Object.entries(settings).map(([key, value]) => {
                 const num =
                   typeof value === "number" && !Number.isInteger(value)
@@ -415,7 +519,7 @@ export function NotFoundPage() {
                     : value;
                 return `  ${key}: ${num},`;
               });
-              const text = `headlineMessage: "${escaped}",\n{\n${lines.join("\n")}\n}`;
+              const text = `buttonLabel: "${escaped}",\n{\n${lines.join("\n")}\n}`;
               void navigator.clipboard.writeText(text).then(
                 () => setCopyLabel("Copied"),
                 () => setCopyLabel("Copy failed"),

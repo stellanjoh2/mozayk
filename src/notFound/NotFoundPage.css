@@ -4,13 +4,6 @@
   --muted: rgba(255, 255, 255, 0.45);
   --chrome: #ff5300;
   --panel: #131313;
-  --brand-blue: #2e1ebc;
-  --brand-purple: #cf41f2;
-  --brand-orange: #ff5300;
-  --logo-fill-1: var(--brand-blue);
-  --logo-fill-2: var(--brand-purple);
-  --logo-fill-3: var(--brand-orange);
-  --logo-fill-4: #ffffff;
   --font-ui:
     "Bitcount Grid Single Variable",
     "Bitcount Grid Single",
@@ -36,17 +29,11 @@ body,
 }
 
 .not-found {
-  /*
-    Reference composition at 2560-wide (headline 256px).
-    Soft unitless scale (vw/px → number) so calc() can multiply sizes.
-  */
-  --nf-fluid: clamp(0.82, calc(0.55 + 0.45 * (100vw / 2560px)), 1.35);
   position: relative;
   width: 100%;
   height: 100%;
 }
 
-/* Canvas + headline share this layer so Difference can sample the shapes. */
 .not-found__blend {
   position: absolute;
   inset: 0;
@@ -61,79 +48,74 @@ body,
   pointer-events: none;
 }
 
-.not-found__center {
+.not-found__stack {
   position: absolute;
   inset: 0;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: calc(
-    var(--nf-headline-button-gap, 28) * 1px * var(--nf-fluid)
-  );
-  padding: calc(32px * var(--nf-fluid));
-  text-align: center;
+  overflow: hidden;
   pointer-events: none;
-}
-
-.not-found__logo {
-  box-sizing: border-box;
-  width: calc(var(--nf-logo-size, 400) * 1px * var(--nf-fluid));
-  height: auto;
-  pointer-events: auto;
-  cursor: default;
   mix-blend-mode: difference;
 }
 
-.not-found__logo svg {
+.not-found__stack-track {
+  display: flex;
+  flex-direction: row;
+  will-change: transform;
+}
+
+.not-found__stack-line {
+  /* Height matches one “404”; width is the full 404404404404 strip. */
+  box-sizing: border-box;
+  flex-shrink: 0;
+  height: min(90vh, 90vw / var(--nf-unit-aspect, 2));
+  width: calc(
+    min(90vh, 90vw / var(--nf-unit-aspect, 2)) * var(--nf-mark-aspect, 8)
+  );
+  margin: 0;
+  padding: 0;
+  line-height: 0;
+}
+
+.not-found__stack-line svg {
   display: block;
   width: 100%;
-  height: auto;
-}
-
-.not-found__title {
-  margin: 0;
-  max-width: 14ch;
-  font-size: calc(
-    256px * var(--nf-fluid) * var(--nf-headline-scale, 1)
-  );
-  font-weight: 400;
-  line-height: var(--nf-headline-lh, 0.9);
-  color: #fff;
-  mix-blend-mode: difference;
+  height: 100%;
 }
 
 .not-found__cta {
-  --hover-plate-on: color-mix(in srgb, var(--chrome) 35%, transparent);
-  position: relative;
-  isolation: isolate;
+  position: absolute;
+  /* Park in a “0” hole — offset uses one unit “404” width. */
+  left: calc(
+    50% + (var(--nf-cta-at, 0.5) - 0.5) *
+      min(90vw, 90vh * var(--nf-unit-aspect, 2))
+  );
+  top: 50%;
+  z-index: 2;
+  transform: translate(-50%, -50%);
   appearance: none;
   pointer-events: auto;
   margin: 0;
-  padding: calc(28px * var(--nf-fluid) * var(--nf-button-scale, 1))
-    calc(44px * var(--nf-fluid) * var(--nf-button-scale, 1));
-  border: 1px solid var(--chrome);
-  background: transparent;
-  color: var(--chrome);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* Optical: Bitcount ink sits left in its cells, so equal pad looks left-heavy. */
+  padding: calc(28px * var(--nf-button-scale, 1))
+    calc(44px * var(--nf-button-scale, 1))
+    calc(28px * var(--nf-button-scale, 1))
+    calc(56px * var(--nf-button-scale, 1));
+  border: none;
+  background: var(--chrome);
+  color: #000;
   font: inherit;
-  font-size: calc(44px * var(--nf-fluid) * var(--nf-button-scale, 1));
+  font-size: calc(44px * var(--nf-button-scale, 1));
+  text-align: center;
   text-decoration: none;
   cursor: pointer;
 }
 
-.not-found__cta::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: var(--hover-plate-on);
-  opacity: 0;
-  pointer-events: none;
-}
-
-html.normal-hover .not-found__cta:hover::before,
-.not-found__cta:hover::before {
-  opacity: 1;
+.not-found__cta:hover {
+  filter: brightness(1.08);
 }
 
 .not-found__dev {
