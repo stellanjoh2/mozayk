@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { FourOhFourMark, useFourOhFourMetrics } from "./FourOhFourMark";
+import { FourOhFourCreator } from "./FourOhFourCreator";
 import {
   GALLERY_SHAPE_PATHS,
   GALLERY_SHAPE_VIEWBOX,
@@ -29,7 +29,6 @@ type EmitterSettings = {
   rotationRandomness: number;
   gravity: number;
   blastRadius: number;
-  scrollSpeed: number;
   fontSize: number;
   buttonSize: number;
 };
@@ -42,7 +41,6 @@ const DEFAULT_SETTINGS: EmitterSettings = {
   rotationRandomness: 0.87,
   gravity: 2300,
   blastRadius: 480,
-  scrollSpeed: 84,
   fontSize: 0.9,
   buttonSize: 0.55,
 };
@@ -276,8 +274,6 @@ function formatValue(key: keyof EmitterSettings, value: number): string {
       return value.toFixed(1);
     case "fontSize":
       return `${Math.round(value * 100)}%`;
-    case "scrollSpeed":
-      return `${Math.round(value)}px/s`;
     case "gravity":
       return `${Math.round(value)}`;
     case "blastRadius":
@@ -305,16 +301,13 @@ const SLIDERS: {
   },
   { key: "gravity", label: "Gravity", min: 200, max: 4000, step: 50 },
   { key: "blastRadius", label: "Initial blast", min: 40, max: 1200, step: 10 },
-  { key: "scrollSpeed", label: "Scroll speed", min: 0, max: 200, step: 1 },
   { key: "fontSize", label: "Font size", min: 0.4, max: 1.2, step: 0.05 },
   { key: "buttonSize", label: "Button size", min: 0.25, max: 2, step: 0.05 },
 ];
 
 export function NotFoundPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const trackRef = useRef<HTMLDivElement>(null);
   const ctaRef = useRef<HTMLAnchorElement>(null);
-  const metrics = useFourOhFourMetrics();
   const [devOpen, setDevOpen] = useState(false);
   const [copyLabel, setCopyLabel] = useState("Copy settings");
   const [buttonLabel, setButtonLabel] = useState("Oops, go back home");
@@ -408,7 +401,6 @@ export function NotFoundPage() {
 
     let frame = 0;
     let last = performance.now();
-    let scrollX = 0;
     const tick = (now: number) => {
       const dt = Math.min(0.033, (now - last) / 1000);
       last = now;
@@ -416,17 +408,6 @@ export function NotFoundPage() {
       syncButtonBounds();
       updateParticles(state, dt);
       drawParticles(ctx, state);
-
-      const track = trackRef.current;
-      if (track) {
-        scrollX += state.settings.scrollSpeed * dt;
-        const loop = track.scrollWidth / 2;
-        if (loop > 0) {
-          scrollX %= loop;
-          track.style.transform = `translate3d(${-scrollX}px, 0, 0)`;
-        }
-      }
-
       frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);
@@ -447,13 +428,6 @@ export function NotFoundPage() {
         {
           "--nf-button-scale": String(settings.buttonSize),
           "--nf-font-size": String(settings.fontSize),
-          ...(metrics
-            ? {
-                "--nf-mark-aspect": String(metrics.aspect),
-                "--nf-unit-aspect": String(metrics.unitAspect),
-                "--nf-cta-at": String(metrics.ctaAt),
-              }
-            : null),
         } as CSSProperties
       }
     >
@@ -463,24 +437,9 @@ export function NotFoundPage() {
           className="not-found__canvas"
           aria-hidden="true"
         />
-        {metrics ? (
-          <div className="not-found__stack" aria-hidden="true">
-            <div className="not-found__stack-track" ref={trackRef}>
-              <div className="not-found__stack-line">
-                <FourOhFourMark
-                  viewBox={metrics.viewBox}
-                  text={metrics.text}
-                />
-              </div>
-              <div className="not-found__stack-line">
-                <FourOhFourMark
-                  viewBox={metrics.viewBox}
-                  text={metrics.text}
-                />
-              </div>
-            </div>
-          </div>
-        ) : null}
+        <div className="not-found__stack" aria-hidden="true">
+          <FourOhFourCreator className="not-found__mark" />
+        </div>
         <a
           ref={ctaRef}
           className="not-found__cta"

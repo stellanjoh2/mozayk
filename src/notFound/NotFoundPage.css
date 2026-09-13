@@ -52,35 +52,21 @@ body,
   position: absolute;
   inset: 0;
   display: flex;
-  align-items: stretch;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
   pointer-events: none;
   mix-blend-mode: difference;
 }
 
-.not-found__stack-track {
-  display: flex;
-  flex-direction: row;
-  align-items: stretch;
-  height: 100%;
-  will-change: transform;
+.not-found__mark {
+  /* Font size = fraction of viewport height */
+  width: auto;
+  height: calc(var(--nf-font-size, 1) * 100vh);
+  max-height: 90vh;
 }
 
-.not-found__stack-line {
-  /* Font size = fraction of viewport height; flush top/bottom at 100%. */
-  box-sizing: border-box;
-  flex-shrink: 0;
-  align-self: center;
-  height: calc(var(--nf-font-size, 1) * 100%);
-  width: calc(
-    var(--nf-font-size, 1) * 100vh * var(--nf-mark-aspect, 8)
-  );
-  margin: 0;
-  padding: 0;
-  line-height: 0;
-}
-
-.not-found__stack-line svg {
+.not-found__mark svg {
   display: block;
   width: 100%;
   height: 100%;
