@@ -336,7 +336,7 @@ export function NotFoundPage() {
   const [devOpen, setDevOpen] = useState(false);
   const [copyLabel, setCopyLabel] = useState("Copy settings");
   const [headlineMessage, setHeadlineMessage] = useState(
-    "Oops, this site doesn't even exist",
+    "Oops, this page doesn't even exist",
   );
   const [buttonLabel, setButtonLabel] = useState("Go to Mozayk");
   const [settings, setSettings] = useState<EmitterSettings>(DEFAULT_SETTINGS);
