@@ -36,7 +36,7 @@ type EmitterSettings = {
 
 const DEFAULT_SETTINGS: EmitterSettings = {
   particleCount: 40,
-  particleSize: 120,
+  particleSize: 150,
   randomness: 1,
   rotationSpeed: 1.9,
   rotationRandomness: 0.87,
@@ -300,7 +300,7 @@ const SLIDERS: {
   step: number;
 }[] = [
   { key: "particleCount", label: "Particle count", min: 1, max: 120, step: 1 },
-  { key: "particleSize", label: "Particle size", min: 8, max: 120, step: 1 },
+  { key: "particleSize", label: "Particle size", min: 8, max: 150, step: 1 },
   { key: "randomness", label: "Particle randomness", min: 0, max: 1, step: 0.01 },
   { key: "rotationSpeed", label: "Rotation speed", min: 0, max: 4, step: 0.1 },
   {
