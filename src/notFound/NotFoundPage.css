@@ -52,7 +52,7 @@ body,
   position: absolute;
   inset: 0;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   overflow: hidden;
   pointer-events: none;
   mix-blend-mode: difference;
@@ -61,16 +61,19 @@ body,
 .not-found__stack-track {
   display: flex;
   flex-direction: row;
+  align-items: stretch;
+  height: 100%;
   will-change: transform;
 }
 
 .not-found__stack-line {
-  /* Height matches one “404”; width is the full 404404404404 strip. */
+  /* Font size = fraction of viewport height; flush top/bottom at 100%. */
   box-sizing: border-box;
   flex-shrink: 0;
-  height: min(90vh, 90vw / var(--nf-unit-aspect, 2));
+  align-self: center;
+  height: calc(var(--nf-font-size, 1) * 100%);
   width: calc(
-    min(90vh, 90vw / var(--nf-unit-aspect, 2)) * var(--nf-mark-aspect, 8)
+    var(--nf-font-size, 1) * 100vh * var(--nf-mark-aspect, 8)
   );
   margin: 0;
   padding: 0;
@@ -85,10 +88,10 @@ body,
 
 .not-found__cta {
   position: absolute;
-  /* Park in a “0” hole — offset uses one unit “404” width. */
+  /* Park in a “0” hole — offset uses one unit “404” width at current font size. */
   left: calc(
-    50% + (var(--nf-cta-at, 0.5) - 0.5) *
-      min(90vw, 90vh * var(--nf-unit-aspect, 2))
+    50% + (var(--nf-cta-at, 0.5) - 0.5) * var(--nf-font-size, 1) * 100vh *
+      var(--nf-unit-aspect, 2)
   );
   top: 50%;
   z-index: 2;

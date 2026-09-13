@@ -30,19 +30,21 @@ type EmitterSettings = {
   gravity: number;
   blastRadius: number;
   scrollSpeed: number;
+  fontSize: number;
   buttonSize: number;
 };
 
 const DEFAULT_SETTINGS: EmitterSettings = {
-  particleCount: 31,
+  particleCount: 18,
   particleSize: 104,
-  randomness: 0.44,
+  randomness: 1,
   rotationSpeed: 1.9,
   rotationRandomness: 0.87,
   gravity: 2300,
-  blastRadius: 1000,
+  blastRadius: 480,
   scrollSpeed: 84,
-  buttonSize: 0.75,
+  fontSize: 0.9,
+  buttonSize: 0.55,
 };
 
 type Particle = {
@@ -179,12 +181,24 @@ function collideParticleWithButton(
   p.vy += scatter * ty;
 }
 
+function pointerOverButton(state: SimState, pad = 0): boolean {
+  const b = state.button;
+  if (!b) return false;
+  return (
+    state.mouseX >= b.left - pad &&
+    state.mouseX <= b.right + pad &&
+    state.mouseY >= b.top - pad &&
+    state.mouseY <= b.bottom + pad
+  );
+}
+
 function updateParticles(state: SimState, dt: number): void {
   const { gravity, particleCount } = state.settings;
   // Light drag so bounce arcs keep sideways speed instead of stalling into a vertical drop.
   const damp = Math.exp(-1.0 * dt);
 
-  if (state.hasMouse) {
+  // Don't spawn on the CTA — birth inside the hitbox fires an instant kick (often downward).
+  if (state.hasMouse && !pointerOverButton(state, 56)) {
     state.spawnAcc += particleCount * dt;
     while (state.spawnAcc >= 1) {
       state.particles.push(spawnParticle(state));
@@ -260,6 +274,8 @@ function formatValue(key: keyof EmitterSettings, value: number): string {
     case "rotationSpeed":
     case "buttonSize":
       return value.toFixed(1);
+    case "fontSize":
+      return `${Math.round(value * 100)}%`;
     case "scrollSpeed":
       return `${Math.round(value)}px/s`;
     case "gravity":
@@ -290,6 +306,7 @@ const SLIDERS: {
   { key: "gravity", label: "Gravity", min: 200, max: 4000, step: 50 },
   { key: "blastRadius", label: "Initial blast", min: 40, max: 1200, step: 10 },
   { key: "scrollSpeed", label: "Scroll speed", min: 0, max: 200, step: 1 },
+  { key: "fontSize", label: "Font size", min: 0.4, max: 1.2, step: 0.05 },
   { key: "buttonSize", label: "Button size", min: 0.25, max: 2, step: 0.05 },
 ];
 
@@ -429,6 +446,7 @@ export function NotFoundPage() {
       style={
         {
           "--nf-button-scale": String(settings.buttonSize),
+          "--nf-font-size": String(settings.fontSize),
           ...(metrics
             ? {
                 "--nf-mark-aspect": String(metrics.aspect),

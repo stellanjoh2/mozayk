@@ -138,15 +138,14 @@ function measure(): FourOhFourMetrics {
 
   const unitX = (unitInk ? unitInk.x : unitProbe.box.x) - INK_PAD;
   const unitW = (unitInk ? unitInk.width : unitProbe.box.width) + INK_PAD * 2;
-  const unitH =
-    (unitInk ? unitInk.height : unitProbe.box.height) + INK_PAD * 2;
+  // No vertical pad — ink sits flush on the top/bottom edges of the mark.
+  const unitH = unitInk ? unitInk.height : unitProbe.box.height;
   const ctaAt = (unitProbe.zeroCenter - unitX) / unitW;
 
   const x = (stripInk ? stripInk.x : stripProbe.box.x) - INK_PAD;
-  const y = (stripInk ? stripInk.y : stripProbe.box.y) - INK_PAD;
+  const y = stripInk ? stripInk.y : stripProbe.box.y;
   const width = (stripInk ? stripInk.width : stripProbe.box.width) + INK_PAD * 2;
-  const height =
-    (stripInk ? stripInk.height : stripProbe.box.height) + INK_PAD * 2;
+  const height = stripInk ? stripInk.height : stripProbe.box.height;
 
   return {
     viewBox: `${x} ${y} ${width} ${height}`,
