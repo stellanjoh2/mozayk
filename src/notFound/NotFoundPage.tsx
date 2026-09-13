@@ -35,7 +35,7 @@ type EmitterSettings = {
 };
 
 const DEFAULT_SETTINGS: EmitterSettings = {
-  particleCount: 24,
+  particleCount: 40,
   particleSize: 120,
   randomness: 1,
   rotationSpeed: 1.9,
@@ -43,7 +43,7 @@ const DEFAULT_SETTINGS: EmitterSettings = {
   gravity: 2300,
   blastRadius: 480,
   headlineSize: 1.1,
-  headlineLineHeight: 0.9,
+  headlineLineHeight: 0.8,
   headlineButtonGap: 82,
   buttonSize: 1,
 };
