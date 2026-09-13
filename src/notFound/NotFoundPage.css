@@ -14,6 +14,14 @@
     Consolas,
     monospace;
   --ui-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  /* 404-only: Mozayk cursors at 64px (4× the 16px set; hotspot 6 6). */
+  --cursor-default: url("../../cursors/default-4x.svg") 6 6, default;
+  --cursor-pointer: url("../../cursors/pointer-4x.svg") 6 6, pointer;
+}
+
+html.normal-cursor {
+  --cursor-default: default;
+  --cursor-pointer: pointer;
 }
 
 html,
@@ -26,9 +34,12 @@ body,
   color: var(--text);
   color-scheme: dark;
   font-family: var(--font-ui);
+  cursor: var(--cursor-default);
 }
 
 .not-found {
+  /* Unitless scale vs 2560×1440 — must divide by px so calc(Npx * var(--nf-fluid)) is valid. */
+  --nf-fluid: min(100vw / 2560px, 100vh / 1440px);
   position: relative;
   width: 100%;
   height: 100%;
@@ -48,77 +59,55 @@ body,
   pointer-events: none;
 }
 
-.not-found__stack {
+.not-found__center {
   position: absolute;
   inset: 0;
-  display: flex;
-  align-items: stretch;
-  overflow: hidden;
+  display: grid;
+  place-items: center;
+  padding: calc(32px * var(--nf-fluid));
+  text-align: center;
   pointer-events: none;
+}
+
+.not-found__copy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--nf-headline-button-gap, 28) * 1px * var(--nf-fluid));
+}
+
+.not-found__title {
+  margin: 0;
+  max-width: 14ch;
+  font-size: calc(256px * var(--nf-fluid) * var(--nf-headline-scale, 1));
+  font-weight: 400;
+  line-height: var(--nf-headline-lh, 0.9);
+  color: #fff;
   mix-blend-mode: difference;
 }
 
-.not-found__stack-track {
-  display: flex;
-  flex-direction: row;
-  align-items: stretch;
-  height: 100%;
-  will-change: transform;
-}
-
-.not-found__stack-line {
-  /* Font size = fraction of viewport height; flush top/bottom at 100%. */
-  box-sizing: border-box;
-  flex-shrink: 0;
-  align-self: center;
-  height: calc(var(--nf-font-size, 1) * 100%);
-  width: calc(
-    var(--nf-font-size, 1) * 100vh * var(--nf-mark-aspect, 8)
-  );
-  margin: 0;
-  padding: 0;
-  line-height: 0;
-}
-
-.not-found__stack-line svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
 .not-found__cta {
-  position: absolute;
-  /* Park in a “0” hole — offset uses one unit “404” width at current font size. */
-  left: calc(
-    50% + (var(--nf-cta-at, 0.5) - 0.5) * var(--nf-font-size, 1) * 100vh *
-      var(--nf-unit-aspect, 2)
-  );
-  top: 50%;
-  z-index: 2;
-  transform: translate(-50%, -50%);
   appearance: none;
   pointer-events: auto;
   margin: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  /* Optical: Bitcount ink sits left in its cells, so equal pad looks left-heavy. */
-  padding: calc(28px * var(--nf-button-scale, 1))
-    calc(44px * var(--nf-button-scale, 1))
-    calc(28px * var(--nf-button-scale, 1))
-    calc(56px * var(--nf-button-scale, 1));
+  padding: calc(28px * var(--nf-button-scale, 1) * var(--nf-fluid))
+    calc(44px * var(--nf-button-scale, 1) * var(--nf-fluid));
   border: none;
   background: var(--chrome);
   color: #000;
   font: inherit;
-  font-size: calc(44px * var(--nf-button-scale, 1));
+  font-size: calc(44px * var(--nf-button-scale, 1) * var(--nf-fluid));
   text-align: center;
   text-decoration: none;
-  cursor: pointer;
+  cursor: var(--cursor-pointer);
 }
 
 .not-found__cta:hover {
-  filter: brightness(1.08);
+  background: #fff;
+  color: var(--chrome);
 }
 
 .not-found__dev {
@@ -204,7 +193,7 @@ body,
   color: var(--text);
   font: inherit;
   font-size: 13px;
-  cursor: pointer;
+  cursor: var(--cursor-pointer);
 }
 
 .not-found__dev-copy:hover {
