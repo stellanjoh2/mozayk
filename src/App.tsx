@@ -31,6 +31,7 @@ import {
   patchNeedsLayoutRegen,
   rerollShapes,
 } from "./layout/generateLayout";
+import { getShapePool } from "./shapes/shapePalette";
 import { relocateBlock } from "./layout/blockPlacement";
 import {
   addColorToSettings,
@@ -385,6 +386,9 @@ export default function App() {
         if (frame.backgroundImage?.dataUrl) {
           dataUrls.add(frame.backgroundImage.dataUrl);
         }
+        for (const slot of frame.settings.customShapes ?? []) {
+          if (slot.dataUrl) dataUrls.add(slot.dataUrl);
+        }
       }
       await Promise.all(
         [...dataUrls].map((dataUrl) => ensureCachedSourceImage(dataUrl)),
@@ -612,7 +616,7 @@ export default function App() {
         ? patchNeedsImportedLayoutRegen(patch)
         : patchNeedsLayoutRegen(patch);
       const rerollsShape =
-        "shapeMix" in patch || "shapes" in patch;
+        "shapeMix" in patch || "shapes" in patch || "customShapes" in patch;
 
       if (needsLayout && immediateLayout) {
         updateActiveFrame((frame) => {
@@ -636,14 +640,26 @@ export default function App() {
       updateActiveFrame((frame) => {
         const nextSettings = mergeSettings(frame, patch);
 
-        let blocks = frame.blocks;
-        if (rerollsShape && !needsLayout && !("shapeMix" in patch)) {
-          if (shapeRerollTimer.current) {
-            window.clearTimeout(shapeRerollTimer.current);
-            shapeRerollTimer.current = null;
+          let blocks = frame.blocks;
+          if (rerollsShape && !needsLayout && !("shapeMix" in patch)) {
+            const prevCustom = frame.settings.customShapes ?? [];
+            const nextCustom = nextSettings.customShapes ?? [];
+            const customSlotRemoved = prevCustom.some(
+              (slot) => !nextCustom.some((other) => other.id === slot.id),
+            );
+            const poolChanged =
+              "shapes" in patch ||
+              customSlotRemoved ||
+              getShapePool(frame.settings).join("\0") !==
+                getShapePool(nextSettings).join("\0");
+            if (poolChanged) {
+              if (shapeRerollTimer.current) {
+                window.clearTimeout(shapeRerollTimer.current);
+                shapeRerollTimer.current = null;
+              }
+              blocks = rerollShapes(blocks, nextSettings);
+            }
           }
-          blocks = rerollShapes(blocks, nextSettings);
-        }
 
         return { ...frame, settings: nextSettings, blocks };
       });
@@ -1466,6 +1482,7 @@ export default function App() {
         highQualityMode={highQualityMode}
         onHighQualityModeChange={setHighQualityMode}
         onSettingsChange={handleSettingsChange}
+        onErrorMessage={setImportErrorMessage}
         onRandomizeLayout={randomizeLayout}
         onRandomizeAll={randomizeAll}
         onApplyLookToAllFrames={() => handleApplyLookToAllFrames()}

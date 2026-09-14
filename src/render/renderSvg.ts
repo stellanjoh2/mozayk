@@ -23,6 +23,11 @@ import {
   svgGalleryShape,
 } from "../shapes/galleryShapes";
 import {
+  findCustomShapeSlot,
+  isCustomShapeRef,
+  svgCustomShape,
+} from "../shapes/customShapes";
+import {
   insetCrossRects,
   insetPixelRect,
   shapeGapInsetPx,
@@ -78,6 +83,7 @@ function svgBlock(
   fillRadius: number,
   cornerRadius: number,
   shapeGap: number,
+  settings: FrameSettings,
 ): string {
   const raw = blockPixelRect(grid, block);
   const { x, y, width: drawW, height: drawH } = insetPixelRect(
@@ -134,6 +140,19 @@ function svgBlock(
       { x, y, width: drawW, height: drawH },
       ` fill="${block.color}"`,
     );
+  }
+
+  if (isCustomShapeRef(block.shape)) {
+    const slot = findCustomShapeSlot(settings, block.shape);
+    if (slot?.dataUrl) {
+      return svgCustomShape(
+        slot.dataUrl,
+        { x, y, width: drawW, height: drawH },
+        cornerRadius,
+        `cs${block.col}-${block.row}-${block.width}x${block.height}`,
+      );
+    }
+    return "";
   }
 
   const radius = Math.min(
@@ -269,6 +288,7 @@ export function renderMosaicToSvg(options: SvgRenderOptions): string {
             fillRadius,
             cornerRadius,
             shapeGap,
+            settings,
           ),
     )
     .join("\n  ");

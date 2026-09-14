@@ -287,8 +287,27 @@ function settingsKeyChanged<K extends keyof FrameSettings>(
   return keys.some((key) => from[key] !== to[key]);
 }
 
+function customShapesChanged(
+  from: FrameSettings["customShapes"],
+  to: FrameSettings["customShapes"],
+): boolean {
+  const left = from ?? [];
+  const right = to ?? [];
+  if (left.length !== right.length) return true;
+  return left.some((slot, index) => {
+    const other = right[index];
+    return (
+      !other ||
+      slot.id !== other.id ||
+      slot.enabled !== other.enabled ||
+      slot.dataUrl !== other.dataUrl
+    );
+  });
+}
+
 function shapeSettingsChanged(from: FrameSettings, to: FrameSettings): boolean {
   if (from.shapeMix !== to.shapeMix) return true;
+  if (customShapesChanged(from.customShapes, to.customShapes)) return true;
   const fromShapes = from.shapes ?? createDefaultShapePalette();
   const toShapes = to.shapes ?? createDefaultShapePalette();
   return OPTIONAL_SHAPES.some(

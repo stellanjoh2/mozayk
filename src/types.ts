@@ -50,7 +50,7 @@ export type TextureOverlayBlendMode =
   | "hard-light"
   | "screen"
   | "difference";
-export type ShapeType =
+export type BuiltinShapeType =
   | "block"
   | "sphere"
   | "ring"
@@ -68,6 +68,20 @@ export type ShapeType =
   | "bloom"
   | "flower"
   | "blossom";
+/** User-uploaded SVG / still image mixed like a prefab shape. */
+export type CustomShapeRef = `custom:${string}`;
+export type ShapeType = BuiltinShapeType | CustomShapeRef;
+
+/** Empty or filled custom shape slot in the Add Shapes grid. */
+export type CustomShapeSlot = {
+  id: string;
+  /** Mixed into the mosaic when true and dataUrl is set. */
+  enabled: boolean;
+  /** Data URL of an SVG or still image. Undefined = empty "?" slot. */
+  dataUrl?: string;
+  name?: string;
+};
+
 export type LayoutSource = "procedural" | "imported";
 
 export const RANDOMIZE_PAUSE_KEYS = [
@@ -131,6 +145,8 @@ export type FrameSettings = {
   density: Density;
   shapeMix: number;
   shapes: ShapePalette;
+  /** User-uploaded shape slots (5th+ rows under Add Shapes). */
+  customShapes?: CustomShapeSlot[];
   /** 0 = thin ring · 100 = solid disc. Absolute wall width, shared by all rings. */
   ringThickness: number;
   /** Internal — derived from density; not user-facing. */

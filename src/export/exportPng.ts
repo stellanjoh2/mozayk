@@ -1,6 +1,7 @@
 import { zipSync } from "fflate";
 import { getExportSize, type ExportPreset } from "../config";
 import { ensureCachedSourceImage } from "../import/imageSource";
+import { loadCustomShapeImages } from "../shapes/customShapes";
 import { renderMosaicToBlob } from "../render/renderFrame";
 import { lockedColorsSet } from "../state/frameUtils";
 import type { Frame, Orientation } from "../types";
@@ -39,6 +40,12 @@ export async function loadTextureOverlayForFrame(
   }
 }
 
+export async function loadCustomShapeImagesForFrame(
+  frame: Frame,
+): Promise<Map<string, HTMLImageElement>> {
+  return loadCustomShapeImages(frame.settings.customShapes);
+}
+
 export type StillImageFormat = "png" | "jpg";
 
 const JPEG_QUALITY = 0.92;
@@ -69,11 +76,13 @@ export async function exportCurrentFrame(
 ): Promise<void> {
   const encode = stillImageEncode(format);
   const [width, height] = getExportSize(orientation, preset);
-  const [sourceImage, backgroundImage, textureOverlayImage] = await Promise.all([
-    loadSourceImageForFrame(frame),
-    loadBackgroundImageForFrame(frame),
-    loadTextureOverlayForFrame(frame),
-  ]);
+  const [sourceImage, backgroundImage, textureOverlayImage, customShapeImages] =
+    await Promise.all([
+      loadSourceImageForFrame(frame),
+      loadBackgroundImageForFrame(frame),
+      loadTextureOverlayForFrame(frame),
+      loadCustomShapeImagesForFrame(frame),
+    ]);
   const blob = await renderMosaicToBlob(
     {
       orientation,
@@ -84,6 +93,7 @@ export async function exportCurrentFrame(
       sourceImage,
       backgroundImage,
       textureOverlayImage,
+      customShapeImages,
     },
     encode.type,
     encode.quality,
@@ -99,11 +109,13 @@ export async function exportCurrentFrameTransparent(
   frameIndex: number,
 ): Promise<void> {
   const [width, height] = getExportSize(orientation, preset);
-  const [sourceImage, backgroundImage, textureOverlayImage] = await Promise.all([
-    loadSourceImageForFrame(frame),
-    loadBackgroundImageForFrame(frame),
-    loadTextureOverlayForFrame(frame),
-  ]);
+  const [sourceImage, backgroundImage, textureOverlayImage, customShapeImages] =
+    await Promise.all([
+      loadSourceImageForFrame(frame),
+      loadBackgroundImageForFrame(frame),
+      loadTextureOverlayForFrame(frame),
+      loadCustomShapeImagesForFrame(frame),
+    ]);
   const blob = await renderMosaicToBlob({
     orientation,
     settings: frame.settings,
@@ -113,6 +125,7 @@ export async function exportCurrentFrameTransparent(
     sourceImage,
     backgroundImage,
     textureOverlayImage,
+    customShapeImages,
     omitColors: lockedColorsSet(frame.settings),
     transparentBackground: true,
   });
@@ -131,11 +144,13 @@ export async function exportAllFrames(
   const files: Record<string, Uint8Array> = {};
 
   for (let i = 0; i < frames.length; i++) {
-    const [sourceImage, backgroundImage, textureOverlayImage] = await Promise.all([
-      loadSourceImageForFrame(frames[i]),
-      loadBackgroundImageForFrame(frames[i]),
-      loadTextureOverlayForFrame(frames[i]),
-    ]);
+    const [sourceImage, backgroundImage, textureOverlayImage, customShapeImages] =
+      await Promise.all([
+        loadSourceImageForFrame(frames[i]),
+        loadBackgroundImageForFrame(frames[i]),
+        loadTextureOverlayForFrame(frames[i]),
+        loadCustomShapeImagesForFrame(frames[i]),
+      ]);
     const blob = await renderMosaicToBlob(
       {
         orientation,
@@ -146,6 +161,7 @@ export async function exportAllFrames(
         sourceImage,
         backgroundImage,
         textureOverlayImage,
+        customShapeImages,
       },
       encode.type,
       encode.quality,

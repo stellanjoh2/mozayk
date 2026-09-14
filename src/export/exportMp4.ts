@@ -7,6 +7,7 @@ import type { Frame, Orientation } from "../types";
 import { downloadBlob } from "./downloadBlob";
 import {
   loadBackgroundImageForFrame,
+  loadCustomShapeImagesForFrame,
   loadSourceImageForFrame,
   loadTextureOverlayForFrame,
 } from "./exportPng";
@@ -76,11 +77,13 @@ export async function exportMp4(
   for (let i = 0; i < total; i++) {
     onProgress?.(`Rendering ${i + 1}/${total}…`);
     const frame = frames[i];
-    const [sourceImage, backgroundImage, textureOverlayImage] = await Promise.all([
-      loadSourceImageForFrame(frame),
-      loadBackgroundImageForFrame(frame),
-      loadTextureOverlayForFrame(frame),
-    ]);
+    const [sourceImage, backgroundImage, textureOverlayImage, customShapeImages] =
+      await Promise.all([
+        loadSourceImageForFrame(frame),
+        loadBackgroundImageForFrame(frame),
+        loadTextureOverlayForFrame(frame),
+        loadCustomShapeImagesForFrame(frame),
+      ]);
     renderMosaic(canvas, {
       orientation,
       settings: frame.settings,
@@ -90,6 +93,7 @@ export async function exportMp4(
       sourceImage,
       backgroundImage,
       textureOverlayImage,
+      customShapeImages,
     });
     await videoSource.add(i * frameDurationS, frameDurationS);
   }

@@ -1,6 +1,7 @@
 import {
   blockPixelRect,
   crossFillRects,
+  inscribedPixelSquare,
   triangleFillPoints,
   type PixelRect,
 } from "../grid/gridMath";
@@ -15,6 +16,7 @@ import {
   strokeGalleryShapeInside,
   svgGalleryShape,
 } from "../shapes/galleryShapes";
+import { isCustomShapeRef } from "../shapes/customShapes";
 import { blockCornerRadiusPx } from "./cornerRadius";
 import { resolveGridOverlayStroke } from "./gridOverlayParams";
 import { isExtrasEnabled } from "./bonusFx";
@@ -204,6 +206,27 @@ export function drawBlockInnerStroke(
     return;
   }
 
+  if (isCustomShapeRef(block.shape)) {
+    const square = inscribedPixelSquare(rect);
+    if (square.width <= 0 || square.height <= 0) return;
+    const radius = Math.min(
+      blockCornerRadiusPx(square.width, square.height, cornerRadius),
+      square.width / 2,
+      square.height / 2,
+    );
+    strokeInside(ctx, color, stroke, () =>
+      addRectPath(
+        ctx,
+        square.x,
+        square.y,
+        square.width,
+        square.height,
+        radius,
+      ),
+    );
+    return;
+  }
+
   if (drawW <= 0 || drawH <= 0) return;
   const radius = Math.min(
     blockCornerRadiusPx(raw.width, raw.height, cornerRadius),
@@ -361,6 +384,27 @@ export function svgWireframeBlock(
     });
     if (!inner) return "";
     return svgClippedStroke(clipId, inner, color, stroke);
+  }
+
+  if (isCustomShapeRef(block.shape)) {
+    const square = inscribedPixelSquare({
+      x,
+      y,
+      width: drawW,
+      height: drawH,
+    });
+    if (square.width <= 0 || square.height <= 0) return "";
+    const radius = Math.min(
+      blockCornerRadiusPx(square.width, square.height, cornerRadius),
+      square.width / 2,
+      square.height / 2,
+    );
+    return svgClippedStroke(
+      clipId,
+      svgRect(square.x, square.y, square.width, square.height, radius),
+      color,
+      stroke,
+    );
   }
 
   if (drawW <= 0 || drawH <= 0) return "";

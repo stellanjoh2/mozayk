@@ -86,6 +86,8 @@ function loadImage(url: string): Promise<HTMLImageElement> {
 
 export function LogoCreator() {
   const markRef = useRef<HTMLDivElement>(null);
+  const previewSmRef = useRef<HTMLDivElement>(null);
+  const previewMdRef = useRef<HTMLDivElement>(null);
   const timersRef = useRef<number[]>([]);
   const loopTimerRef = useRef<number | null>(null);
   const revealGenRef = useRef(0);
@@ -137,11 +139,20 @@ export function LogoCreator() {
     loopTimerRef.current = null;
   };
 
+  const markSvgs = () => {
+    const svgs: Element[] = [];
+    for (const root of [markRef.current, previewMdRef.current, previewSmRef.current]) {
+      const svg = root?.querySelector("svg");
+      if (svg) svgs.push(svg);
+    }
+    return svgs;
+  };
+
   const showAllPieces = () => {
-    const svg = markRef.current?.querySelector("svg");
-    if (!svg) return;
-    for (const el of svg.querySelectorAll(PIECE_SELECTOR)) {
-      setPieceVisible(el as SVGElement, true);
+    for (const svg of markSvgs()) {
+      for (const el of svg.querySelectorAll(PIECE_SELECTOR)) {
+        setPieceVisible(el as SVGElement, true);
+      }
     }
   };
 
@@ -235,31 +246,38 @@ export function LogoCreator() {
 
   useLayoutEffect(() => {
     if (playTick === 0) return;
-    const svg = markRef.current?.querySelector("svg");
-    if (!svg) return;
+    const svgs = markSvgs();
+    if (svgs.length === 0) return;
     const gen = ++revealGenRef.current;
     clearRevealTimers();
     clearLoopTimer();
-    const pieces = logoPieces(svg);
-    if (pieces.length === 0) return;
+    const pieceSets = svgs.map((svg) => logoPieces(svg));
+    const primary = pieceSets[0];
+    if (!primary || primary.length === 0) return;
     const phaseMs = SPEEDS[speedRef.current] * 1000;
     const looping = loopRef.current;
     const armed = (fn: () => void) => {
       if (gen !== revealGenRef.current) return;
       fn();
     };
-    pieces.forEach(({ el, t }) => {
+    const setVisibleAt = (index: number, visible: boolean) => {
+      for (const pieces of pieceSets) {
+        const el = pieces[index]?.el;
+        if (el) setPieceVisible(el, visible);
+      }
+    };
+    primary.forEach(({ t }, i) => {
       const showAt = t * phaseMs;
-      setPieceVisible(el, showAt <= 0);
+      setVisibleAt(i, showAt <= 0);
       if (showAt > 0) {
         timersRef.current.push(
-          window.setTimeout(() => armed(() => setPieceVisible(el, true)), showAt),
+          window.setTimeout(() => armed(() => setVisibleAt(i, true)), showAt),
         );
       }
       if (looping) {
         timersRef.current.push(
           window.setTimeout(
-            () => armed(() => setPieceVisible(el, false)),
+            () => armed(() => setVisibleAt(i, false)),
             phaseMs + t * phaseMs,
           ),
         );
@@ -336,17 +354,17 @@ export function LogoCreator() {
         event.preventDefault();
         if (!event.repeat) triggerShortcutButton("Space");
         togglePlay();
-      } else if (event.code === "KeyQ") {
+      } else if (event.code === "KeyR") {
         event.preventDefault();
-        if (!event.repeat) triggerShortcutButton("KeyQ");
+        if (!event.repeat) triggerShortcutButton("KeyR");
         randomizeLayout();
       } else if (event.code === "KeyS") {
         event.preventDefault();
         if (!event.repeat) triggerShortcutButton("KeyS");
         toggleSubdivide();
-      } else if (event.code === "KeyW") {
+      } else if (event.code === "KeyC") {
         event.preventDefault();
-        if (!event.repeat) triggerShortcutButton("KeyW");
+        if (!event.repeat) triggerShortcutButton("KeyC");
         randomizeColours();
       } else if (event.code === "KeyE") {
         event.preventDefault();
@@ -417,8 +435,24 @@ export function LogoCreator() {
 
   return (
     <div className={`logo-creator${uiHidden ? " is-ui-hidden" : ""}`}>
+      <div className="logo-creator__previews" aria-hidden="true">
+        <div
+          key={`preview-sm-${playTick}`}
+          ref={previewSmRef}
+          className="logo-creator__preview logo-creator__preview--sm"
+          style={markStyle}
+          dangerouslySetInnerHTML={markHtml}
+        />
+        <div
+          key={`preview-md-${playTick}`}
+          ref={previewMdRef}
+          className="logo-creator__preview logo-creator__preview--md"
+          style={markStyle}
+          dangerouslySetInnerHTML={markHtml}
+        />
+      </div>
       <div
-        key={playTick}
+        key={`mark-${playTick}`}
         ref={markRef}
         className="logo-creator__mark"
         style={markStyle}
@@ -433,8 +467,8 @@ export function LogoCreator() {
         inert={uiHidden}
       >
         <div className="logo-creator__dock-group">
-          <button type="button" aria-keyshortcuts="q" data-shortcut="KeyQ" onClick={randomizeLayout}>
-            Randomize Layout
+          <button type="button" aria-keyshortcuts="r" data-shortcut="KeyR" onClick={randomizeLayout}>
+            Randomize Layout (R)
           </button>
           <button
             type="button"
@@ -445,7 +479,7 @@ export function LogoCreator() {
             data-ui-sound={subdivided ? "close" : "ok"}
             onClick={toggleSubdivide}
           >
-            Subdivide
+            Subdivide (S)
           </button>
           <div className="logo-creator__swatches" role="group" aria-label="Logotype colours">
             {colors.map((color, i) => (
@@ -463,11 +497,11 @@ export function LogoCreator() {
               />
             ))}
           </div>
-          <button type="button" aria-keyshortcuts="w" data-shortcut="KeyW" onClick={randomizeColours}>
-            Randomize Colours
+          <button type="button" aria-keyshortcuts="c" data-shortcut="KeyC" onClick={randomizeColours}>
+            Randomize Colours (C)
           </button>
           <button type="button" aria-keyshortcuts="e" data-shortcut="KeyE" data-ui-sound="ok" onClick={restoreColours}>
-            Restore
+            Restore (E)
           </button>
         </div>
         <div className="logo-creator__dock-divider" aria-hidden="true" />

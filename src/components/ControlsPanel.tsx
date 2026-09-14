@@ -64,6 +64,15 @@ import {
   type GalleryShape,
 } from "../shapes/galleryShapes";
 import { anyOptionalShapeEnabled } from "../shapes/shapePalette";
+import {
+  CUSTOM_SHAPE_ACCEPT,
+  MAX_CUSTOM_SHAPE_SLOTS,
+  createCustomShapeSlotId,
+  unsupportedCustomShapeMessage,
+  UnsupportedCustomShapeError,
+  validateCustomShapeFile,
+} from "../shapes/customShapes";
+import { readImageFileAsDataUrl } from "../import/imageSource";
 import { createDefaultShapePalette } from "../state/frameUtils";
 import {
   ORIENTATION_LABELS,
@@ -216,6 +225,7 @@ type ControlsPanelProps = {
   onSaveProject: () => void;
   onLoadProject: (file: File) => void;
   loadingProject?: boolean;
+  onErrorMessage?: (message: string) => void;
 };
 
 type PanelTab = "create" | "export" | "settings";
@@ -286,6 +296,7 @@ export function ControlsPanel({
   onSaveProject,
   onLoadProject,
   loadingProject = false,
+  onErrorMessage,
 }: ControlsPanelProps) {
   const { settings } = frame;
   const panelRef = useRef<HTMLElement>(null);
@@ -316,16 +327,93 @@ export function ControlsPanel({
     ...createDefaultShapePalette(),
     ...settings.shapes,
   };
-  const anyShapeActive = anyOptionalShapeEnabled(shapes);
+  const customShapes = settings.customShapes ?? [];
+  const anyShapeActive = anyOptionalShapeEnabled(shapes, customShapes);
   const textureOverlayOn = isTextureOverlayEnabled(
     settings,
     Boolean(frame.textureOverlay),
   );
   const extrasOn = isExtrasEnabled(settings);
+  const customShapeInputRef = useRef<HTMLInputElement>(null);
+  const pendingCustomSlotIdRef = useRef<string | null>(null);
   const toggleShape = (key: keyof typeof shapes) => {
     const next = !shapes[key];
     playUiSound(next ? "ok" : "close");
     onSettingsChange({ shapes: { ...shapes, [key]: next } });
+  };
+
+  const handleAddShapeSlot = () => {
+    if (customShapes.length >= MAX_CUSTOM_SHAPE_SLOTS) {
+      onErrorMessage?.(
+        `You can add up to ${MAX_CUSTOM_SHAPE_SLOTS} custom shape slots.`,
+      );
+      return;
+    }
+    playUiSound("ok");
+    onSettingsChange({
+      customShapes: [
+        ...customShapes,
+        { id: createCustomShapeSlotId(), enabled: false },
+      ],
+    });
+  };
+
+  const handleCustomSlotClick = (slotId: string) => {
+    const slot = customShapes.find((item) => item.id === slotId);
+    if (!slot) return;
+    if (!slot.dataUrl) {
+      pendingCustomSlotIdRef.current = slotId;
+      customShapeInputRef.current?.click();
+      return;
+    }
+    const next = !slot.enabled;
+    playUiSound(next ? "ok" : "close");
+    onSettingsChange({
+      customShapes: customShapes.map((item) =>
+        item.id === slotId ? { ...item, enabled: next } : item,
+      ),
+    });
+  };
+
+  const handleRemoveCustomSlot = (slotId: string) => {
+    onSettingsChange({
+      customShapes: customShapes.filter((item) => item.id !== slotId),
+    });
+  };
+
+  const handleCustomShapeFile = async (file: File | undefined) => {
+    const slotId = pendingCustomSlotIdRef.current;
+    pendingCustomSlotIdRef.current = null;
+    if (!file || !slotId) return;
+
+    try {
+      validateCustomShapeFile(file);
+    } catch (error) {
+      if (error instanceof UnsupportedCustomShapeError) {
+        onErrorMessage?.(unsupportedCustomShapeMessage(error.label));
+        return;
+      }
+      onErrorMessage?.(
+        "This file could not be used. Use SVG, PNG, JPEG, WebP, or BMP.",
+      );
+      return;
+    }
+
+    try {
+      const dataUrl = await readImageFileAsDataUrl(file);
+      playUiSound("ok");
+      onSettingsChange({
+        customShapes: customShapes.map((item) =>
+          item.id === slotId
+            ? { ...item, dataUrl, name: file.name, enabled: true }
+            : item,
+        ),
+      });
+    } catch {
+      onErrorMessage?.(
+        "This file could not be loaded. Try SVG, PNG, JPEG, WebP, or BMP.",
+      );
+    }
   };
   const selectOrientation = (next: Orientation) => {
     if (next === orientation) return;
@@ -643,9 +731,31 @@ export function ControlsPanel({
         >
           Apply Look to All Frames
         </button>
-        <p className="control-row__label control-row__label--solo">
-          <HintLabel hint="Blocks always on · toggle extras to mix in">Add Shapes</HintLabel>
-        </p>
+        <div className="control-row__label control-row__label--solo control-row__label--with-action">
+          <HintLabel hint="Blocks always on · toggle extras to mix in">
+            Add Shapes
+          </HintLabel>
+          <button
+            type="button"
+            className="text-action-btn"
+            data-ui-sound="ok"
+            disabled={customShapes.length >= MAX_CUSTOM_SHAPE_SLOTS}
+            onClick={handleAddShapeSlot}
+          >
+            Add your own
+          </button>
+        </div>
+        <input
+          ref={customShapeInputRef}
+          type="file"
+          accept={CUSTOM_SHAPE_ACCEPT}
+          hidden
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            void handleCustomShapeFile(file);
+          }}
+        />
         <div className="button-row button-row--4 button-row--shape-icons">
           <button
             type="button"
@@ -816,6 +926,53 @@ export function ControlsPanel({
             <GalleryShapeIcon shape="blossom" />
           </button>
         </div>
+        {customShapes.length > 0 ? (
+          <div className="button-row button-row--4 button-row--shape-icons">
+            {customShapes.map((slot) => {
+              const isOn = Boolean(slot.enabled && slot.dataUrl);
+              return (
+                <div key={slot.id} className="shape-slot-wrap">
+                  <button
+                    type="button"
+                    aria-label={
+                      slot.dataUrl
+                        ? slot.name
+                          ? `Custom shape ${slot.name}`
+                          : "Custom shape"
+                        : "Choose custom shape file"
+                    }
+                    aria-pressed={isOn}
+                    className={`shape-slot--custom${isOn ? " is-active" : ""}`}
+                    onClick={() => handleCustomSlotClick(slot.id)}
+                  >
+                    {slot.dataUrl ? (
+                      <img
+                        className="shape-icon shape-icon--custom"
+                        src={slot.dataUrl}
+                        alt=""
+                        draggable={false}
+                      />
+                    ) : (
+                      <span className="shape-slot-placeholder" aria-hidden="true">
+                        ?
+                      </span>
+                    )}
+                  </button>
+                  {slot.dataUrl ? (
+                    <RemoveIconButton
+                      ariaLabel={
+                        slot.name
+                          ? `Remove custom shape ${slot.name}`
+                          : "Remove custom shape slot"
+                      }
+                      onClick={() => handleRemoveCustomSlot(slot.id)}
+                    />
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
         <SliderRow
           label="Shape Mix"
           hint="0 = blocks only · 100 = mix all enabled"

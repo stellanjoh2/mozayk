@@ -30,6 +30,11 @@ import {
   isGalleryShape,
 } from "../shapes/galleryShapes";
 import {
+  fillCustomShape,
+  isCustomShapeRef,
+  customShapeSlotId,
+} from "../shapes/customShapes";
+import {
   insetCrossRects,
   insetPixelRect,
   shapeGapInsetPx,
@@ -54,6 +59,8 @@ export type RenderOptions = {
   backgroundImage?: HTMLImageElement | null;
   /** Local texture overlay image when frame.textureOverlay is set. */
   textureOverlayImage?: HTMLImageElement | null;
+  /** Loaded images for custom shape slots, keyed by slot id. */
+  customShapeImages?: ReadonlyMap<string, HTMLImageElement> | null;
   /** Skip drawing blocks with these colours (export holes). */
   omitColors?: ReadonlySet<string>;
   /** Clear alpha background instead of black/checkerboard. */
@@ -133,6 +140,7 @@ function drawBlock(
   fillRadius: number,
   cornerRadius: number,
   shapeGap: number,
+  customShapeImages?: ReadonlyMap<string, HTMLImageElement> | null,
 ): void {
   const raw = blockPixelRect(grid, block);
   const rect = insetPixelRect(raw, shapeGap, grid.cellSize);
@@ -198,6 +206,12 @@ function drawBlock(
 
   if (isGalleryShape(block.shape)) {
     fillGalleryShape(ctx, block.shape, rect, block.color);
+    return;
+  }
+
+  if (isCustomShapeRef(block.shape)) {
+    const image = customShapeImages?.get(customShapeSlotId(block.shape));
+    if (image) fillCustomShape(ctx, image, rect, cornerRadius);
     return;
   }
 
@@ -314,6 +328,7 @@ export function renderMosaic(
     omitColors,
     transparentBackground,
   } = options;
+  const customShapeImages = options.customShapeImages;
   const grid = getGridDimensions(orientation, settings.density, width, height);
   const extrasOn = isExtrasEnabled(settings);
   const cornerRadius = extrasOn ? (settings.cornerRadius ?? 0) : 0;
@@ -384,6 +399,7 @@ export function renderMosaic(
           fillRadius,
           cornerRadius ?? 0,
           shapeGap ?? 0,
+          customShapeImages,
         );
       }
       ctx.save();
@@ -396,6 +412,7 @@ export function renderMosaic(
         fillRadius,
         cornerRadius ?? 0,
         shapeGap ?? 0,
+        customShapeImages,
       );
       ctx.restore();
       continue;
@@ -427,6 +444,7 @@ export function renderMosaic(
         fillRadius,
         cornerRadius ?? 0,
         shapeGap ?? 0,
+        customShapeImages,
       );
     }
     if (isSelected || isDragSource) {
@@ -464,6 +482,7 @@ export function renderMosaic(
           fillRadius,
           cornerRadius ?? 0,
           shapeGap ?? 0,
+          customShapeImages,
         );
       }
       if (dragPreviewPulseOpacity != null) {

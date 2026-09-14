@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { getPreviewSize } from "../config";
 import { ensureCachedSourceImage } from "../import/imageSource";
+import {
+  customShapesSignature,
+  loadCustomShapeImages,
+} from "../shapes/customShapes";
 import { renderMosaic } from "../render/renderFrame";
 import { duplicateFrame } from "../state/frameUtils";
 import type { Frame, Orientation } from "../types";
@@ -86,6 +90,20 @@ export function LiveShow({
   );
   const backgroundImage = useLoadedImage(frame.backgroundImage?.dataUrl);
   const textureOverlayImage = useLoadedImage(frame.textureOverlay?.dataUrl);
+  const [customShapeImages, setCustomShapeImages] = useState<
+    Map<string, HTMLImageElement>
+  >(() => new Map());
+  const customShapesKey = customShapesSignature(frame.settings.customShapes);
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadCustomShapeImages(frame.settings.customShapes).then((map) => {
+      if (!cancelled) setCustomShapeImages(map);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [customShapesKey, frame.settings.customShapes]);
 
   const [canvasW, canvasH] = getPreviewSize(orientation);
 
@@ -135,6 +153,7 @@ export function LiveShow({
         sourceImage,
         backgroundImage,
         textureOverlayImage,
+        customShapeImages,
         skipGridBlur: true,
       });
     } catch (err) {
@@ -148,6 +167,7 @@ export function LiveShow({
     sourceImage,
     backgroundImage,
     textureOverlayImage,
+    customShapeImages,
   ]);
 
   const startMic = useCallback(async () => {

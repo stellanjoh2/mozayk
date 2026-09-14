@@ -19,6 +19,10 @@ import {
   ensureCachedSourceImage,
   getCachedSourceImage,
 } from "../import/imageSource";
+import {
+  customShapesSignature,
+  loadCustomShapeImages,
+} from "../shapes/customShapes";
 import { renderMosaic } from "../render/renderFrame";
 import { isExtrasEnabled } from "../render/bonusFx";
 import { isGridBlurActive } from "../render/gridBlur";
@@ -135,6 +139,9 @@ export function CanvasView({
     useState<HTMLImageElement | null>(null);
   const [textureOverlayImage, setTextureOverlayImage] =
     useState<HTMLImageElement | null>(null);
+  const [customShapeImages, setCustomShapeImages] = useState<
+    Map<string, HTMLImageElement>
+  >(() => new Map());
   const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(
     null,
   );
@@ -353,6 +360,17 @@ export function CanvasView({
     };
   }, [frame.textureOverlay?.dataUrl]);
 
+  const customShapesKey = customShapesSignature(frame.settings.customShapes);
+  useEffect(() => {
+    let cancelled = false;
+    void loadCustomShapeImages(frame.settings.customShapes).then((map) => {
+      if (!cancelled) setCustomShapeImages(map);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [customShapesKey, frame.settings.customShapes]);
+
   useLayoutEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -386,6 +404,7 @@ export function CanvasView({
           sourceImage: frame.settings.showSourceImage ? sourceImage : null,
           backgroundImage,
           textureOverlayImage,
+          customShapeImages,
           selectedBlockIndex: showSelectionPulse ? selectedBlockIndex : null,
           selectionPulseOpacity: showSelectionPulse
             ? selectionPulseOpacity(pulsePhase)
@@ -433,6 +452,7 @@ export function CanvasView({
     sourceImage,
     backgroundImage,
     textureOverlayImage,
+    customShapeImages,
     frame.settings,
     frame.blocks,
     frame.id,
@@ -926,6 +946,9 @@ function FrameThumbnail({
     useState<HTMLImageElement | null>(() =>
       overlayDataUrl ? getCachedSourceImage(overlayDataUrl) ?? null : null,
     );
+  const [customShapeImages, setCustomShapeImages] = useState<
+    Map<string, HTMLImageElement>
+  >(() => new Map());
 
   useEffect(() => {
     if (!frame.settings.showSourceImage || !frame.imageSource) {
@@ -999,6 +1022,17 @@ function FrameThumbnail({
     };
   }, [overlayDataUrl]);
 
+  const customShapesKey = customShapesSignature(frame.settings.customShapes);
+  useEffect(() => {
+    let cancelled = false;
+    void loadCustomShapeImages(frame.settings.customShapes).then((map) => {
+      if (!cancelled) setCustomShapeImages(map);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [customShapesKey, frame.settings.customShapes]);
+
   useLayoutEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -1012,6 +1046,7 @@ function FrameThumbnail({
         sourceImage: frame.settings.showSourceImage ? sourceImage : null,
         backgroundImage,
         textureOverlayImage,
+        customShapeImages,
       });
     } catch (error) {
       console.error(error);
@@ -1029,6 +1064,7 @@ function FrameThumbnail({
     sourceImage,
     backgroundImage,
     textureOverlayImage,
+    customShapeImages,
   ]);
 
   return (

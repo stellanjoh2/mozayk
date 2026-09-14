@@ -1,8 +1,9 @@
-import type { FrameSettings, ShapeType } from "../types";
+import type { BuiltinShapeType, FrameSettings, ShapeType } from "../types";
+import { toCustomShapeRef } from "./customShapes";
 
 export type Rng = () => number;
 
-export type OptionalShape = Exclude<ShapeType, "block">;
+export type OptionalShape = Exclude<BuiltinShapeType, "block">;
 
 export const OPTIONAL_SHAPES: OptionalShape[] = [
   "sphere",
@@ -25,14 +26,23 @@ export const OPTIONAL_SHAPES: OptionalShape[] = [
 
 export function anyOptionalShapeEnabled(
   shapes: FrameSettings["shapes"],
+  customShapes: FrameSettings["customShapes"] = undefined,
 ): boolean {
-  return OPTIONAL_SHAPES.some((shape) => shapes[shape]);
+  if (OPTIONAL_SHAPES.some((shape) => shapes[shape])) return true;
+  return Boolean(
+    customShapes?.some((slot) => slot.enabled && Boolean(slot.dataUrl)),
+  );
 }
 
 export function getShapePool(settings: FrameSettings): ShapeType[] {
   const pool: ShapeType[] = ["block"];
   for (const shape of OPTIONAL_SHAPES) {
     if (settings.shapes[shape]) pool.push(shape);
+  }
+  for (const slot of settings.customShapes ?? []) {
+    if (slot.enabled && slot.dataUrl) {
+      pool.push(toCustomShapeRef(slot.id));
+    }
   }
   return pool;
 }

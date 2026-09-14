@@ -26,6 +26,7 @@ import { WIREFRAME_PEEL_STROKE_DEFAULT } from "../render/wireframePeel";
 import {
   isOrientation,
   RANDOMIZE_PAUSE_KEYS,
+  type CustomShapeSlot,
   type Density,
   type FrameSettings,
   type LayoutSource,
@@ -34,6 +35,7 @@ import {
   type ShapePalette,
   type ShapeType,
 } from "../types";
+import { isCustomShapeRef } from "../shapes/customShapes";
 
 const CLIPBOARD_MIME = "application/x-mozayk-settings";
 const SHAPE_TYPES = new Set<ShapeType>([
@@ -210,6 +212,37 @@ function parseShapePalette(value: unknown): ShapePalette {
   };
 }
 
+function parseCustomShapes(value: unknown): CustomShapeSlot[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const slots: CustomShapeSlot[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== "object") continue;
+    const record = item as Record<string, unknown>;
+    const id = typeof record.id === "string" ? record.id.trim() : "";
+    if (!id) continue;
+    const dataUrl =
+      typeof record.dataUrl === "string" && record.dataUrl.startsWith("data:")
+        ? record.dataUrl
+        : undefined;
+    const name =
+      typeof record.name === "string" && record.name.trim()
+        ? record.name.trim()
+        : undefined;
+    slots.push({
+      id,
+      enabled: Boolean(record.enabled),
+      ...(dataUrl ? { dataUrl } : {}),
+      ...(name ? { name } : {}),
+    });
+  }
+  return slots.length > 0 ? slots : undefined;
+}
+
+function isPersistedShapeType(shape: string): shape is ShapeType {
+  if (SHAPE_TYPES.has(shape as ShapeType)) return true;
+  return isCustomShapeRef(shape as ShapeType);
+}
+
 export function parseBlocks(value: unknown): MosaicBlock[] | undefined {
   if (!Array.isArray(value) || value.length === 0) return undefined;
 
@@ -228,7 +261,7 @@ export function parseBlocks(value: unknown): MosaicBlock[] | undefined {
     if (!Number.isInteger(row) || row < 0) return undefined;
     if (!Number.isInteger(width) || width < 1) return undefined;
     if (!Number.isInteger(height) || height < 1) return undefined;
-    if (typeof shape !== "string" || !SHAPE_TYPES.has(shape as ShapeType)) {
+    if (typeof shape !== "string" || !isPersistedShapeType(shape)) {
       return undefined;
     }
 
@@ -240,7 +273,7 @@ export function parseBlocks(value: unknown): MosaicBlock[] | undefined {
       row,
       width,
       height,
-      shape: shape as ShapeType,
+      shape,
       color,
     });
   }
@@ -265,10 +298,13 @@ export function parseSettingsRecord(
     ? candidate.layoutSource
     : undefined;
 
+  const customShapes = parseCustomShapes(candidate.customShapes);
+
   return {
     density,
     shapeMix: clampInt(candidate.shapeMix, 0, 100, 50),
     shapes: parseShapePalette(candidate.shapes),
+    ...(customShapes ? { customShapes } : {}),
     ringThickness: clampInt(candidate.ringThickness, 0, 100, 50),
     minCellSize: clampInt(candidate.minCellSize, 1, 999, 1),
     maxCellSize: clampInt(candidate.maxCellSize, 1, 999, 4),

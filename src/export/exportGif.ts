@@ -11,6 +11,7 @@ import type { Frame, Orientation } from "../types";
 import { downloadBlob, mosaicFrameFileName } from "./downloadBlob";
 import {
   loadBackgroundImageForFrame,
+  loadCustomShapeImagesForFrame,
   loadSourceImageForFrame,
   loadTextureOverlayForFrame,
 } from "./exportPng";
@@ -123,11 +124,13 @@ export async function exportGif(
   const images: ImageData[] = [];
 
   for (const frame of frames) {
-    const [sourceImage, backgroundImage, textureOverlayImage] = await Promise.all([
-      loadSourceImageForFrame(frame),
-      loadBackgroundImageForFrame(frame),
-      loadTextureOverlayForFrame(frame),
-    ]);
+    const [sourceImage, backgroundImage, textureOverlayImage, customShapeImages] =
+      await Promise.all([
+        loadSourceImageForFrame(frame),
+        loadBackgroundImageForFrame(frame),
+        loadTextureOverlayForFrame(frame),
+        loadCustomShapeImagesForFrame(frame),
+      ]);
     renderMosaic(source, {
       orientation,
       settings: frame.settings,
@@ -137,6 +140,7 @@ export async function exportGif(
       sourceImage,
       backgroundImage,
       textureOverlayImage,
+      customShapeImages,
     });
     images.push(downscaleFrame(source, dest, width, height));
     await yieldToUi();
