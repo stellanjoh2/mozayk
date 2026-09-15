@@ -23,16 +23,21 @@ export function mp4ExportToast(bytes: number): string {
   return `Exported ${formatMp4Bytes(bytes)} MP4`;
 }
 
+function yieldToUi(): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, 0);
+  });
+}
+
 export async function exportMp4(
   frames: Frame[],
   orientation: Orientation,
   preset: ExportPreset,
   playbackFps: number,
-  onProgress?: (label: string) => void,
 ): Promise<number> {
   if (frames.length === 0) throw new Error("MP4 export failed");
 
-  onProgress?.("Exporting…");
+  const total = frames.length;
 
   const {
     Output,
@@ -43,8 +48,6 @@ export async function exportMp4(
     canEncodeVideo,
   } = await import("mediabunny");
 
-  onProgress?.("Preparing…");
-
   if (!(await canEncodeVideo("avc"))) {
     throw new Error(
       "MP4 export requires H.264 encoding (WebCodecs) in this browser",
@@ -54,7 +57,6 @@ export async function exportMp4(
   const [width, height] = getMp4ExportSize(orientation, preset);
   const fps = Math.max(playbackFps, 1);
   const frameDurationS = 1 / fps;
-  const total = frames.length;
 
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -75,7 +77,6 @@ export async function exportMp4(
   await output.start();
 
   for (let i = 0; i < total; i++) {
-    onProgress?.(`Rendering ${i + 1}/${total}…`);
     const frame = frames[i];
     const [sourceImage, backgroundImage, textureOverlayImage, customShapeImages] =
       await Promise.all([
@@ -97,9 +98,9 @@ export async function exportMp4(
       customShapeImages,
     });
     await videoSource.add(i * frameDurationS, frameDurationS);
+    await yieldToUi();
   }
 
-  onProgress?.("Encoding…");
   await output.finalize();
 
   const buffer = output.target.buffer;

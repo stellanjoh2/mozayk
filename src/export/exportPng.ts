@@ -135,6 +135,12 @@ export async function exportCurrentFrameTransparent(
   downloadBlob(blob, mosaicFrameFileName(frameIndex, "png", "_transparent"));
 }
 
+function yieldToUi(): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, 0);
+  });
+}
+
 export async function exportAllFrames(
   frames: Frame[],
   orientation: Orientation,
@@ -172,6 +178,7 @@ export async function exportAllFrames(
     if (!blob) throw new Error(`${encode.label} export failed`);
     const buffer = new Uint8Array(await blob.arrayBuffer());
     files[mosaicFrameFileName(i, encode.ext)] = buffer;
+    await yieldToUi();
   }
 
   const zipped = zipSync(files);

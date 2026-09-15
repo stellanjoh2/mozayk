@@ -834,6 +834,18 @@ export default function App() {
     }
   }, []);
 
+  const runHeavyExport = useCallback(
+    async (task: () => Promise<void>) => {
+      setExportingLabel("Exporting…");
+      try {
+        await runExport(task);
+      } finally {
+        setExportingLabel(null);
+      }
+    },
+    [runExport],
+  );
+
   const handleImportImage = useCallback(
     async (file: File) => {
       try {
@@ -950,6 +962,8 @@ export default function App() {
         return;
       }
 
+      setImportingImage(true);
+      setImportingLabel("Loading…");
       try {
         const probe = await probeVideoFile(file);
         setVideoImportDialog({ file, probe });
@@ -957,6 +971,9 @@ export default function App() {
         setImportErrorMessage(
           "This video could not be loaded. Try an MP4 or MOV clip (H.264, up to 150 frames).",
         );
+      } finally {
+        setImportingImage(false);
+        setImportingLabel(null);
       }
     },
     [],
@@ -1582,7 +1599,7 @@ export default function App() {
           )
         }
         onExportPngSequence={() =>
-          void runExport(() =>
+          void runHeavyExport(() =>
             exportAllFrames(frames, orientation, exportPreset),
           )
         }
@@ -1598,32 +1615,25 @@ export default function App() {
           )
         }
         onExportJpgSequence={() =>
-          void runExport(() =>
+          void runHeavyExport(() =>
             exportAllFrames(frames, orientation, exportPreset, "jpg"),
           )
         }
         onExportMp4={() =>
-          void runExport(async () => {
-            setExportingLabel("Exporting…");
-            try {
-              const bytes = await exportMp4(
-                frames,
-                orientation,
-                mp4Preset,
-                playbackFps,
-                setExportingLabel,
-              );
-              setToast(mp4ExportToast(bytes));
-            } finally {
-              setExportingLabel(null);
-            }
+          void runHeavyExport(async () => {
+            const bytes = await exportMp4(
+              frames,
+              orientation,
+              mp4Preset,
+              playbackFps,
+            );
+            setToast(mp4ExportToast(bytes));
           })
         }
         onGifPresetChange={setGifPreset}
         onGifFrameDelayChange={setGifFrameDelayCs}
         onExportGif={() =>
-          void runExport(async () => {
-            setToast("Exporting GIF…");
+          void runHeavyExport(async () => {
             const bytes = await exportGif(
               frames,
               orientation,
