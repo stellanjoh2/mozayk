@@ -357,6 +357,7 @@ export function parseSettingsRecord(
     hueShift: clampInt(candidate.hueShift, -180, 180, 0),
     contrast: clampInt(candidate.contrast, -100, 100, 0),
     brightness: clampInt(candidate.brightness, -100, 100, 0),
+    saturation: clampInt(candidate.saturation, -100, 100, 0),
     invert: Boolean(candidate.invert),
     ...(typeof candidate.extrasEnabled === "boolean"
       ? { extrasEnabled: candidate.extrasEnabled }

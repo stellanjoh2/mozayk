@@ -39,7 +39,7 @@ export function SliderRow({
   // Local overlay lets the fill lead App re-renders during a drag. Drop it when
   // the value comes from elsewhere (other frame, paste, undo).
   useLayoutEffect(() => {
-    setDragValue(null);
+    setDragValue((prev) => (prev === null ? prev : null));
   }, [value]);
 
   const handleChange = (next: number) => {

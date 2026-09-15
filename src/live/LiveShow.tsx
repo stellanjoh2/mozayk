@@ -103,7 +103,8 @@ export function LiveShow({
     return () => {
       cancelled = true;
     };
-  }, [customShapesKey, frame.settings.customShapes]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- customShapesKey covers slot content
+  }, [customShapesKey]);
 
   const [canvasW, canvasH] = getPreviewSize(orientation);
 
@@ -151,6 +152,7 @@ export function LiveShow({
         width: canvasW,
         height: canvasH,
         sourceImage,
+        sourceImageFit: frame.imageSource?.fit ?? "cover",
         backgroundImage,
         textureOverlayImage,
         customShapeImages,

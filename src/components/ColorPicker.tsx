@@ -128,7 +128,10 @@ export function ColorPicker({
     if (!anchor || !root) return;
     const place = () => {
       const rect = root.getBoundingClientRect();
-      setPos(placePanel(anchor.getBoundingClientRect(), rect));
+      const next = placePanel(anchor.getBoundingClientRect(), rect);
+      setPos((prev) =>
+        prev && prev.left === next.left && prev.top === next.top ? prev : next,
+      );
     };
     place();
     const onScrollOrResize = () => place();

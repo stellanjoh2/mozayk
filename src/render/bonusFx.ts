@@ -49,7 +49,7 @@ function getGrainTile(): HTMLCanvasElement {
   return grainTile;
 }
 
-/** Apply contrast, brightness + hue in one filter pass when any is non-default. */
+/** Apply brightness, contrast + hue in one filter pass when any is non-default. */
 function applyColorFilters(
   ctx: CanvasRenderingContext2D,
   contrast: number,
@@ -64,8 +64,8 @@ function applyColorFilters(
   if (contrastFactor === 1 && brightnessFactor === 1 && hueDegrees === 0) return;
 
   const parts: string[] = [];
-  if (contrastFactor !== 1) parts.push(`contrast(${contrastFactor})`);
   if (brightnessFactor !== 1) parts.push(`brightness(${brightnessFactor})`);
+  if (contrastFactor !== 1) parts.push(`contrast(${contrastFactor})`);
   if (hueDegrees !== 0) parts.push(`hue-rotate(${hueDegrees}deg)`);
 
   const copy = context2d(width, height);
@@ -114,12 +114,36 @@ function applyNoise(
   ctx.restore();
 }
 
+/** Final pass — Lightroom-style saturate after every other extra (−100…+100 → 0×…2×). */
+function applySaturation(
+  ctx: CanvasRenderingContext2D,
+  saturation: number,
+  width: number,
+  height: number,
+): void {
+  if (saturation === 0) return;
+
+  const copy = context2d(width, height);
+  if (!copy) return;
+  try {
+    copy.filter = `saturate(${1 + saturation / 100})`;
+    copy.drawImage(ctx.canvas, 0, 0);
+    copy.filter = "none";
+  } catch {
+    return;
+  }
+
+  ctx.clearRect(0, 0, width, height);
+  ctx.drawImage(copy.canvas, 0, 0);
+}
+
 function hasActiveExtras(settings: FrameSettings): boolean {
   return (
     (settings.noiseAmount ?? 0) !== 0 ||
     (settings.hueShift ?? 0) !== 0 ||
     (settings.contrast ?? 0) !== 0 ||
     (settings.brightness ?? 0) !== 0 ||
+    (settings.saturation ?? 0) !== 0 ||
     Boolean(settings.invert) ||
     (settings.cornerRadius ?? 0) !== 0 ||
     (settings.shapeGap ?? 0) !== 0 ||
@@ -144,14 +168,23 @@ export function applyBonusFx(
   const contrast = clampInt(settings.contrast, -100, 100, 0);
   const brightness = clampInt(settings.brightness, -100, 100, 0);
   const noise = clampInt(settings.noiseAmount, 0, 100, 0);
+  const saturation = clampInt(settings.saturation, -100, 100, 0);
   const invert = Boolean(settings.invert);
-  if (hue === 0 && contrast === 0 && brightness === 0 && noise <= 0 && !invert)
+  if (
+    hue === 0 &&
+    contrast === 0 &&
+    brightness === 0 &&
+    noise <= 0 &&
+    saturation === 0 &&
+    !invert
+  )
     return;
 
   try {
     applyColorFilters(ctx, contrast, brightness, hue, width, height);
     applyNoise(ctx, noise, width, height);
     if (invert) applyInvert(ctx, width, height);
+    applySaturation(ctx, saturation, width, height);
   } catch {
     // Color filters / noise at 4K can fail to allocate — keep the mosaic.
   }

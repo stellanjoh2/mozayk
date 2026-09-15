@@ -57,7 +57,7 @@ Either way, the result is a precise, resolution-aware composition you can export
 ### Import
 
 - **Images** — JPEG, PNG, WebP, GIF, AVIF
-- **Video** — MP4 or MOV, up to 5 seconds (sampled into frames)
+- **Video** — MP4 or MOV, up to 150 frames at the clip’s native frame rate
 
 Imported layouts can be reshuffled while keeping their source colours.
 

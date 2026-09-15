@@ -505,6 +505,7 @@ export function relayoutImportedFrame(
       displayPalette,
       frame.imageSource.paletteRgb,
       rng,
+      frame.imageSource.fit ?? "cover",
     );
     return dropOrientationLayout({ ...frame, settings, blocks });
   }
@@ -557,6 +558,15 @@ export function relayoutFrameToOrientation(
     source.colors,
     settings.colors,
   );
+
+  // Contain-fit cutouts must re-sample from the photo — cover-cropping tiles
+  // would clip subject pixels that were letterboxed in.
+  if (frame.imageSource?.fit === "contain") {
+    return relayoutImportedFrame(
+      { ...frame, settings, blocks: sourceBlocks, orientationLayout: source },
+      to,
+    );
+  }
 
   const derivedBlocks =
     !frame.imageSource && canTransposeOrientation(source.orientation, to)
@@ -828,20 +838,17 @@ export function activeIndexAfterReorder(
 export function applyImageImport(
   frame: Frame,
   result: ImageImportResult,
+  orientation: Orientation,
 ): Frame {
   const base = dropOrientationLayout(frame);
+  const layout = settingsForImageImport(base.settings, orientation);
   return {
     ...base,
     settings: {
-      ...frame.settings,
+      ...layout,
       colors: result.colors,
       colorAmounts: result.colorAmounts,
       colorsLocked: result.colors.map(() => false),
-      fillAmount: 100,
-      randomWidth: false,
-      randomHeight: false,
-      minCellSize: defaultMinCellSize(),
-      maxCellSize: defaultMaxCellSize(base.settings.density),
       layoutSource: "imported",
     },
     blocks: result.blocks,
@@ -852,6 +859,7 @@ export function applyImageImport(
 export function createImportedFrame(
   settings: FrameSettings,
   result: ImageImportResult,
+  orientation: Orientation,
 ): Frame {
   return applyImageImport(
     {
@@ -860,5 +868,27 @@ export function createImportedFrame(
       blocks: [],
     },
     result,
+    orientation,
   );
+}
+
+/** Drop prior Scale Blend / max-span tweaks so a new photo isn't built oversized. */
+export function settingsForImageImport(
+  settings: FrameSettings,
+  orientation: Orientation,
+): FrameSettings {
+  const density = settings.density;
+  const heightMax = maxHeightSliderMax(density, orientation);
+  const widthMax = maxWidthSliderMax(density, orientation);
+  return {
+    ...settings,
+    scaleBlend: 3,
+    minCellSize: defaultMinCellSize(),
+    maxCellSize: defaultMaxCellSize(density),
+    maxHeight: Math.max(1, Math.round(heightMax / 2)),
+    maxWidth: Math.max(1, Math.round(widthMax / 2)),
+    randomHeight: false,
+    randomWidth: false,
+    fillAmount: 100,
+  };
 }

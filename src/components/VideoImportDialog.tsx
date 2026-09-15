@@ -1,14 +1,9 @@
 import { useEffect, useId, useRef, useState } from "react";
-import {
-  MAX_VIDEO_DURATION_S,
-  VIDEO_IMPORT_FPS,
-  VIDEO_IMPORT_FPS_OPTIONS,
-  type VideoImportFps,
-} from "../config";
+import { MAX_FRAMES } from "../config";
 import {
   formatClipDuration,
+  formatClipFps,
   videoImportDurationS,
-  videoImportFrameCount,
   type VideoProbe,
 } from "../import/videoImport";
 import { playUiSound } from "../ui/sounds";
@@ -20,7 +15,7 @@ type VideoImportDialogProps = {
   fileName: string;
   probe: VideoProbe | null;
   onCancel: () => void;
-  onConfirm: (targetFps: VideoImportFps) => void;
+  onConfirm: () => void;
 };
 
 export function VideoImportDialog({
@@ -35,11 +30,9 @@ export function VideoImportDialog({
   const cancelRef = useRef<HTMLButtonElement>(null);
   const [mounted, setMounted] = useState(open);
   const [entered, setEntered] = useState(false);
-  const [targetFps, setTargetFps] = useState<VideoImportFps>(VIDEO_IMPORT_FPS);
 
   useEffect(() => {
     if (open) {
-      setTargetFps(VIDEO_IMPORT_FPS);
       setMounted(true);
       const id = window.requestAnimationFrame(() => {
         window.requestAnimationFrame(() => setEntered(true));
@@ -69,9 +62,10 @@ export function VideoImportDialog({
 
   if (!mounted || !probe) return null;
 
-  const importDurationS = videoImportDurationS(probe.duration);
-  const clipTruncated = probe.duration > MAX_VIDEO_DURATION_S + 0.05;
-  const frameCount = videoImportFrameCount(probe.duration, targetFps);
+  const importDurationS = videoImportDurationS(probe.duration, probe.fps);
+  const clipTruncated = probe.importFrameCount < probe.sourceFrameCount;
+  const frameLabel =
+    probe.importFrameCount === 1 ? "frame" : "frames";
 
   return (
     <div
@@ -113,9 +107,16 @@ export function VideoImportDialog({
           <TypewriterReveal
             as="span"
             className="video-import-dialog__meta"
-            text={`${formatClipDuration(probe.duration)} clip · ${
-              ORIENTATION_LABELS[probe.orientation]
-            }`}
+            text={`${formatClipDuration(probe.duration)} · ${formatClipFps(
+              probe.fps,
+            )} · ${ORIENTATION_LABELS[probe.orientation]}`}
+            active={entered}
+            caret={false}
+          />
+          <TypewriterReveal
+            as="span"
+            className="video-import-dialog__meta"
+            text={`${probe.importFrameCount} ${frameLabel}`}
             active={entered}
             caret={false}
           />
@@ -123,7 +124,7 @@ export function VideoImportDialog({
             <TypewriterReveal
               as="span"
               className="video-import-dialog__note"
-              text={`Mozayk uses the first ${MAX_VIDEO_DURATION_S} seconds (${formatClipDuration(
+              text={`Mozayk imports the first ${MAX_FRAMES} frames (${formatClipDuration(
                 importDurationS,
               )}).`}
               active={entered}
@@ -131,26 +132,6 @@ export function VideoImportDialog({
             />
           ) : null}
         </p>
-
-        <div className="video-import-dialog__fps">
-          <span className="video-import-dialog__fps-label">Frame rate</span>
-          <div className="button-row button-row--3 button-row--choice video-import-dialog__fps-row">
-            {VIDEO_IMPORT_FPS_OPTIONS.map((option) => (
-              <button
-                key={option.fps}
-                type="button"
-                className={targetFps === option.fps ? "is-active" : ""}
-                onClick={() => setTargetFps(option.fps)}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-          <p className="video-import-dialog__fps-note">
-            {VIDEO_IMPORT_FPS_OPTIONS.find((option) => option.fps === targetFps)?.note} ·{" "}
-            {frameCount} {frameCount === 1 ? "frame" : "frames"}
-          </p>
-        </div>
 
         <div className="reset-canvas-dialog__actions">
           <button
@@ -166,7 +147,7 @@ export function VideoImportDialog({
             type="button"
             className="panel-btn"
             data-ui-sound="ok"
-            onClick={() => onConfirm(targetFps)}
+            onClick={onConfirm}
           >
             Import
           </button>

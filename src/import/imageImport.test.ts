@@ -9,7 +9,7 @@ import {
   resampleColorGrid,
   sameGridAspect,
 } from "./imageImport";
-import { coverCropRect } from "./imageSource";
+import { coverCropRect, containDestRect } from "./imageSource";
 import type { MosaicBlock } from "../types";
 
 function assert(condition: boolean, message: string): asserts condition {
@@ -96,6 +96,22 @@ function run(): void {
     Math.abs(portraitCrop.sw / portraitCrop.sh - 9 / 16) < 0.001,
     "portrait recrop matches 9:16 instead of stretching",
   );
+
+  // Portrait cutout into landscape canvas: letterbox horizontally, never crop.
+  const containLand = containDestRect(100, 200, 16, 9);
+  assert(containLand.dh === 9, "contain uses full target height when image is taller");
+  assert(containLand.dw < 16, "contain letterboxes width for tall images");
+  assert(
+    Math.abs(containLand.dw / containLand.dh - 100 / 200) < 0.001,
+    "contain keeps source aspect",
+  );
+  assert(containLand.dx > 0 && containLand.dy === 0, "contain centres horizontally");
+
+  // Wide cutout into portrait: letterbox vertically.
+  const containPort = containDestRect(200, 100, 9, 16);
+  assert(containPort.dw === 9, "contain uses full target width when image is wider");
+  assert(containPort.dh < 16, "contain letterboxes height for wide images");
+  assert(containPort.dy > 0 && containPort.dx === 0, "contain centres vertically");
 
   const importRgb = [
     { r: 180, g: 120, b: 90 },

@@ -15,7 +15,7 @@ import { Flip } from "gsap/Flip";
 gsap.registerPlugin(useGSAP, Flip);
 import { getThumbnailRenderSize, getThumbnailSize, getGridDimensions, clientToCanvasPixel, pixelToGridCell } from "../grid/gridMath";
 import {
-  drawCoverImage,
+  drawFittedImage,
   ensureCachedSourceImage,
   getCachedSourceImage,
 } from "../import/imageSource";
@@ -52,6 +52,7 @@ import { UiSelect } from "./UiSelect";
 
 const STAGE_PADDING = 24;
 const PIECE_DRAG_THRESHOLD = 4;
+const EMPTY_DROP_TARGETS: GridSlot[] = [];
 
 function stageAvailableSize(
   stageWidth: number,
@@ -205,7 +206,7 @@ export function CanvasView({
   useEffect(() => {
     setSelectedBlockIndex(null);
     setIsDraggingPiece(false);
-    setDropTargets([]);
+    setDropTargets(EMPTY_DROP_TARGETS);
     setHoveredTarget(null);
     setPieceDropBlink(null);
   }, [frame.id]);
@@ -216,7 +217,7 @@ export function CanvasView({
         cancelAnimationFrame(dropBlinkRafRef.current);
         dropBlinkRafRef.current = null;
       }
-      setDropBlinkT(null);
+      setDropBlinkT((prev) => (prev === null ? prev : null));
       return;
     }
 
@@ -363,13 +364,16 @@ export function CanvasView({
   const customShapesKey = customShapesSignature(frame.settings.customShapes);
   useEffect(() => {
     let cancelled = false;
+    // Depend only on signature — array identity often changes without content
+    // (paste/clone/spread) and would re-set a new Map every time → update loop.
     void loadCustomShapeImages(frame.settings.customShapes).then((map) => {
       if (!cancelled) setCustomShapeImages(map);
     });
     return () => {
       cancelled = true;
     };
-  }, [customShapesKey, frame.settings.customShapes]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- customShapesKey covers slot content
+  }, [customShapesKey]);
 
   useLayoutEffect(() => {
     const canvas = canvasRef.current;
@@ -379,7 +383,13 @@ export function CanvasView({
       if (viewOriginal && sourceImage) {
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
-        drawCoverImage(ctx, sourceImage, width, height);
+        drawFittedImage(
+          ctx,
+          sourceImage,
+          width,
+          height,
+          frame.imageSource?.fit ?? "cover",
+        );
         return;
       }
 
@@ -402,6 +412,7 @@ export function CanvasView({
           width,
           height,
           sourceImage: frame.settings.showSourceImage ? sourceImage : null,
+          sourceImageFit: frame.imageSource?.fit ?? "cover",
           backgroundImage,
           textureOverlayImage,
           customShapeImages,
@@ -606,7 +617,7 @@ export function CanvasView({
     }
     clearPieceSelection();
     setIsDraggingPiece(false);
-    setDropTargets([]);
+    setDropTargets(EMPTY_DROP_TARGETS);
     setHoveredTarget(null);
     dragPointerIdRef.current = null;
     dragStartRef.current = null;
@@ -614,7 +625,7 @@ export function CanvasView({
 
   const clearPiecePointer = () => {
     setIsDraggingPiece(false);
-    setDropTargets([]);
+    setDropTargets(EMPTY_DROP_TARGETS);
     setHoveredTarget(null);
     dragPointerIdRef.current = null;
     dragStartRef.current = null;
@@ -665,7 +676,7 @@ export function CanvasView({
     } else {
       setSelectedBlockIndex(hitIndex);
       setIsDraggingPiece(false);
-      setDropTargets([]);
+      setDropTargets(EMPTY_DROP_TARGETS);
     }
   };
 
@@ -972,13 +983,13 @@ function FrameThumbnail({
 
   useEffect(() => {
     if (!backgroundDataUrl) {
-      setBackgroundImage(null);
+      setBackgroundImage((prev) => (prev === null ? prev : null));
       return;
     }
 
     const cached = getCachedSourceImage(backgroundDataUrl);
     if (cached) {
-      setBackgroundImage(cached);
+      setBackgroundImage((prev) => (prev === cached ? prev : cached));
       return;
     }
 
@@ -998,13 +1009,13 @@ function FrameThumbnail({
 
   useEffect(() => {
     if (!overlayDataUrl) {
-      setTextureOverlayImage(null);
+      setTextureOverlayImage((prev) => (prev === null ? prev : null));
       return;
     }
 
     const cached = getCachedSourceImage(overlayDataUrl);
     if (cached) {
-      setTextureOverlayImage(cached);
+      setTextureOverlayImage((prev) => (prev === cached ? prev : cached));
       return;
     }
 
@@ -1031,7 +1042,8 @@ function FrameThumbnail({
     return () => {
       cancelled = true;
     };
-  }, [customShapesKey, frame.settings.customShapes]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- customShapesKey covers slot content
+  }, [customShapesKey]);
 
   useLayoutEffect(() => {
     const canvas = canvasRef.current;
@@ -1044,6 +1056,7 @@ function FrameThumbnail({
         width: renderW,
         height: renderH,
         sourceImage: frame.settings.showSourceImage ? sourceImage : null,
+        sourceImageFit: frame.imageSource?.fit ?? "cover",
         backgroundImage,
         textureOverlayImage,
         customShapeImages,

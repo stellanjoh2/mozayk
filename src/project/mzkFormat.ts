@@ -86,7 +86,14 @@ function parseImageSource(value: unknown): ImageSourceData | undefined {
     }
   }
 
-  return { dataUrl: record.dataUrl, palette, paletteRgb };
+  return {
+    dataUrl: record.dataUrl,
+    palette,
+    paletteRgb,
+    ...(record.fit === "contain" || record.fit === "cover"
+      ? { fit: record.fit }
+      : {}),
+  };
 }
 
 function parseTextureOverlay(value: unknown): TextureOverlayData | undefined {

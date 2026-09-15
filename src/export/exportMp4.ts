@@ -91,6 +91,7 @@ export async function exportMp4(
       width,
       height,
       sourceImage,
+      sourceImageFit: frame.imageSource?.fit ?? "cover",
       backgroundImage,
       textureOverlayImage,
       customShapeImages,

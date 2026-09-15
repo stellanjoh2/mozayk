@@ -10,8 +10,11 @@ import type {
 } from "../types";
 import {
   cacheSourceImage,
+  containDestRect,
   coverCropRect,
+  imageHasTransparency,
   imageToDataUrl,
+  type ImageFitMode,
   type ImageRgb,
   type ImageSourceData,
 } from "./imageSource";
@@ -147,11 +150,15 @@ function poolSizeForContrast(contrast: number): number {
 }
 
 function majorityIndex(indices: number[]): number {
+  const solid = indices.filter((idx) => idx >= 0);
+  // Mostly empty pool stays empty so letterbox/alpha does not grow into tiles.
+  if (solid.length === 0 || solid.length * 2 < indices.length) return -1;
+
   const counts = new Map<number, number>();
-  for (const idx of indices) {
+  for (const idx of solid) {
     counts.set(idx, (counts.get(idx) ?? 0) + 1);
   }
-  let best = indices[0];
+  let best = solid[0];
   let bestCount = 0;
   for (const [idx, count] of counts) {
     if (count > bestCount) {
@@ -668,13 +675,16 @@ export function buildMergedLayoutFromImage(
   palette: string[],
   paletteRgb: ImageRgb[],
   rng: Rng = Math.random,
+  fit: ImageFitMode = "cover",
 ): MosaicBlock[] {
   if (isDensityOff(settings.density)) return [];
   const { columns, rows } = getGridCounts(orientation, settings.density);
-  const sampled = sampleImageGrid(image, columns, rows);
+  const sampled = sampleImageGrid(image, columns, rows, fit);
   const { indexRgb, colors } = colorsForImportIndexing(palette, paletteRgb);
   const indexedGrid = sampled.map((line) =>
-    line.map((pixel) => nearestPaletteIndex(pixel, indexRgb)),
+    line.map((pixel) =>
+      pixel ? nearestPaletteIndex(pixel, indexRgb) : -1,
+    ),
   );
 
   return buildBlocksFromIndexedGrid(
@@ -695,6 +705,7 @@ function blocksFromCells(
   for (let row = 0; row < grid.length; row++) {
     for (let col = 0; col < grid[row].length; col++) {
       const colorIdx = grid[row][col];
+      if (colorIdx < 0) continue;
       blocks.push({
         col,
         row,
@@ -708,40 +719,60 @@ function blocksFromCells(
   return blocks;
 }
 
+/** Alpha below this = no tile (letterbox / PNG cutout). */
+const EMPTY_CELL_ALPHA = 32;
+
 export function sampleImageGrid(
   image: HTMLImageElement,
   columns: number,
   rows: number,
-): Rgb[][] {
+  fit: ImageFitMode = "cover",
+): (Rgb | null)[][] {
   const canvas = document.createElement("canvas");
   canvas.width = columns;
   canvas.height = rows;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Could not create canvas context");
 
-  const { sx, sy, sw, sh } = coverCropRect(
-    image.width,
-    image.height,
-    columns,
-    rows,
-  );
-
-  ctx.fillStyle = "#000000";
-  ctx.fillRect(0, 0, columns, rows);
-  ctx.drawImage(image, sx, sy, sw, sh, 0, 0, columns, rows);
+  if (fit === "contain") {
+    // Leave letterbox + PNG holes as alpha 0 so they stay empty tiles.
+    ctx.clearRect(0, 0, columns, rows);
+    const { dx, dy, dw, dh } = containDestRect(
+      image.width,
+      image.height,
+      columns,
+      rows,
+    );
+    ctx.drawImage(image, 0, 0, image.width, image.height, dx, dy, dw, dh);
+  } else {
+    ctx.fillStyle = "#000000";
+    ctx.fillRect(0, 0, columns, rows);
+    const { sx, sy, sw, sh } = coverCropRect(
+      image.width,
+      image.height,
+      columns,
+      rows,
+    );
+    ctx.drawImage(image, sx, sy, sw, sh, 0, 0, columns, rows);
+  }
 
   const { data } = ctx.getImageData(0, 0, columns, rows);
-  const grid: Rgb[][] = [];
+  const grid: (Rgb | null)[][] = [];
 
   for (let row = 0; row < rows; row++) {
-    const line: Rgb[] = [];
+    const line: (Rgb | null)[] = [];
     for (let col = 0; col < columns; col++) {
       const i = (row * columns + col) * 4;
-      const alpha = data[i + 3] / 255;
+      const alpha = data[i + 3];
+      if (fit === "contain" && alpha < EMPTY_CELL_ALPHA) {
+        line.push(null);
+        continue;
+      }
+      const a = alpha / 255;
       line.push({
-        r: data[i] * alpha,
-        g: data[i + 1] * alpha,
-        b: data[i + 2] * alpha,
+        r: data[i] * a,
+        g: data[i + 1] * a,
+        b: data[i + 2] * a,
       });
     }
     grid.push(line);
@@ -780,9 +811,16 @@ export type ImportPalette = {
 
 const PALETTE_PIXEL_BUDGET = 8000;
 
-function sourceDataUrl(image: HTMLImageElement): string {
+function sourceDataUrl(
+  image: HTMLImageElement,
+  preserveAlpha: boolean,
+): string {
   if (image.src.startsWith("data:")) return image.src;
-  return imageToDataUrl(image);
+  return imageToDataUrl(image, preserveAlpha ? "png" : "jpeg");
+}
+
+function fitForImage(image: HTMLImageElement): ImageFitMode {
+  return imageHasTransparency(image) ? "contain" : "cover";
 }
 
 export function paletteFromPixels(
@@ -812,7 +850,9 @@ export function paletteFromImages(
   );
   const pixels: Rgb[] = [];
   for (const image of images) {
-    pixels.push(...sampleImageGrid(image, columns, rows).flat());
+    for (const cell of sampleImageGrid(image, columns, rows).flat()) {
+      if (cell) pixels.push(cell);
+    }
   }
 
   if (pixels.length <= PALETTE_PIXEL_BUDGET) {
@@ -833,8 +873,10 @@ export function importImageToMosaicWithPalette(
   palette: ImportPalette,
   options: ImageImportOptions = {},
 ): ImageImportResult {
+  const fit = fitForImage(image);
+  const preserveAlpha = fit === "contain";
   if (isDensityOff(settings.density)) {
-    const dataUrl = sourceDataUrl(image);
+    const dataUrl = sourceDataUrl(image, preserveAlpha);
     cacheSourceImage(dataUrl, image);
     return {
       colors: palette.colors,
@@ -844,14 +886,17 @@ export function importImageToMosaicWithPalette(
         dataUrl,
         palette: palette.colors,
         paletteRgb: palette.paletteRgb,
+        fit,
       },
     };
   }
   const { columns, rows } = getGridCounts(orientation, settings.density);
   const mergeRegions = options.mergeRegions ?? true;
-  const sampled = sampleImageGrid(image, columns, rows);
+  const sampled = sampleImageGrid(image, columns, rows, fit);
   const indexedGrid = sampled.map((line) =>
-    line.map((pixel) => nearestPaletteIndex(pixel, palette.paletteRgb)),
+    line.map((pixel) =>
+      pixel ? nearestPaletteIndex(pixel, palette.paletteRgb) : -1,
+    ),
   );
 
   // Import always fills the canvas. A leftover procedural Fill Amount
@@ -861,7 +906,7 @@ export function importImageToMosaicWithPalette(
     ? buildBlocksFromIndexedGrid(indexedGrid, palette.colors, layoutSettings)
     : blocksFromCells(indexedGrid, palette.colors, layoutSettings);
 
-  const dataUrl = sourceDataUrl(image);
+  const dataUrl = sourceDataUrl(image, preserveAlpha);
   cacheSourceImage(dataUrl, image);
 
   return {
@@ -872,6 +917,7 @@ export function importImageToMosaicWithPalette(
       dataUrl,
       palette: palette.colors,
       paletteRgb: palette.paletteRgb,
+      fit,
     },
   };
 }
@@ -882,13 +928,15 @@ export function importImageToMosaic(
   settings: FrameSettings,
   options: ImageImportOptions = {},
 ): ImageImportResult {
+  const fit = fitForImage(image);
   const { columns, rows } = getGridCounts(
     orientation,
     isDensityOff(settings.density) ? 1 : settings.density,
   );
   const colorCount = options.colorCount ?? IMPORT_COLOR_COUNT;
-  const sampled = sampleImageGrid(image, columns, rows);
-  const palette = paletteFromPixels(sampled.flat(), colorCount);
+  const sampled = sampleImageGrid(image, columns, rows, fit);
+  const pixels = sampled.flat().filter((cell): cell is Rgb => cell != null);
+  const palette = paletteFromPixels(pixels, colorCount);
   return importImageToMosaicWithPalette(
     image,
     orientation,

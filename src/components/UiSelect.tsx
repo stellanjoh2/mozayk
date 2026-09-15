@@ -121,7 +121,9 @@ export function UiSelect({
         target.removeEventListener("scroll", place);
       }
     };
-  }, [open, options]);
+    // `options` identity often changes every parent render (inline .map());
+    // placing only needs open — menu content updates via React render.
+  }, [open]);
 
   useLayoutEffect(() => {
     if (!open) return;

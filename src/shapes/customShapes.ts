@@ -162,12 +162,20 @@ export function findCustomShapeSlot(
   return settings.customShapes?.find((slot) => slot.id === id);
 }
 
+/** Stable empty map so callers can bail out with Object.is when nothing to load. */
+export const EMPTY_CUSTOM_SHAPE_IMAGES: ReadonlyMap<
+  string,
+  HTMLImageElement
+> = new Map();
+
 export async function loadCustomShapeImages(
   slots: CustomShapeSlot[] | undefined,
 ): Promise<Map<string, HTMLImageElement>> {
-  const map = new Map<string, HTMLImageElement>();
-  if (!slots?.length) return map;
+  if (!slots?.length) {
+    return EMPTY_CUSTOM_SHAPE_IMAGES as Map<string, HTMLImageElement>;
+  }
 
+  const map = new Map<string, HTMLImageElement>();
   await Promise.all(
     slots.map(async (slot) => {
       if (!slot.dataUrl) return;

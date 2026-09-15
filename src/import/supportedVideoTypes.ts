@@ -48,7 +48,7 @@ export function unsupportedVideoMessage(label: string): string {
   if (label === "GIF") {
     return "Animated GIFs use Import Image. Video import is for MP4 and MOV clips.";
   }
-  return `${label} isn't supported. Use an MP4 or MOV clip (up to 5 seconds).`;
+  return `${label} isn't supported. Use an MP4 or MOV clip (up to 150 frames).`;
 }
 
 export function validateVideoFile(file: File): void {

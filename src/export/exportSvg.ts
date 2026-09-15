@@ -23,6 +23,7 @@ export function exportCurrentFrameSvg(
       frame.settings.showSourceImage && frame.imageSource
         ? frame.imageSource.dataUrl
         : undefined,
+    sourceImageFit: frame.imageSource?.fit ?? "cover",
     backgroundDataUrl: frame.backgroundImage?.dataUrl,
   });
 

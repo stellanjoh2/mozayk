@@ -171,9 +171,12 @@ function svgBackground(
   sourceDataUrl?: string,
   transparentBackground?: boolean,
   backgroundDataUrl?: string,
+  sourceImageFit: "cover" | "contain" = "cover",
 ): string {
   if (settings.showSourceImage && sourceDataUrl) {
-    return `<image href="${sourceDataUrl}" x="0" y="0" width="${width}" height="${height}" preserveAspectRatio="xMidYMid slice"/>`;
+    const aspect =
+      sourceImageFit === "contain" ? "xMidYMid meet" : "xMidYMid slice";
+    return `<image href="${sourceDataUrl}" x="0" y="0" width="${width}" height="${height}" preserveAspectRatio="${aspect}"/>`;
   }
 
   if (transparentBackground || settings.transparentBackground) {
@@ -257,6 +260,7 @@ export function renderMosaicToSvg(options: SvgRenderOptions): string {
     width,
     height,
     sourceDataUrl,
+    sourceImageFit = "cover",
     backgroundDataUrl,
     omitColors,
     transparentBackground,
@@ -308,6 +312,7 @@ export function renderMosaicToSvg(options: SvgRenderOptions): string {
       sourceDataUrl,
       transparentBackground,
       backgroundDataUrl,
+      sourceImageFit,
     ),
     shapes,
     overlay,

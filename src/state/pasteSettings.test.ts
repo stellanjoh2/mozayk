@@ -236,6 +236,44 @@ function run(): void {
     textureHueRoundTrip.settings.textureOverlayHue === -90,
     "texture overlay hue survives round-trip",
   );
+
+  const saturation = parseSettingsClipboard(
+    JSON.stringify({
+      density: 5,
+      colors: ["#ffffff"],
+      saturation: -100,
+    }),
+  );
+  assert(saturation !== null, "saturation should parse");
+  assert(saturation.settings.saturation === -100, "saturation −100 kept");
+
+  const saturationOmitted = parseSettingsClipboard(
+    JSON.stringify({
+      density: 5,
+      colors: ["#ffffff"],
+    }),
+  );
+  assert(saturationOmitted !== null, "omitted saturation should parse");
+  assert(
+    saturationOmitted.settings.saturation === 0,
+    "omitted saturation defaults to neutral",
+  );
+
+  const saturationRoundTrip = parseSettingsClipboard(
+    serializeSettingsClipboard(
+      {
+        ...createDefaultSettings(),
+        saturation: 40,
+      },
+      sampleBlocks(),
+      "landscape",
+    ),
+  );
+  assert(saturationRoundTrip !== null, "saturation round-trip should parse");
+  assert(
+    saturationRoundTrip.settings.saturation === 40,
+    "saturation survives round-trip",
+  );
 }
 
 run();

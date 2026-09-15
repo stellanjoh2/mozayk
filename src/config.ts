@@ -4,16 +4,6 @@ export const MAX_FRAMES = 150;
 export const HEAVY_BLUR_FRAME_THRESHOLD = 90;
 export const MAX_COLORS = 8;
 export const MAX_UNDO = 10;
-/** Video import samples up to this many seconds (first N seconds if longer). */
-export const MAX_VIDEO_DURATION_S = 5;
-/** Default video import sample rate (shown pre-selected in the import dialog). */
-export const VIDEO_IMPORT_FPS = 12;
-export const VIDEO_IMPORT_FPS_OPTIONS = [
-  { fps: 12, label: "12 fps", note: "Fast import" },
-  { fps: 24, label: "24 fps", note: "Smooth" },
-  { fps: 30, label: "30 fps", note: "Smoothest" },
-] as const;
-export type VideoImportFps = (typeof VIDEO_IMPORT_FPS_OPTIONS)[number]["fps"];
 
 /** Exact fps for in-app playback and MP4 export. */
 export const PLAYBACK_FPS_DEFAULT = 15;

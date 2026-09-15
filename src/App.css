@@ -1634,12 +1634,12 @@ html.normal-hover .button-row--choice button.is-active:hover::before {
   line-height: 1;
   border-radius: 0;
   background: var(--chrome);
-  color: #fff;
+  color: var(--on-chrome);
   text-shadow: none;
 }
 
 .button-row--shape-icons .shape-slot-wrap .ui-icon-btn--remove:hover {
-  color: #111;
+  color: var(--on-chrome);
   background: var(--chrome);
 }
 

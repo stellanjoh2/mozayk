@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { copyPaletteToClipboard } from "./colorMath";
 import {
   GIF_FRAME_DELAY_CS_DEFAULT,
-  MAX_VIDEO_DURATION_S,
   PLAYBACK_FPS_DEFAULT,
   clampGifFrameDelayCs,
   clampMp4ExportPreset,
@@ -11,7 +10,6 @@ import {
   playbackDelayMs,
   type ExportPreset,
   type GifExportPreset,
-  type VideoImportFps,
 } from "./config";
 import { CanvasView, Timeline } from "./components/CanvasView";
 import { ControlsPanel, MAX_FRAMES } from "./components/ControlsPanel";
@@ -59,6 +57,7 @@ import {
   removeColorFromFrame,
   transposeFrameBlocks,
   createImportedFrame,
+  settingsForImageImport,
 } from "./state/frameUtils";
 import {
   copySettings,
@@ -73,7 +72,6 @@ import { importImageFileToMosaic } from "./import/imageImport";
 import {
   importVideoFileToMosaic,
   probeVideoFile,
-  videoImportMaxFrames,
   type VideoProbe,
 } from "./import/videoImport";
 import {
@@ -854,13 +852,20 @@ export default function App() {
       setImportingImage(true);
       try {
         const frame = frames[activeIndexRef.current] ?? frames[0];
+        const orientation = orientationRef.current;
+        const importSettings = settingsForImageImport(
+          frame.settings,
+          orientation,
+        );
         const result = await importImageFileToMosaic(
           file,
-          orientationRef.current,
-          frame.settings,
+          orientation,
+          importSettings,
         );
         pushUndoCheckpoint();
-        updateActiveFrame((current) => applyImageImport(current, result));
+        updateActiveFrame((current) =>
+          applyImageImport(current, result, orientation),
+        );
         setToast("Image imported");
       } catch {
         setImportErrorMessage(
@@ -874,25 +879,26 @@ export default function App() {
   );
 
   const importVideoFile = useCallback(
-    async (file: File, targetFps: VideoImportFps) => {
+    async (file: File, probe: VideoProbe) => {
       setImportingImage(true);
       setImportingLabel("Importing…");
       try {
         const base =
           framesRef.current[activeIndexRef.current] ?? framesRef.current[0];
         const result = await importVideoFileToMosaic(file, {
-          settings: base.settings,
-          maxFrames: videoImportMaxFrames(targetFps, MAX_VIDEO_DURATION_S),
-          maxDurationS: MAX_VIDEO_DURATION_S,
-          targetFps,
+          settings: settingsForImageImport(
+            base.settings,
+            orientationRef.current,
+          ),
+          probe,
           onProgress: setImportingLabel,
         });
-        const settings = clampSettingsForOrientation(
-          base.settings,
+        const settings = settingsForImageImport(
+          clampSettingsForOrientation(base.settings, result.orientation),
           result.orientation,
         );
         const nextFrames = result.mosaics.map((mosaic) =>
-          createImportedFrame(settings, mosaic),
+          createImportedFrame(settings, mosaic, result.orientation),
         );
         if (layoutRegenTimer.current) {
           window.clearTimeout(layoutRegenTimer.current);
@@ -919,7 +925,7 @@ export default function App() {
         );
       } catch {
         setImportErrorMessage(
-          "This video could not be loaded. Try an MP4 or MOV clip (H.264, up to 5 seconds).",
+          "This video could not be loaded. Try an MP4 or MOV clip (H.264, up to 150 frames).",
         );
       } finally {
         setImportingImage(false);
@@ -949,11 +955,11 @@ export default function App() {
         setVideoImportDialog({ file, probe });
       } catch {
         setImportErrorMessage(
-          "This video could not be loaded. Try an MP4 or MOV clip (H.264, up to 5 seconds).",
+          "This video could not be loaded. Try an MP4 or MOV clip (H.264, up to 150 frames).",
         );
       }
     },
-    [importVideoFile],
+    [],
   );
 
   const handleBackgroundImageUpload = useCallback(
@@ -1462,10 +1468,10 @@ export default function App() {
         fileName={videoImportDialog?.file.name ?? ""}
         probe={videoImportDialog?.probe ?? null}
         onCancel={() => setVideoImportDialog(null)}
-        onConfirm={(targetFps) => {
+        onConfirm={() => {
           const pending = videoImportDialog;
           setVideoImportDialog(null);
-          if (pending) void importVideoFile(pending.file, targetFps);
+          if (pending) void importVideoFile(pending.file, pending.probe);
         }}
       />
       {!isFullscreen && !isMobileGate ? (

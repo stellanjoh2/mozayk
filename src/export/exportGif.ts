@@ -138,6 +138,7 @@ export async function exportGif(
       width: renderWidth,
       height: renderHeight,
       sourceImage,
+      sourceImageFit: frame.imageSource?.fit ?? "cover",
       backgroundImage,
       textureOverlayImage,
       customShapeImages,

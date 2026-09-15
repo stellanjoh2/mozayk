@@ -686,7 +686,7 @@ export function ControlsPanel({
           <button
             type="button"
             disabled={importingImage}
-            title="MP4 or MOV, up to 5 seconds"
+            title="MP4 or MOV, up to 150 frames"
             onClick={() => videoInputRef.current?.click()}
           >
             {importingLabel ?? "Import Video"}
@@ -1627,24 +1627,30 @@ export function ControlsPanel({
       >
         <HeadlineToggle
           title="Extras"
-          hint="Noise, colour grade, gaps, and outlines"
+          hint="Grain, colour grade, gaps, and outlines"
           checked={extrasOn}
           onChange={(extrasEnabled) =>
             onSettingsChange({ extrasEnabled }, false)
           }
         >
         <SliderRow
-          label="Noise"
-          hint="Film grain over the finished image · PNG only"
-          value={settings.noiseAmount ?? 0}
-          min={0}
+          label="Brightness"
+          hint="Lighten or darken the finished image · PNG only"
+          value={settings.brightness ?? 0}
+          min={-100}
           max={100}
-          onChange={(noiseAmount) =>
-            onSettingsChange({ noiseAmount }, false)
-          }
+          onChange={(brightness) => onSettingsChange({ brightness }, false)}
         />
         <SliderRow
-          label="Master Hue"
+          label="Saturation"
+          hint="−100 greyscale · 0 unchanged · +100 boosted · last in post · PNG only"
+          value={settings.saturation ?? 0}
+          min={-100}
+          max={100}
+          onChange={(saturation) => onSettingsChange({ saturation }, false)}
+        />
+        <SliderRow
+          label="Hue"
           hint="Rotate colours of the finished image · PNG only"
           value={settings.hueShift ?? 0}
           min={-180}
@@ -1661,12 +1667,14 @@ export function ControlsPanel({
           onChange={(contrast) => onSettingsChange({ contrast }, false)}
         />
         <SliderRow
-          label="Brightness"
-          hint="Lighten or darken the finished image · PNG only"
-          value={settings.brightness ?? 0}
-          min={-100}
+          label="Grain"
+          hint="Film grain over the finished image · PNG only"
+          value={settings.noiseAmount ?? 0}
+          min={0}
           max={100}
-          onChange={(brightness) => onSettingsChange({ brightness }, false)}
+          onChange={(noiseAmount) =>
+            onSettingsChange({ noiseAmount }, false)
+          }
         />
         <SliderRow
           label="Corner radius"
@@ -1948,7 +1956,7 @@ export function ControlsPanel({
           onToggle={() => toggleExportFormat("svg")}
         >
         <p className="export-group__meta">
-          Shapes and grids · no blur, noise, or texture
+          Shapes and grids · no blur, grain, or texture
         </p>
         <button
           type="button"

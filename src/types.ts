@@ -219,6 +219,8 @@ export type FrameSettings = {
   contrast?: number;
   /** Brightness −100–100. Defaults to 0 (unchanged). */
   brightness?: number;
+  /** Saturation −100–100. 0 = unchanged · −100 = greyscale · +100 = boosted. Defaults to 0. */
+  saturation?: number;
   /** Invert the finished image (full-frame difference with white). */
   invert?: boolean;
   /** Master switch for Extras. Defaults on when any extra is non-default. */

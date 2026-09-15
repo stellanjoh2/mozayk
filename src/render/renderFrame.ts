@@ -4,7 +4,7 @@ import {
   getGridDimensions,
   triangleFillPoints,
 } from "../grid/gridMath";
-import { drawCoverImage } from "../import/imageSource";
+import { drawCoverImage, drawFittedImage } from "../import/imageSource";
 import type {
   FrameSettings,
   GridDimensions,
@@ -55,6 +55,8 @@ export type RenderOptions = {
   height: number;
   /** Loaded source photo — required when settings.showSourceImage is enabled. */
   sourceImage?: HTMLImageElement | null;
+  /** How to place the source photo (contain for transparent cutouts). */
+  sourceImageFit?: "cover" | "contain";
   /** Local background photo when frame.backgroundImage is set. */
   backgroundImage?: HTMLImageElement | null;
   /** Local texture overlay image when frame.textureOverlay is set. */
@@ -237,9 +239,10 @@ function drawBackground(
   height: number,
   sourceImage?: HTMLImageElement | null,
   backgroundImage?: HTMLImageElement | null,
+  sourceImageFit: "cover" | "contain" = "cover",
 ): void {
   if (settings.showSourceImage && sourceImage) {
-    drawCoverImage(ctx, sourceImage, width, height);
+    drawFittedImage(ctx, sourceImage, width, height, sourceImageFit);
     return;
   }
 
@@ -323,6 +326,7 @@ export function renderMosaic(
     width,
     height,
     sourceImage,
+    sourceImageFit = "cover",
     backgroundImage,
     textureOverlayImage,
     omitColors,
@@ -343,7 +347,7 @@ export function renderMosaic(
   ctx.clearRect(0, 0, width, height);
   if (transparentBackground) {
     if (settings.showSourceImage && sourceImage) {
-      drawCoverImage(ctx, sourceImage, width, height);
+      drawFittedImage(ctx, sourceImage, width, height, sourceImageFit);
     }
   } else {
     drawBackground(
@@ -353,6 +357,7 @@ export function renderMosaic(
       height,
       sourceImage,
       backgroundImage,
+      sourceImageFit,
     );
   }
 
