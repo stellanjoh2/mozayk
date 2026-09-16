@@ -556,6 +556,8 @@ export function LogoCreator() {
     }
   };
 
+  const boxesOn = enabledShapes.includes("square");
+
   return (
     <div className={`logo-creator${uiHidden ? " is-ui-hidden" : ""}`}>
       <div className="logo-creator__previews" aria-hidden="true">
@@ -590,6 +592,7 @@ export function LogoCreator() {
           aria-hidden={uiHidden}
           inert={uiHidden}
         >
+        <div className="logo-creator__tools">
         <div className="logo-creator__shapes-row">
           <div className="logo-creator__shapes" role="group" aria-label="Shapes">
             {LOGO_SHAPE_IDS.map((shape) => {
@@ -610,7 +613,10 @@ export function LogoCreator() {
               );
             })}
           </div>
-          <label className="logo-creator__slider" title="0 = square · 100 = pill · boxes only">
+          <label
+            className={`logo-creator__slider${boxesOn ? "" : " is-muted"}`}
+            title="0 = square · 100 = pill · boxes only"
+          >
             <span className="logo-creator__slider-label">
               Corner radius
               <span className="logo-creator__slider-value">{cornerRadius}</span>
@@ -621,6 +627,7 @@ export function LogoCreator() {
               max={100}
               step={1}
               value={cornerRadius}
+              disabled={!boxesOn}
               aria-label="Corner radius"
               style={{ ["--val" as string]: cornerRadius } as CSSProperties}
               onChange={(e) => onCornerRadiusChange(Number(e.target.value))}
@@ -789,6 +796,11 @@ export function LogoCreator() {
             ) : null}
           </div>
         </nav>
+        </div>
+        <p className="logo-creator__legal">
+          Internal tool —{" "}
+          <a href={import.meta.env.BASE_URL}>Back to Mozayk</a>
+        </p>
         </div>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import { generateLayout, randomizeColors } from "./generateLayout";
+import { getGridCounts } from "../grid/gridMath";
 import { createDefaultSettings } from "../state/frameUtils";
 import type { MosaicBlock } from "../types";
 
@@ -25,6 +26,21 @@ function tiles(count: number, color = "#ff0000"): MosaicBlock[] {
     shape: "block" as const,
     color,
   }));
+}
+
+function coverage(blocks: MosaicBlock[], columns: number, rows: number): number {
+  const occupied = Array.from({ length: rows }, () => Array<boolean>(columns).fill(false));
+  let cells = 0;
+  for (const block of blocks) {
+    for (let r = block.row; r < block.row + block.height; r++) {
+      for (let c = block.col; c < block.col + block.width; c++) {
+        if (occupied[r]?.[c]) continue;
+        occupied[r][c] = true;
+        cells += 1;
+      }
+    }
+  }
+  return cells / (columns * rows);
 }
 
 function run(): void {
@@ -79,7 +95,33 @@ function run(): void {
     a.some((block, i) => block.color !== b[i].color),
     "different rng seeds must rearrange colours",
   );
+
+  const quadsOnly = {
+    ...createDefaultSettings(),
+    density: 4 as const,
+    fillAmount: 100,
+    scaleBlend: 3,
+    weight: 50,
+    shapes: {
+      ...createDefaultSettings().shapes,
+      block: false,
+      quads: true,
+    },
+  };
+  for (let seed = 1; seed <= 12; seed++) {
+    const blocks = generateLayout("landscape", quadsOnly, mulberry32(seed));
+    assert(blocks.length > 0, `quads-only layout produces tiles (seed ${seed})`);
+    assert(
+      blocks.every((block) => block.shape === "quads" && block.width === block.height),
+      `non-box tiles stay square so they fill their cell (seed ${seed})`,
+    );
+    const { columns, rows } = getGridCounts("landscape", quadsOnly.density);
+    assert(
+      coverage(blocks, columns, rows) > 0.98,
+      `max fill with one shape packs the grid (seed ${seed})`,
+    );
+  }
 }
 
 run();
-console.log("randomizeColors tests passed");
+console.log("generateLayout tests passed");

@@ -88,12 +88,13 @@ function withDerivedLayout(
 
 export function createDefaultShapePalette(): FrameSettings["shapes"] {
   return {
+    block: true,
     sphere: false,
     ring: false,
     triangle: false,
     cross: false,
     clover: false,
-    arrows: false,
+    dots: false,
     spots: false,
     arcs: false,
     quads: false,
@@ -104,6 +105,14 @@ export function createDefaultShapePalette(): FrameSettings["shapes"] {
     bloom: false,
     flower: false,
     blossom: false,
+    moons: false,
+    steps: false,
+    chevrons: false,
+    gates: false,
+    waves: false,
+    arches: false,
+    tiles: false,
+    scallops: false,
   };
 }
 
@@ -139,7 +148,7 @@ export function lockedColorsSet(settings: FrameSettings): Set<string> {
 }
 
 export function createDefaultSettings(): FrameSettings {
-  const density = 5 as Density;
+  const density = 6 as Density;
   const orientation: Orientation = "landscape";
   const heightMax = maxHeightSliderMax(density, orientation);
   const widthMax = maxWidthSliderMax(density, orientation);
@@ -559,9 +568,13 @@ export function relayoutFrameToOrientation(
     settings.colors,
   );
 
-  // Contain-fit cutouts must re-sample from the photo — cover-cropping tiles
-  // would clip subject pixels that were letterboxed in.
-  if (frame.imageSource?.fit === "contain") {
+  // When the source photo is loaded, re-sample into the new ratio. Cover-cropping
+  // tiles permanently loses the parts of the photo that were cropped away
+  // (and contain-fit letterboxing would clip subject pixels).
+  if (
+    frame.imageSource &&
+    getCachedSourceImage(frame.imageSource.dataUrl)
+  ) {
     return relayoutImportedFrame(
       { ...frame, settings, blocks: sourceBlocks, orientationLayout: source },
       to,

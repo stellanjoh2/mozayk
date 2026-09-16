@@ -8,7 +8,7 @@ import {
 /** Eight gallery shapes for the cursor emitter. */
 const SHAPES = [
   "clover",
-  "arrows",
+  "dots",
   "spots",
   "arcs",
   "quads",

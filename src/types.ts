@@ -57,7 +57,7 @@ export type BuiltinShapeType =
   | "triangle"
   | "cross"
   | "clover"
-  | "arrows"
+  | "dots"
   | "spots"
   | "arcs"
   | "quads"
@@ -67,7 +67,15 @@ export type BuiltinShapeType =
   | "star"
   | "bloom"
   | "flower"
-  | "blossom";
+  | "blossom"
+  | "moons"
+  | "steps"
+  | "chevrons"
+  | "gates"
+  | "waves"
+  | "arches"
+  | "tiles"
+  | "scallops";
 /** User-uploaded SVG / still image mixed like a prefab shape. */
 export type CustomShapeRef = `custom:${string}`;
 export type ShapeType = BuiltinShapeType | CustomShapeRef;
@@ -100,16 +108,18 @@ export const RANDOMIZE_PAUSE_KEYS = [
 export type RandomizePauseKey = (typeof RANDOMIZE_PAUSE_KEYS)[number];
 
 export type ShapePalette = {
+  /** Solid rectangular tiles (boxes). */
+  block: boolean;
   sphere: boolean;
   ring: boolean;
   /** Upper-right half of a diagonally split square. */
   triangle: boolean;
-  /** Plus-shaped cross inscribed in the cell. */
+  /** Plus-shaped cross inscribed in the cell. Kept for legacy projects. */
   cross: boolean;
   /** Four circular petals meeting at the centre. */
   clover: boolean;
-  /** Four arrows pointing to the cell corners. */
-  arrows: boolean;
+  /** 4×4 grid of dots (edge halves included). */
+  dots: boolean;
   /** Four circular spots in the cell corners. */
   spots: boolean;
   /** Four thick quarter-ring arcs in the cell corners. */
@@ -130,6 +140,22 @@ export type ShapePalette = {
   flower: boolean;
   /** Four-lobe flower with a hole in each lobe. */
   blossom: boolean;
+  /** Two opposite quarter-disks. */
+  moons: boolean;
+  /** Stepped bars climbing the cell. */
+  steps: boolean;
+  /** Four diagonal chevron wedges. */
+  chevrons: boolean;
+  /** Two thick opposing arc gates. */
+  gates: boolean;
+  /** Ribbon wave threading the cell. */
+  waves: boolean;
+  /** Double arches over a solid base. */
+  arches: boolean;
+  /** Two parallel parallelogram strips. */
+  tiles: boolean;
+  /** Scalloped vertical side bars. */
+  scallops: boolean;
 };
 
 export type MosaicBlock = {

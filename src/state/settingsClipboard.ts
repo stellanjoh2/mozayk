@@ -45,7 +45,7 @@ const SHAPE_TYPES = new Set<ShapeType>([
   "triangle",
   "cross",
   "clover",
-  "arrows",
+  "dots",
   "spots",
   "arcs",
   "quads",
@@ -56,6 +56,14 @@ const SHAPE_TYPES = new Set<ShapeType>([
   "bloom",
   "flower",
   "blossom",
+  "moons",
+  "steps",
+  "chevrons",
+  "gates",
+  "waves",
+  "arches",
+  "tiles",
+  "scallops",
 ]);
 
 export type SettingsClipboardPayload = {
@@ -173,12 +181,13 @@ function parseColors(value: unknown): string[] {
 function parseShapePalette(value: unknown): ShapePalette {
   if (!value || typeof value !== "object") {
     return {
+      block: true,
       sphere: true,
       ring: true,
       triangle: true,
-      cross: true,
+      cross: false,
       clover: true,
-      arrows: true,
+      dots: true,
       spots: true,
       arcs: true,
       quads: true,
@@ -189,16 +198,26 @@ function parseShapePalette(value: unknown): ShapePalette {
       bloom: true,
       flower: true,
       blossom: true,
+      moons: true,
+      steps: true,
+      chevrons: true,
+      gates: true,
+      waves: true,
+      arches: true,
+      tiles: true,
+      scallops: true,
     };
   }
   const record = value as Record<string, unknown>;
   return {
+    // Legacy projects omit `block` — treat as always-on boxes.
+    block: record.block === undefined ? true : Boolean(record.block),
     sphere: Boolean(record.sphere),
     ring: Boolean(record.ring),
     triangle: Boolean(record.triangle),
     cross: Boolean(record.cross),
     clover: Boolean(record.clover),
-    arrows: Boolean(record.arrows),
+    dots: Boolean(record.dots ?? record.arrows),
     spots: Boolean(record.spots),
     arcs: Boolean(record.arcs),
     quads: Boolean(record.quads),
@@ -209,6 +228,14 @@ function parseShapePalette(value: unknown): ShapePalette {
     bloom: Boolean(record.bloom),
     flower: Boolean(record.flower),
     blossom: Boolean(record.blossom),
+    moons: Boolean(record.moons),
+    steps: Boolean(record.steps),
+    chevrons: Boolean(record.chevrons),
+    gates: Boolean(record.gates ?? record.axes),
+    waves: Boolean(record.waves),
+    arches: Boolean(record.arches),
+    tiles: Boolean(record.tiles),
+    scallops: Boolean(record.scallops ?? record.brackets),
   };
 }
 
@@ -240,7 +267,16 @@ function parseCustomShapes(value: unknown): CustomShapeSlot[] | undefined {
 
 function isPersistedShapeType(shape: string): shape is ShapeType {
   if (SHAPE_TYPES.has(shape as ShapeType)) return true;
+  // Legacy gallery ids renamed in the palette.
+  if (shape === "arrows" || shape === "axes" || shape === "brackets") return true;
   return isCustomShapeRef(shape as ShapeType);
+}
+
+function migratePersistedShape(shape: string): ShapeType {
+  if (shape === "arrows") return "dots";
+  if (shape === "axes") return "gates";
+  if (shape === "brackets") return "scallops";
+  return shape as ShapeType;
 }
 
 export function parseBlocks(value: unknown): MosaicBlock[] | undefined {
@@ -273,7 +309,7 @@ export function parseBlocks(value: unknown): MosaicBlock[] | undefined {
       row,
       width,
       height,
-      shape,
+      shape: migratePersistedShape(shape),
       color,
     });
   }

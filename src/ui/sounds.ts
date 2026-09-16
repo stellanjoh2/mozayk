@@ -274,6 +274,7 @@ export function playUiSound(name: UiSound, unthrottled = false): void {
 function shouldPlayHover(el: HTMLElement): boolean {
   if (el instanceof HTMLButtonElement && el.disabled) return false;
   if (el.classList.contains("is-on")) return false;
+  if (el.classList.contains("is-sole")) return false;
   if (el.classList.contains("ui-switch")) {
     const input = el.querySelector("input");
     if (input instanceof HTMLInputElement && input.disabled) return false;

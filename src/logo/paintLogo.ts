@@ -36,7 +36,7 @@ const UNIT_KIND_WEIGHTS: Partial<Record<LogoShapeId, number>> = {
   cross: 33,
   wedges: 33,
   checks: 33,
-  arrows: 33,
+  dots: 33,
   ex: 33,
   star: 33,
   quads: 33,

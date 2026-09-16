@@ -47,6 +47,12 @@ These are built into supported browsers rather than npm packages:
 - **Web Audio API** — UI sound playback
 - **ResizeObserver** — canvas and stage sizing
 
+## Shapes
+
+| Source | Used for | License / note |
+| --- | --- | --- |
+| [shapes.gallery](https://www.shapes.gallery/) by [Monika Michalczyk](https://www.monikamichalczyk.com/) | SVG path shapes in the Add Shapes gallery (`src/shapes/galleryShapes.ts`) | Free shapes by the author |
+
 ## Project assets
 
 The following appear to be project-owned and have no external attribution in the repository:

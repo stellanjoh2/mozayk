@@ -107,12 +107,46 @@ body,
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 54px;
+  gap: 53px;
   box-sizing: border-box;
   width: max-content;
   max-width: none;
   padding: 0 32px 106px;
   transform-origin: bottom left;
+}
+
+.logo-creator__tools {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 54px;
+}
+
+.logo-creator__legal {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 12px;
+  line-height: 1.3;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.logo-creator__legal a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 55%, transparent);
+  text-underline-offset: 2px;
+}
+
+.logo-creator__legal a:hover {
+  color: #ff5300;
+  text-decoration-color: currentColor;
+}
+
+.logo-creator__legal a:focus-visible {
+  color: #ff5300;
+  outline: 1px solid rgba(255, 255, 255, 0.35);
+  outline-offset: 3px;
 }
 
 .logo-creator__shapes-row {
@@ -143,6 +177,15 @@ body,
   color: rgba(255, 255, 255, 0.42);
   font-size: 16px;
   line-height: 1.2;
+  cursor: default;
+}
+
+.logo-creator__slider.is-muted {
+  opacity: 0.4;
+}
+
+.logo-creator__slider.is-muted input[type="range"] {
+  pointer-events: none;
   cursor: default;
 }
 
@@ -428,6 +471,17 @@ body,
 @media (prefers-reduced-motion: reduce) {
   .logo-creator__chrome-slot {
     transition: none;
+  }
+}
+
+/* MacBook / laptop viewports — tighten vertical UI gaps */
+@media (max-height: 960px) {
+  .logo-creator__chrome {
+    gap: 40px;
+  }
+
+  .logo-creator__tools {
+    gap: 40px;
   }
 }
 

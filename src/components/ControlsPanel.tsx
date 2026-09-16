@@ -63,11 +63,12 @@ import {
   GALLERY_SHAPE_VIEWBOX,
   type GalleryShape,
 } from "../shapes/galleryShapes";
-import { anyOptionalShapeEnabled } from "../shapes/shapePalette";
+import { anyOptionalShapeEnabled, getShapePool } from "../shapes/shapePalette";
 import {
   CUSTOM_SHAPE_ACCEPT,
   MAX_CUSTOM_SHAPE_SLOTS,
   createCustomShapeSlotId,
+  toCustomShapeRef,
   unsupportedCustomShapeMessage,
   UnsupportedCustomShapeError,
   validateCustomShapeFile,
@@ -83,6 +84,7 @@ import {
   type FrameSettings,
   type GridBlendMode,
   type Orientation,
+  type ShapeType,
   type TextureOverlayBlendMode,
 } from "../types";
 import { SUPPORTED_IMAGE_ACCEPT } from "../import/supportedImageTypes";
@@ -329,6 +331,7 @@ export function ControlsPanel({
   };
   const customShapes = settings.customShapes ?? [];
   const anyShapeActive = anyOptionalShapeEnabled(shapes, customShapes);
+  const shapeMixActive = shapes.block && anyShapeActive;
   const textureOverlayOn = isTextureOverlayEnabled(
     settings,
     Boolean(frame.textureOverlay),
@@ -336,8 +339,21 @@ export function ControlsPanel({
   const extrasOn = isExtrasEnabled(settings);
   const customShapeInputRef = useRef<HTMLInputElement>(null);
   const pendingCustomSlotIdRef = useRef<string | null>(null);
+  const shapePoolWouldEmpty = (nextShapes: typeof shapes, nextCustoms = customShapes) =>
+    !nextShapes.block &&
+    !anyOptionalShapeEnabled(nextShapes, nextCustoms);
+  const soleShape = (() => {
+    const pool = getShapePool({ ...settings, shapes, customShapes });
+    return pool.length === 1 ? pool[0]! : null;
+  })();
+  const shapeBtnClass = (on: boolean, id: ShapeType) =>
+    on ? (soleShape === id ? "is-active is-sole" : "is-active") : "";
   const toggleShape = (key: keyof typeof shapes) => {
     const next = !shapes[key];
+    if (!next && shapePoolWouldEmpty({ ...shapes, [key]: false })) {
+      playUiSound("delete");
+      return;
+    }
     playUiSound(next ? "ok" : "close");
     onSettingsChange({ shapes: { ...shapes, [key]: next } });
   };
@@ -367,6 +383,18 @@ export function ControlsPanel({
       return;
     }
     const next = !slot.enabled;
+    if (
+      !next &&
+      shapePoolWouldEmpty(
+        shapes,
+        customShapes.map((item) =>
+          item.id === slotId ? { ...item, enabled: false } : item,
+        ),
+      )
+    ) {
+      playUiSound("delete");
+      return;
+    }
     playUiSound(next ? "ok" : "close");
     onSettingsChange({
       customShapes: customShapes.map((item) =>
@@ -732,7 +760,7 @@ export function ControlsPanel({
           Apply Look to All Frames
         </button>
         <div className="control-row__label control-row__label--solo control-row__label--with-action">
-          <HintLabel hint="Blocks always on · toggle extras to mix in">
+          <HintLabel hint="Toggle shapes to include in the mix">
             Add Shapes
           </HintLabel>
           <button
@@ -759,9 +787,20 @@ export function ControlsPanel({
         <div className="button-row button-row--4 button-row--shape-icons">
           <button
             type="button"
+            aria-label="Boxes"
+            aria-pressed={shapes.block}
+            className={shapeBtnClass(shapes.block, "block")}
+            onClick={() => toggleShape("block")}
+          >
+            <svg className="shape-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="2" y="2" width="20" height="20" fill="currentColor" />
+            </svg>
+          </button>
+          <button
+            type="button"
             aria-label="Spheres"
             aria-pressed={shapes.sphere}
-            className={shapes.sphere ? "is-active" : ""}
+            className={shapeBtnClass(shapes.sphere, "sphere")}
             onClick={() => toggleShape("sphere")}
           >
             <svg className="shape-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -770,9 +809,20 @@ export function ControlsPanel({
           </button>
           <button
             type="button"
+            aria-label="Triangles"
+            aria-pressed={Boolean(shapes.triangle)}
+            className={shapeBtnClass(Boolean(shapes.triangle), "triangle")}
+            onClick={() => toggleShape("triangle")}
+          >
+            <svg className="shape-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <polygon points="2,2 22,2 22,22" fill="currentColor" />
+            </svg>
+          </button>
+          <button
+            type="button"
             aria-label="Rings"
             aria-pressed={shapes.ring}
-            className={shapes.ring ? "is-active" : ""}
+            className={shapeBtnClass(shapes.ring, "ring")}
             onClick={() => toggleShape("ring")}
           >
             <svg className="shape-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -786,11 +836,22 @@ export function ControlsPanel({
               />
             </svg>
           </button>
+        </div>
+        <div className="button-row button-row--4 button-row--shape-icons">
+          <button
+            type="button"
+            aria-label="Wedges"
+            aria-pressed={Boolean(shapes.wedges)}
+            className={shapeBtnClass(Boolean(shapes.wedges), "wedges")}
+            onClick={() => toggleShape("wedges")}
+          >
+            <GalleryShapeIcon shape="wedges" />
+          </button>
           <button
             type="button"
             aria-label="Spots"
             aria-pressed={Boolean(shapes.spots)}
-            className={shapes.spots ? "is-active" : ""}
+            className={shapeBtnClass(Boolean(shapes.spots), "spots")}
             onClick={() => toggleShape("spots")}
           >
             <GalleryShapeIcon shape="spots" />
@@ -799,52 +860,16 @@ export function ControlsPanel({
             type="button"
             aria-label="Quads"
             aria-pressed={Boolean(shapes.quads)}
-            className={shapes.quads ? "is-active" : ""}
+            className={shapeBtnClass(Boolean(shapes.quads), "quads")}
             onClick={() => toggleShape("quads")}
           >
             <GalleryShapeIcon shape="quads" />
-          </button>
-        </div>
-        <div className="button-row button-row--4 button-row--shape-icons">
-          <button
-            type="button"
-            aria-label="Triangles"
-            aria-pressed={Boolean(shapes.triangle)}
-            className={shapes.triangle ? "is-active" : ""}
-            onClick={() => toggleShape("triangle")}
-          >
-            <svg className="shape-icon" viewBox="0 0 24 24" aria-hidden="true">
-              <polygon points="2,2 22,2 22,22" fill="currentColor" />
-            </svg>
-          </button>
-          <button
-            type="button"
-            aria-label="Wedges"
-            aria-pressed={Boolean(shapes.wedges)}
-            className={shapes.wedges ? "is-active" : ""}
-            onClick={() => toggleShape("wedges")}
-          >
-            <GalleryShapeIcon shape="wedges" />
-          </button>
-          <button
-            type="button"
-            aria-label="Crosses"
-            aria-pressed={Boolean(shapes.cross)}
-            className={shapes.cross ? "is-active" : ""}
-            onClick={() => toggleShape("cross")}
-          >
-            <svg className="shape-icon" viewBox="0 0 24 24" aria-hidden="true">
-              <path
-                fill="currentColor"
-                d="M9 2h6v7h7v6h-7v7H9v-7H2V9h7V2z"
-              />
-            </svg>
           </button>
           <button
             type="button"
             aria-label="Checks"
             aria-pressed={Boolean(shapes.checks)}
-            className={shapes.checks ? "is-active" : ""}
+            className={shapeBtnClass(Boolean(shapes.checks), "checks")}
             onClick={() => toggleShape("checks")}
           >
             <GalleryShapeIcon shape="checks" />
@@ -855,25 +880,25 @@ export function ControlsPanel({
             type="button"
             aria-label="Clovers"
             aria-pressed={Boolean(shapes.clover)}
-            className={shapes.clover ? "is-active" : ""}
+            className={shapeBtnClass(Boolean(shapes.clover), "clover")}
             onClick={() => toggleShape("clover")}
           >
             <GalleryShapeIcon shape="clover" />
           </button>
           <button
             type="button"
-            aria-label="Arrows"
-            aria-pressed={Boolean(shapes.arrows)}
-            className={shapes.arrows ? "is-active" : ""}
-            onClick={() => toggleShape("arrows")}
+            aria-label="Dots"
+            aria-pressed={Boolean(shapes.dots)}
+            className={shapeBtnClass(Boolean(shapes.dots), "dots")}
+            onClick={() => toggleShape("dots")}
           >
-            <GalleryShapeIcon shape="arrows" />
+            <GalleryShapeIcon shape="dots" />
           </button>
           <button
             type="button"
             aria-label="Xs"
             aria-pressed={Boolean(shapes.ex)}
-            className={shapes.ex ? "is-active" : ""}
+            className={shapeBtnClass(Boolean(shapes.ex), "ex")}
             onClick={() => toggleShape("ex")}
           >
             <GalleryShapeIcon shape="ex" />
@@ -882,7 +907,7 @@ export function ControlsPanel({
             type="button"
             aria-label="Arcs"
             aria-pressed={Boolean(shapes.arcs)}
-            className={shapes.arcs ? "is-active" : ""}
+            className={shapeBtnClass(Boolean(shapes.arcs), "arcs")}
             onClick={() => toggleShape("arcs")}
           >
             <GalleryShapeIcon shape="arcs" />
@@ -893,7 +918,7 @@ export function ControlsPanel({
             type="button"
             aria-label="Stars"
             aria-pressed={Boolean(shapes.star)}
-            className={shapes.star ? "is-active" : ""}
+            className={shapeBtnClass(Boolean(shapes.star), "star")}
             onClick={() => toggleShape("star")}
           >
             <GalleryShapeIcon shape="star" />
@@ -902,7 +927,7 @@ export function ControlsPanel({
             type="button"
             aria-label="Blooms"
             aria-pressed={Boolean(shapes.bloom)}
-            className={shapes.bloom ? "is-active" : ""}
+            className={shapeBtnClass(Boolean(shapes.bloom), "bloom")}
             onClick={() => toggleShape("bloom")}
           >
             <GalleryShapeIcon shape="bloom" />
@@ -911,7 +936,7 @@ export function ControlsPanel({
             type="button"
             aria-label="Flowers"
             aria-pressed={Boolean(shapes.flower)}
-            className={shapes.flower ? "is-active" : ""}
+            className={shapeBtnClass(Boolean(shapes.flower), "flower")}
             onClick={() => toggleShape("flower")}
           >
             <GalleryShapeIcon shape="flower" />
@@ -920,16 +945,93 @@ export function ControlsPanel({
             type="button"
             aria-label="Blossoms"
             aria-pressed={Boolean(shapes.blossom)}
-            className={shapes.blossom ? "is-active" : ""}
+            className={shapeBtnClass(Boolean(shapes.blossom), "blossom")}
             onClick={() => toggleShape("blossom")}
           >
             <GalleryShapeIcon shape="blossom" />
+          </button>
+        </div>
+        <div className="button-row button-row--4 button-row--shape-icons">
+          <button
+            type="button"
+            aria-label="Moons"
+            aria-pressed={Boolean(shapes.moons)}
+            className={shapeBtnClass(Boolean(shapes.moons), "moons")}
+            onClick={() => toggleShape("moons")}
+          >
+            <GalleryShapeIcon shape="moons" />
+          </button>
+          <button
+            type="button"
+            aria-label="Steps"
+            aria-pressed={Boolean(shapes.steps)}
+            className={shapeBtnClass(Boolean(shapes.steps), "steps")}
+            onClick={() => toggleShape("steps")}
+          >
+            <GalleryShapeIcon shape="steps" />
+          </button>
+          <button
+            type="button"
+            aria-label="Chevrons"
+            aria-pressed={Boolean(shapes.chevrons)}
+            className={shapeBtnClass(Boolean(shapes.chevrons), "chevrons")}
+            onClick={() => toggleShape("chevrons")}
+          >
+            <GalleryShapeIcon shape="chevrons" />
+          </button>
+          <button
+            type="button"
+            aria-label="Gates"
+            aria-pressed={Boolean(shapes.gates)}
+            className={shapeBtnClass(Boolean(shapes.gates), "gates")}
+            onClick={() => toggleShape("gates")}
+          >
+            <GalleryShapeIcon shape="gates" />
+          </button>
+        </div>
+        <div className="button-row button-row--4 button-row--shape-icons">
+          <button
+            type="button"
+            aria-label="Waves"
+            aria-pressed={Boolean(shapes.waves)}
+            className={shapeBtnClass(Boolean(shapes.waves), "waves")}
+            onClick={() => toggleShape("waves")}
+          >
+            <GalleryShapeIcon shape="waves" />
+          </button>
+          <button
+            type="button"
+            aria-label="Arches"
+            aria-pressed={Boolean(shapes.arches)}
+            className={shapeBtnClass(Boolean(shapes.arches), "arches")}
+            onClick={() => toggleShape("arches")}
+          >
+            <GalleryShapeIcon shape="arches" />
+          </button>
+          <button
+            type="button"
+            aria-label="Tiles"
+            aria-pressed={Boolean(shapes.tiles)}
+            className={shapeBtnClass(Boolean(shapes.tiles), "tiles")}
+            onClick={() => toggleShape("tiles")}
+          >
+            <GalleryShapeIcon shape="tiles" />
+          </button>
+          <button
+            type="button"
+            aria-label="Scallops"
+            aria-pressed={Boolean(shapes.scallops)}
+            className={shapeBtnClass(Boolean(shapes.scallops), "scallops")}
+            onClick={() => toggleShape("scallops")}
+          >
+            <GalleryShapeIcon shape="scallops" />
           </button>
         </div>
         {customShapes.length > 0 ? (
           <div className="button-row button-row--4 button-row--shape-icons">
             {customShapes.map((slot) => {
               const isOn = Boolean(slot.enabled && slot.dataUrl);
+              const slotClass = shapeBtnClass(isOn, toCustomShapeRef(slot.id));
               return (
                 <div key={slot.id} className="shape-slot-wrap">
                   <button
@@ -942,7 +1044,7 @@ export function ControlsPanel({
                         : "Choose custom shape file"
                     }
                     aria-pressed={isOn}
-                    className={`shape-slot--custom${isOn ? " is-active" : ""}`}
+                    className={`shape-slot--custom${slotClass ? ` ${slotClass}` : ""}`}
                     onClick={() => handleCustomSlotClick(slot.id)}
                   >
                     {slot.dataUrl ? (
@@ -977,7 +1079,7 @@ export function ControlsPanel({
           label="Shape Mix"
           hint="0 = blocks only · 100 = mix all enabled"
           value={settings.shapeMix}
-          disabled={!anyShapeActive}
+          disabled={!shapeMixActive}
           onChange={(shapeMix) => onSettingsChange({ shapeMix })}
         />
         <SliderRow
@@ -1680,6 +1782,7 @@ export function ControlsPanel({
           label="Corner radius"
           hint="0 = square · 100 = pill · boxes only"
           value={settings.cornerRadius ?? 0}
+          disabled={!shapes.block}
           onChange={(cornerRadius) =>
             onSettingsChange({ cornerRadius }, false)
           }
@@ -2226,6 +2329,16 @@ export function ControlsPanel({
           >
             Stellan Johansson
           </button>
+          <br />
+          Shapes provided by{" "}
+          <a
+            href="https://www.shapes.gallery/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="panel-credit__source"
+          >
+            shapes.gallery
+          </a>
           <br />
           <br />
           <span className="panel-credit__social">

@@ -9,6 +9,7 @@ import {
   paletteFromImages,
   type ImageImportResult,
 } from "./imageImport";
+import { orientationFromMediaSize } from "./imageSource";
 
 const VIDEO_CAPTURE_MAX_EDGE = 1920;
 const SEEK_TIMEOUT_MS = 8000;
@@ -43,17 +44,12 @@ export type VideoImportOptions = {
   onProgress?: (label: string) => void;
 };
 
+/** Same aspect buckets as still-image import. */
 export function orientationFromVideoSize(
   width: number,
   height: number,
 ): Orientation {
-  if (width <= 0 || height <= 0) return "landscape";
-  const aspect = width / height;
-  // 16:9 ≈ 1.778, 1:1 = 1, 3:4 = 0.75, 9:16 = 0.5625
-  if (aspect >= 1.25) return "landscape";
-  if (aspect >= 0.875) return "square";
-  if (aspect >= 0.65625) return "photo";
-  return "portrait";
+  return orientationFromMediaSize(width, height);
 }
 
 export function sourceFrameCount(durationS: number, fps: number): number {

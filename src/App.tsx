@@ -68,7 +68,10 @@ import {
   pushSnapshot,
   type CanvasSnapshot,
 } from "./state/undoHistory";
-import { importImageFileToMosaic } from "./import/imageImport";
+import {
+  importImageToMosaic,
+  loadImageFromFile,
+} from "./import/imageImport";
 import {
   importVideoFileToMosaic,
   probeVideoFile,
@@ -77,6 +80,7 @@ import {
 import {
   ensureCachedSourceImage,
   getCachedSourceImage,
+  orientationFromMediaSize,
   readImageFileAsDataUrl,
 } from "./import/imageSource";
 import {
@@ -863,21 +867,48 @@ export default function App() {
 
       setImportingImage(true);
       try {
-        const frame = frames[activeIndexRef.current] ?? frames[0];
-        const orientation = orientationRef.current;
+        const image = await loadImageFromFile(file);
+        const fromOrientation = orientationRef.current;
+        const nextOrientation = orientationFromMediaSize(
+          image.naturalWidth || image.width,
+          image.naturalHeight || image.height,
+        );
+        const frame =
+          framesRef.current[activeIndexRef.current] ?? framesRef.current[0];
         const importSettings = settingsForImageImport(
           frame.settings,
-          orientation,
+          nextOrientation,
         );
-        const result = await importImageFileToMosaic(
-          file,
-          orientation,
+        const result = importImageToMosaic(
+          image,
+          nextOrientation,
           importSettings,
         );
+        const active = activeIndexRef.current;
         pushUndoCheckpoint();
-        updateActiveFrame((current) =>
-          applyImageImport(current, result, orientation),
-        );
+        if (nextOrientation !== fromOrientation) {
+          setOrientation(nextOrientation);
+          orientationRef.current = nextOrientation;
+          setMp4Preset((preset) =>
+            clampMp4ExportPreset(nextOrientation, preset),
+          );
+          setFrames((prev) =>
+            prev.map((current, index) => {
+              if (index === active) {
+                return applyImageImport(current, result, nextOrientation);
+              }
+              return relayoutFrameToOrientation(
+                current,
+                fromOrientation,
+                nextOrientation,
+              );
+            }),
+          );
+        } else {
+          updateActiveFrame((current) =>
+            applyImageImport(current, result, nextOrientation),
+          );
+        }
         setToast("Image imported");
       } catch {
         setImportErrorMessage(
@@ -887,7 +918,7 @@ export default function App() {
         setImportingImage(false);
       }
     },
-    [frames, pushUndoCheckpoint, updateActiveFrame],
+    [pushUndoCheckpoint, updateActiveFrame],
   );
 
   const importVideoFile = useCallback(

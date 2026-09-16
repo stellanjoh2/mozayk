@@ -1,4 +1,4 @@
-import { ensureCachedSourceImage, coverCropRect } from "../import/imageSource";
+import { ensureCachedSourceImage, containDestRect } from "../import/imageSource";
 import { inscribedPixelSquare, type PixelRect } from "../grid/gridMath";
 import { blockCornerRadiusPx } from "../render/cornerRadius";
 import type {
@@ -92,7 +92,7 @@ export function validateCustomShapeFile(file: File): void {
   );
 }
 
-/** Cover-crop into the cell's inscribed square (same grid math as gallery shapes). */
+/** Fit the full image into the cell's inscribed square (no cover-crop). */
 export function fillCustomShape(
   ctx: CanvasRenderingContext2D,
   image: HTMLImageElement,
@@ -104,7 +104,12 @@ export function fillCustomShape(
   const iw = image.naturalWidth || image.width;
   const ih = image.naturalHeight || image.height;
   if (iw <= 0 || ih <= 0) return;
-  const { sx, sy, sw, sh } = coverCropRect(iw, ih, square.width, square.height);
+  const { dx, dy, dw, dh } = containDestRect(
+    iw,
+    ih,
+    square.width,
+    square.height,
+  );
   const radius = Math.min(
     blockCornerRadiusPx(square.width, square.height, cornerRadius),
     square.width / 2,
@@ -119,14 +124,14 @@ export function fillCustomShape(
   }
   ctx.drawImage(
     image,
-    sx,
-    sy,
-    sw,
-    sh,
-    square.x,
-    square.y,
-    square.width,
-    square.height,
+    0,
+    0,
+    iw,
+    ih,
+    square.x + dx,
+    square.y + dy,
+    dw,
+    dh,
   );
   ctx.restore();
 }
@@ -140,7 +145,7 @@ export function svgCustomShape(
   const square = inscribedPixelSquare(rect);
   if (square.width <= 0 || square.height <= 0) return "";
   const href = dataUrl.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
-  const image = `<image href="${href}" x="${square.x}" y="${square.y}" width="${square.width}" height="${square.height}" preserveAspectRatio="xMidYMid slice"/>`;
+  const image = `<image href="${href}" x="${square.x}" y="${square.y}" width="${square.width}" height="${square.height}" preserveAspectRatio="xMidYMid meet"/>`;
   const radius = Math.min(
     blockCornerRadiusPx(square.width, square.height, cornerRadius),
     square.width / 2,

@@ -697,7 +697,8 @@ html.normal-hover .palette-gallery__item:hover .palette-gallery__label {
 html.normal-hover .controls-panel__tab:hover:not(.is-active),
 html.normal-hover .headline-disclosure:hover,
 html.normal-hover .panel-credit__author:hover,
-html.normal-hover .panel-credit a:hover {
+html.normal-hover .panel-credit__source:hover,
+html.normal-hover .panel-credit__social a:hover {
   animation: none;
   opacity: 1;
 }
@@ -952,7 +953,7 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
   gap: 24px;
 }
 
-.panel-credit a {
+.panel-credit__social a {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -963,13 +964,14 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
   text-decoration: none;
 }
 
-.panel-credit a::before {
+.panel-credit__social a::before {
   content: "";
   position: absolute;
   inset: -12px;
 }
 
-.panel-credit__author {
+.panel-credit__author,
+.panel-credit__source {
   appearance: none;
   border: none;
   padding: 0;
@@ -986,7 +988,8 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
   transition: color 0.1s linear;
 }
 
-.panel-credit__author:hover {
+.panel-credit__author:hover,
+.panel-credit__source:hover {
   color: #fff;
   text-decoration-color: #fff;
   animation: hover-plate-blink calc(4s / 30) linear infinite;
@@ -1011,14 +1014,15 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
   mask-size: contain;
 }
 
-.panel-credit a:hover {
+.panel-credit__social a:hover {
   color: var(--text);
   animation: hover-plate-blink calc(4s / 30) linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .panel-credit__author:hover,
-  .panel-credit a:hover {
+  .panel-credit__source:hover,
+  .panel-credit__social a:hover {
     animation: none;
   }
 }
@@ -1595,6 +1599,24 @@ html.normal-hover .button-row--choice button.is-active:hover::before {
   opacity: 0;
 }
 
+.button-row--shape-icons button.is-active.is-sole,
+.button-row--shape-icons .shape-slot--custom.is-active.is-sole {
+  cursor: var(--cursor-default);
+}
+
+.button-row--shape-icons button.is-active.is-sole:hover::before,
+.button-row--shape-icons .shape-slot--custom.is-active.is-sole:hover::before {
+  animation: none;
+  opacity: 0;
+}
+
+html.normal-hover .button-row--shape-icons button.is-active.is-sole:hover::before,
+html.normal-hover
+  .button-row--shape-icons
+  .shape-slot--custom.is-active.is-sole:hover::before {
+  opacity: 0;
+}
+
 .button-row--4 {
   grid-template-columns: repeat(4, 1fr);
 }
@@ -1888,7 +1910,8 @@ html.normal-hover .button-row--choice button.is-active:hover::before {
 .button-row--shape-icons .shape-icon--custom {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  /* Contain so tall/wide cutouts stay fully visible in the slot. */
+  object-fit: contain;
   box-sizing: border-box;
   border: 0;
   outline: none;

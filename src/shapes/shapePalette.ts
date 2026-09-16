@@ -1,17 +1,17 @@
-import type { BuiltinShapeType, FrameSettings, ShapeType } from "../types";
 import { toCustomShapeRef } from "./customShapes";
+import type { BuiltinShapeType, FrameSettings, ShapeType } from "../types";
 
 export type Rng = () => number;
 
-export type OptionalShape = Exclude<BuiltinShapeType, "block">;
+/** Shapes that appear as toggles under Add Shapes (boxes handled separately). */
+export type OptionalShape = Exclude<BuiltinShapeType, "block" | "cross">;
 
 export const OPTIONAL_SHAPES: OptionalShape[] = [
   "sphere",
   "ring",
   "triangle",
-  "cross",
   "clover",
-  "arrows",
+  "dots",
   "spots",
   "arcs",
   "quads",
@@ -22,6 +22,14 @@ export const OPTIONAL_SHAPES: OptionalShape[] = [
   "bloom",
   "flower",
   "blossom",
+  "moons",
+  "steps",
+  "chevrons",
+  "gates",
+  "waves",
+  "arches",
+  "tiles",
+  "scallops",
 ];
 
 export function anyOptionalShapeEnabled(
@@ -35,7 +43,8 @@ export function anyOptionalShapeEnabled(
 }
 
 export function getShapePool(settings: FrameSettings): ShapeType[] {
-  const pool: ShapeType[] = ["block"];
+  const pool: ShapeType[] = [];
+  if (settings.shapes.block) pool.push("block");
   for (const shape of OPTIONAL_SHAPES) {
     if (settings.shapes[shape]) pool.push(shape);
   }
@@ -44,7 +53,8 @@ export function getShapePool(settings: FrameSettings): ShapeType[] {
       pool.push(toCustomShapeRef(slot.id));
     }
   }
-  return pool;
+  // Never leave the pool empty — boxes are the safe fallback.
+  return pool.length > 0 ? pool : ["block"];
 }
 
 function pickInt(rng: Rng, min: number, max: number): number {
@@ -59,13 +69,17 @@ export function assignShape(
   // Triangles may land on any cell; renderers keep them square via the
   // inscribed min(width, height) so they never stretch.
   const pool = getShapePool(settings);
-  if (pool.length === 1) return "block";
+  if (pool.length === 1) return pool[0]!;
+
+  const hasBlock = pool.includes("block");
+  const optional = pool.filter((shape) => shape !== "block");
+  if (!hasBlock) {
+    return optional[pickInt(rng, 0, optional.length - 1)]!;
+  }
+  if (optional.length === 0) return "block";
 
   const mix = settings.shapeMix;
   if (mix <= 0) return "block";
-
-  const optional = pool.filter((shape) => shape !== "block");
-  if (optional.length === 0) return "block";
 
   if (mix >= 100) {
     return optional[pickInt(rng, 0, optional.length - 1)] ?? "block";

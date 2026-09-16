@@ -386,13 +386,22 @@ function placeLayoutPass(
         }
       }
 
+      // Non-box shapes only paint the inscribed square — keep the tile square so
+      // leftover cells stay free for more shapes instead of empty margins.
+      const shape = assignShape(settings, rng);
+      if (shape !== "block" && width !== height) {
+        const size = Math.min(width, height);
+        width = size;
+        height = size;
+      }
+
       markOccupied(occupied, row, col, width, height);
       blocks.push({
         col,
         row,
         width,
         height,
-        shape: assignShape(settings, rng),
+        shape,
         color: "",
       });
     }

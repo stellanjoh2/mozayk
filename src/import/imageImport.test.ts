@@ -9,7 +9,7 @@ import {
   resampleColorGrid,
   sameGridAspect,
 } from "./imageImport";
-import { coverCropRect, containDestRect } from "./imageSource";
+import { coverCropRect, containDestRect, orientationFromMediaSize } from "./imageSource";
 import type { MosaicBlock } from "../types";
 
 function assert(condition: boolean, message: string): asserts condition {
@@ -17,6 +17,18 @@ function assert(condition: boolean, message: string): asserts condition {
 }
 
 function run(): void {
+  assert(orientationFromMediaSize(1920, 1080) === "landscape", "16:9 is landscape");
+  assert(orientationFromMediaSize(1080, 1920) === "portrait", "9:16 is portrait");
+  assert(orientationFromMediaSize(1080, 1080) === "square", "1:1 is square");
+  assert(orientationFromMediaSize(1080, 1440) === "photo", "3:4 is photo");
+  assert(
+    orientationFromMediaSize(768, 1024) === "photo",
+    "tall Unsplash 3:4 still maps to photo, not landscape",
+  );
+  assert(orientationFromMediaSize(1080, 1350) === "photo", "4:5 feed still maps to 3:4");
+  assert(orientationFromMediaSize(1200, 1000) === "square", "near-square stays square");
+  assert(orientationFromMediaSize(0, 0) === "landscape", "empty size defaults landscape");
+
   const blocks: MosaicBlock[] = [
     { col: 0, row: 0, width: 2, height: 2, color: "#ffff00", shape: "block" },
     { col: 2, row: 0, width: 2, height: 2, color: "#ff00ff", shape: "block" },
