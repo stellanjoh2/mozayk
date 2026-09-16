@@ -2342,6 +2342,7 @@ export function ControlsPanel({
             Stellan Johansson
           </button>
           <br />
+          <br />
           Shapes provided by{" "}
           <a
             href="https://www.shapes.gallery/"
@@ -2351,6 +2352,7 @@ export function ControlsPanel({
           >
             shapes.gallery
           </a>
+          <br />
           <br />
           <br />
           <span className="panel-credit__social">
