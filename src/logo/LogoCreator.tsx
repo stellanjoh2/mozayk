@@ -167,6 +167,8 @@ export function LogoCreator() {
   const [exporting, setExporting] = useState(false);
   const speedMenuRef = useRef<HTMLDivElement>(null);
   const exportRef = useRef<HTMLDivElement>(null);
+  const chromeRef = useRef<HTMLDivElement>(null);
+  const chromeSlotRef = useRef<HTMLDivElement>(null);
   const playingRef = useRef(false);
   const uiHiddenRef = useRef(false);
   const subdividedRef = useRef(false);
@@ -338,6 +340,34 @@ export function LogoCreator() {
     loopPoolRef.current = [];
     loopPoolIndexRef.current = 0;
   };
+
+  useLayoutEffect(() => {
+    const el = chromeRef.current;
+    const slot = chromeSlotRef.current;
+    if (!el || !slot) return;
+
+    const fit = () => {
+      // Measure at scale 1 — CSS zoom is unreliable in Safari; use transform.
+      el.style.transform = "none";
+      const width = el.offsetWidth;
+      const height = el.offsetHeight;
+      const viewport = window.visualViewport?.width ?? window.innerWidth;
+      const avail = Math.max(1, viewport - 48);
+      const scale = Math.min(1, avail / Math.max(width, 1));
+      el.style.transform = scale < 1 ? `scale(${scale})` : "";
+      slot.style.width = `${Math.ceil(width * scale)}px`;
+      slot.style.height = `${Math.ceil(height * scale)}px`;
+    };
+
+    fit();
+    void document.fonts?.ready.then(fit);
+    window.addEventListener("resize", fit);
+    window.visualViewport?.addEventListener("resize", fit);
+    return () => {
+      window.removeEventListener("resize", fit);
+      window.visualViewport?.removeEventListener("resize", fit);
+    };
+  }, []);
 
   useLayoutEffect(() => {
     if (playTick === 0) return;
@@ -555,11 +585,13 @@ export function LogoCreator() {
         aria-label="mozayk logotype"
         dangerouslySetInnerHTML={markHtml}
       />
-      <div
-        className="logo-creator__chrome"
-        aria-hidden={uiHidden}
-        inert={uiHidden}
-      >
+      <div ref={chromeSlotRef} className="logo-creator__chrome-slot">
+        <div
+          ref={chromeRef}
+          className="logo-creator__chrome"
+          aria-hidden={uiHidden}
+          inert={uiHidden}
+        >
         <div className="logo-creator__shapes-row">
           <div className="logo-creator__shapes" role="group" aria-label="Shapes">
             {LOGO_SHAPE_IDS.map((shape) => {
@@ -743,6 +775,7 @@ export function LogoCreator() {
             ) : null}
           </div>
         </nav>
+        </div>
       </div>
     </div>
   );

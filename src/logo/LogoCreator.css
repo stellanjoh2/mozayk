@@ -90,22 +90,29 @@ body,
   overflow: hidden;
 }
 
-.logo-creator__chrome {
-  --dock-zoom: min(1, (100vw - 32px) / 1700px);
+.logo-creator__chrome-slot {
   grid-row: 3;
   z-index: 1;
+  position: relative;
+  justify-self: center;
+  align-self: end;
+  /* width/height set from natural chrome size × scale (Safari-safe transform fit) */
+  transition: transform 0.45s cubic-bezier(0.83, 0, 0.17, 1);
+}
+
+.logo-creator__chrome {
+  position: absolute;
+  left: 0;
+  bottom: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 54px;
   box-sizing: border-box;
   width: max-content;
-  max-width: calc(100% - 24px);
-  justify-self: center;
-  align-self: end;
+  max-width: none;
   padding: 0 32px 106px;
-  zoom: var(--dock-zoom);
-  transition: transform 0.45s cubic-bezier(0.83, 0, 0.17, 1);
+  transform-origin: bottom left;
 }
 
 .logo-creator__shapes-row {
@@ -114,6 +121,8 @@ body,
   justify-content: center;
   align-items: center;
   gap: 28px;
+  flex-shrink: 0;
+  width: max-content;
 }
 
 .logo-creator__shapes {
@@ -122,6 +131,7 @@ body,
   justify-content: center;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .logo-creator__radius {
@@ -284,6 +294,7 @@ body,
   box-sizing: border-box;
   width: max-content;
   max-width: none;
+  flex-shrink: 0;
   padding: 0;
 }
 
@@ -409,13 +420,13 @@ body,
   outline-offset: 3px;
 }
 
-.logo-creator.is-ui-hidden .logo-creator__chrome {
+.logo-creator.is-ui-hidden .logo-creator__chrome-slot {
   transform: translateY(50vh);
   pointer-events: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .logo-creator__chrome {
+  .logo-creator__chrome-slot {
     transition: none;
   }
 }
