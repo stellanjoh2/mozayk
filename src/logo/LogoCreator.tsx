@@ -20,13 +20,68 @@ import {
   setPieceVisible,
   type Speed,
 } from "./logoReveal";
-import { paintLogoWithBrandTokens } from "./paintLogo";
+import { applyLogoCornerRadius, paintLogoWithBrandTokens } from "./paintLogo";
+import {
+  DEFAULT_LOGO_SHAPES,
+  LOGO_SHAPE_IDS,
+  LOGO_SHAPE_LABELS,
+  isLogoGalleryShape,
+  type LogoShapeId,
+} from "./logoShapes";
+import { GALLERY_SHAPE_PATHS, GALLERY_SHAPE_VIEWBOX } from "../shapes/galleryShapes";
 import { CaretIcon, LoopIcon, PlayIcon, StopIcon } from "../ui/icons";
 import { playUiSound, triggerShortcutButton } from "../ui/sounds";
 import "./LogoCreator.css";
 
 /** Must match --brand-blue / --brand-purple / --brand-orange in App.css */
 const ORIGINAL_CHROMATIC = ["#2e1ebc", "#cf41f2", "#ff5300"] as const;
+
+function LogoShapeIcon({ shape }: { shape: LogoShapeId }) {
+  if (isLogoGalleryShape(shape)) {
+    return (
+      <svg
+        className="logo-creator__shape-icon"
+        viewBox={`0 0 ${GALLERY_SHAPE_VIEWBOX} ${GALLERY_SHAPE_VIEWBOX}`}
+        aria-hidden="true"
+      >
+        <path fill="currentColor" fillRule="evenodd" d={GALLERY_SHAPE_PATHS[shape]} />
+      </svg>
+    );
+  }
+  if (shape === "square") {
+    return (
+      <svg className="logo-creator__shape-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="2" y="2" width="20" height="20" fill="currentColor" />
+      </svg>
+    );
+  }
+  if (shape === "circle") {
+    return (
+      <svg className="logo-creator__shape-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="11" fill="currentColor" />
+      </svg>
+    );
+  }
+  if (shape === "triangle") {
+    return (
+      <svg className="logo-creator__shape-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <polygon points="2,2 22,2 22,22" fill="currentColor" />
+      </svg>
+    );
+  }
+  if (shape === "ring") {
+    return (
+      <svg className="logo-creator__shape-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" strokeWidth="5" />
+      </svg>
+    );
+  }
+  return (
+    <svg className="logo-creator__shape-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path fill="currentColor" d="M9 2h6v7h7v6h-7v7H9v-7H2V9h7V2z" />
+    </svg>
+  );
+}
 
 function typingInField(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
@@ -105,16 +160,24 @@ export function LogoCreator() {
   const [openColor, setOpenColor] = useState<number | null>(null);
   const [uiHidden, setUiHidden] = useState(false);
   const [subdivided, setSubdivided] = useState(false);
+  const [enabledShapes, setEnabledShapes] = useState<LogoShapeId[]>(() => [
+    ...DEFAULT_LOGO_SHAPES,
+  ]);
+  const [cornerRadius, setCornerRadius] = useState(0);
   const [exporting, setExporting] = useState(false);
   const speedMenuRef = useRef<HTMLDivElement>(null);
   const exportRef = useRef<HTMLDivElement>(null);
   const playingRef = useRef(false);
   const uiHiddenRef = useRef(false);
   const subdividedRef = useRef(false);
+  const enabledShapesRef = useRef(enabledShapes);
+  const cornerRadiusRef = useRef(0);
   speedRef.current = speed;
   playingRef.current = playing;
   uiHiddenRef.current = uiHidden;
   subdividedRef.current = subdivided;
+  enabledShapesRef.current = enabledShapes;
+  cornerRadiusRef.current = cornerRadius;
 
   const markStyle = useMemo(
     () =>
@@ -178,7 +241,11 @@ export function LogoCreator() {
   };
 
   const paintLogo = () =>
-    paintLogoWithBrandTokens(logoSvg, { subdivide: subdividedRef.current });
+    paintLogoWithBrandTokens(logoSvg, {
+      subdivide: subdividedRef.current,
+      shapes: enabledShapesRef.current,
+      cornerRadius: cornerRadiusRef.current,
+    });
 
   const randomizeLayout = () => {
     if (playingRef.current || loopRef.current) stopPlayback();
@@ -189,7 +256,35 @@ export function LogoCreator() {
     const next = !subdividedRef.current;
     subdividedRef.current = next;
     setSubdivided(next);
-    setMarkup(paintLogoWithBrandTokens(logoSvg, { subdivide: next }));
+    setMarkup(
+      paintLogoWithBrandTokens(logoSvg, {
+        subdivide: next,
+        shapes: enabledShapesRef.current,
+        cornerRadius: cornerRadiusRef.current,
+      }),
+    );
+  };
+  const toggleShape = (shape: LogoShapeId) => {
+    if (playingRef.current || loopRef.current) stopPlayback();
+    setEnabledShapes((prev) => {
+      const on = prev.includes(shape);
+      if (on && prev.length <= 1) return prev;
+      const next = on ? prev.filter((s) => s !== shape) : [...prev, shape];
+      enabledShapesRef.current = next;
+      setMarkup(
+        paintLogoWithBrandTokens(logoSvg, {
+          subdivide: subdividedRef.current,
+          shapes: next,
+          cornerRadius: cornerRadiusRef.current,
+        }),
+      );
+      return next;
+    });
+  };
+  const onCornerRadiusChange = (value: number) => {
+    cornerRadiusRef.current = value;
+    setCornerRadius(value);
+    setMarkup((prev) => applyLogoCornerRadius(prev, value));
   };
   const randomizeColours = () => {
     if (playingRef.current) pausePlayback();
@@ -328,7 +423,7 @@ export function LogoCreator() {
         return;
       }
       const el = event.target;
-      if (!(el instanceof Element) || !el.closest(".logo-creator__dock button")) {
+      if (!(el instanceof Element) || !el.closest(".logo-creator__chrome button")) {
         playUiSound("close");
       }
       setOpenMenu(null);
@@ -460,157 +555,195 @@ export function LogoCreator() {
         aria-label="mozayk logotype"
         dangerouslySetInnerHTML={markHtml}
       />
-      <nav
-        className="logo-creator__dock"
-        aria-label="Logotype tools"
+      <div
+        className="logo-creator__chrome"
         aria-hidden={uiHidden}
         inert={uiHidden}
       >
-        <div className="logo-creator__dock-group">
-          <button type="button" aria-keyshortcuts="r" data-shortcut="KeyR" onClick={randomizeLayout}>
-            Randomize Layout (R)
-          </button>
-          <button
-            type="button"
-            className={subdivided ? "is-on" : undefined}
-            aria-pressed={subdivided}
-            aria-keyshortcuts="s"
-            data-shortcut="KeyS"
-            data-ui-sound={subdivided ? "close" : "ok"}
-            onClick={toggleSubdivide}
-          >
-            Subdivide (S)
-          </button>
-          <div className="logo-creator__swatches" role="group" aria-label="Logotype colours">
-            {colors.map((color, i) => (
-              <LogoColorSwatch
-                key={i}
-                color={color}
-                label={`Colour ${i + 1}: ${normalizeHex(color)}`}
-                open={openColor === i}
-                onToggle={() => {
-                  setOpenMenu(null);
-                  setOpenColor((open) => (open === i ? null : i));
-                }}
-                onChange={(hex) => setColorAt(i, hex)}
-                onClose={() => setOpenColor(null)}
-              />
-            ))}
+        <div className="logo-creator__shapes-row">
+          <div className="logo-creator__shapes" role="group" aria-label="Shapes">
+            {LOGO_SHAPE_IDS.map((shape) => {
+              const on = enabledShapes.includes(shape);
+              return (
+                <button
+                  key={shape}
+                  type="button"
+                  className={`logo-creator__shape-btn${on ? " is-on" : ""}`}
+                  aria-label={LOGO_SHAPE_LABELS[shape]}
+                  aria-pressed={on}
+                  title={LOGO_SHAPE_LABELS[shape]}
+                  data-ui-sound={on ? "close" : "ok"}
+                  onClick={() => toggleShape(shape)}
+                >
+                  <LogoShapeIcon shape={shape} />
+                </button>
+              );
+            })}
           </div>
-          <button type="button" aria-keyshortcuts="c" data-shortcut="KeyC" onClick={randomizeColours}>
-            Randomize Colours (C)
-          </button>
-          <button type="button" aria-keyshortcuts="e" data-shortcut="KeyE" data-ui-sound="ok" onClick={restoreColours}>
-            Restore (E)
-          </button>
+          <label className="logo-creator__radius" title="0 = square · 100 = pill · boxes only">
+            <span className="logo-creator__radius-label">
+              Corner radius
+              <span className="logo-creator__radius-value">{cornerRadius}</span>
+            </span>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={1}
+              value={cornerRadius}
+              aria-label="Corner radius"
+              style={{ ["--val" as string]: cornerRadius } as CSSProperties}
+              onChange={(e) => onCornerRadiusChange(Number(e.target.value))}
+            />
+          </label>
         </div>
-        <div className="logo-creator__dock-divider" aria-hidden="true" />
-        <div className="logo-creator__dock-group logo-creator__dock-group--playback">
-          <button
-            type="button"
-            className={`logo-creator__icon-btn${playing ? " is-on" : ""}`}
-            aria-pressed={playing}
-            aria-label={playing ? "Stop" : "Play"}
-            title={playing ? "Stop" : "Play"}
-            aria-keyshortcuts="Space"
-            data-shortcut="Space"
-            data-ui-sound={playing ? "close" : "push"}
-            onClick={togglePlay}
-          >
-            {playing ? <StopIcon /> : <PlayIcon />}
-          </button>
-          <button
-            type="button"
-            className={`logo-creator__icon-btn${looping ? " is-on" : ""}`}
-            aria-pressed={looping}
-            aria-label="Loop"
-            title="Loop"
-            aria-keyshortcuts="l"
-            data-shortcut="KeyL"
-            data-ui-sound={looping ? "close" : "ok"}
-            onClick={toggleLoop}
-          >
-            <LoopIcon />
-          </button>
-          <div className="logo-creator__pop" ref={speedMenuRef}>
+        <nav className="logo-creator__dock" aria-label="Logotype tools">
+          <div className="logo-creator__dock-group">
+            <button type="button" aria-keyshortcuts="r" data-shortcut="KeyR" onClick={randomizeLayout}>
+              Randomize Layout (R)
+            </button>
             <button
               type="button"
-              className={`logo-creator__speed-btn${openMenu === "speed" ? " is-on" : ""}`}
-              aria-label={`Speed: ${SPEED_LABELS[speed]}`}
-              title={`Speed: ${SPEED_LABELS[speed]}`}
-              aria-expanded={openMenu === "speed"}
-              aria-haspopup="menu"
-              data-ui-sound={openMenu === "speed" ? "close" : "push"}
-              onClick={() => toggleMenu("speed")}
+              className={subdivided ? "is-on" : undefined}
+              aria-pressed={subdivided}
+              aria-keyshortcuts="s"
+              data-shortcut="KeyS"
+              data-ui-sound={subdivided ? "close" : "ok"}
+              onClick={toggleSubdivide}
             >
-              <span className="logo-creator__speed-value">
-                {SPEED_KEYS.map((key) => (
-                  <span key={key} className="logo-creator__speed-sizer" aria-hidden="true">
-                    {SPEED_LABELS[key]}
-                  </span>
-                ))}
-                <span>{SPEED_LABELS[speed]}</span>
-              </span>
-              <CaretIcon />
+              Subdivide (S)
             </button>
-            {openMenu === "speed" ? (
+            <div className="logo-creator__swatches" role="group" aria-label="Logotype colours">
+              {colors.map((color, i) => (
+                <LogoColorSwatch
+                  key={i}
+                  color={color}
+                  label={`Colour ${i + 1}: ${normalizeHex(color)}`}
+                  open={openColor === i}
+                  onToggle={() => {
+                    setOpenMenu(null);
+                    setOpenColor((open) => (open === i ? null : i));
+                  }}
+                  onChange={(hex) => setColorAt(i, hex)}
+                  onClose={() => setOpenColor(null)}
+                />
+              ))}
+            </div>
+            <button type="button" aria-keyshortcuts="c" data-shortcut="KeyC" onClick={randomizeColours}>
+              Randomize Colours (C)
+            </button>
+            <button type="button" aria-keyshortcuts="e" data-shortcut="KeyE" data-ui-sound="ok" onClick={restoreColours}>
+              Restore (E)
+            </button>
+          </div>
+          <div className="logo-creator__dock-divider" aria-hidden="true" />
+          <div className="logo-creator__dock-group logo-creator__dock-group--playback">
+            <button
+              type="button"
+              className={`logo-creator__icon-btn${playing ? " is-on" : ""}`}
+              aria-pressed={playing}
+              aria-label={playing ? "Stop" : "Play"}
+              title={playing ? "Stop" : "Play"}
+              aria-keyshortcuts="Space"
+              data-shortcut="Space"
+              data-ui-sound={playing ? "close" : "push"}
+              onClick={togglePlay}
+            >
+              {playing ? <StopIcon /> : <PlayIcon />}
+            </button>
+            <button
+              type="button"
+              className={`logo-creator__icon-btn${looping ? " is-on" : ""}`}
+              aria-pressed={looping}
+              aria-label="Loop"
+              title="Loop"
+              aria-keyshortcuts="l"
+              data-shortcut="KeyL"
+              data-ui-sound={looping ? "close" : "ok"}
+              onClick={toggleLoop}
+            >
+              <LoopIcon />
+            </button>
+            <div className="logo-creator__pop" ref={speedMenuRef}>
+              <button
+                type="button"
+                className={`logo-creator__speed-btn${openMenu === "speed" ? " is-on" : ""}`}
+                aria-label={`Speed: ${SPEED_LABELS[speed]}`}
+                title={`Speed: ${SPEED_LABELS[speed]}`}
+                aria-expanded={openMenu === "speed"}
+                aria-haspopup="menu"
+                data-ui-sound={openMenu === "speed" ? "close" : "push"}
+                onClick={() => toggleMenu("speed")}
+              >
+                <span className="logo-creator__speed-value">
+                  {SPEED_KEYS.map((key) => (
+                    <span key={key} className="logo-creator__speed-sizer" aria-hidden="true">
+                      {SPEED_LABELS[key]}
+                    </span>
+                  ))}
+                  <span>{SPEED_LABELS[speed]}</span>
+                </span>
+                <CaretIcon />
+              </button>
+              {openMenu === "speed" ? (
+                <div className="logo-creator__pop-menu" role="menu">
+                  {SPEED_KEYS.map((key) => (
+                    <button
+                      key={key}
+                      type="button"
+                      role="menuitem"
+                      className={speed === key ? "is-on" : undefined}
+                      onClick={() => {
+                        speedRef.current = key;
+                        setSpeed(key);
+                        setOpenMenu(null);
+                        playReveal();
+                      }}
+                    >
+                      {SPEED_LABELS[key]}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          </div>
+          <div className="logo-creator__dock-divider" aria-hidden="true" />
+          <div className="logo-creator__pop" ref={exportRef}>
+            <button
+              type="button"
+              className={openMenu === "export" || exporting ? "is-on" : undefined}
+              aria-expanded={openMenu === "export"}
+              aria-haspopup="menu"
+              disabled={exporting}
+              data-ui-sound={openMenu === "export" ? "close" : "push"}
+              onClick={() => toggleMenu("export")}
+            >
+              {exporting ? "Exporting…" : "Export"}
+            </button>
+            {openMenu === "export" ? (
               <div className="logo-creator__pop-menu" role="menu">
-                {SPEED_KEYS.map((key) => (
-                  <button
-                    key={key}
-                    type="button"
-                    role="menuitem"
-                    className={speed === key ? "is-on" : undefined}
-                    onClick={() => {
-                      speedRef.current = key;
-                      setSpeed(key);
-                      setOpenMenu(null);
-                      playReveal();
-                    }}
-                  >
-                    {SPEED_LABELS[key]}
-                  </button>
-                ))}
+                <button type="button" role="menuitem" data-ui-sound="ok" onClick={() => void onExportPng()}>
+                  PNG
+                </button>
+                <button type="button" role="menuitem" data-ui-sound="ok" onClick={onExportSvg}>
+                  SVG
+                </button>
+                <button type="button" role="menuitem" data-ui-sound="ok" onClick={() => void onExportMov()}>
+                  MOV
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  data-ui-sound="ok"
+                  onClick={() => void onExportMov(true)}
+                >
+                  MOV Transparent
+                </button>
               </div>
             ) : null}
           </div>
-        </div>
-        <div className="logo-creator__dock-divider" aria-hidden="true" />
-        <div className="logo-creator__pop" ref={exportRef}>
-          <button
-            type="button"
-            className={openMenu === "export" || exporting ? "is-on" : undefined}
-            aria-expanded={openMenu === "export"}
-            aria-haspopup="menu"
-            disabled={exporting}
-            data-ui-sound={openMenu === "export" ? "close" : "push"}
-            onClick={() => toggleMenu("export")}
-          >
-            {exporting ? "Exporting…" : "Export"}
-          </button>
-          {openMenu === "export" ? (
-            <div className="logo-creator__pop-menu" role="menu">
-              <button type="button" role="menuitem" data-ui-sound="ok" onClick={() => void onExportPng()}>
-                PNG
-              </button>
-              <button type="button" role="menuitem" data-ui-sound="ok" onClick={onExportSvg}>
-                SVG
-              </button>
-              <button type="button" role="menuitem" data-ui-sound="ok" onClick={() => void onExportMov()}>
-                MOV
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                data-ui-sound="ok"
-                onClick={() => void onExportMov(true)}
-              >
-                MOV Transparent
-              </button>
-            </div>
-          ) : null}
-        </div>
-      </nav>
+        </nav>
+      </div>
     </div>
   );
 }

@@ -1,3 +1,14 @@
+import {
+  GALLERY_SHAPE_PATHS,
+  GALLERY_SHAPE_VIEWBOX,
+} from "../shapes/galleryShapes";
+import { blockCornerRadiusPx } from "../render/cornerRadius";
+import {
+  isLogoGalleryShape,
+  normalizeLogoShapes,
+  type LogoShapeId,
+} from "./logoShapes";
+
 /**
  * Must match --logo-fill-1/2/3/4 in App.css :root
  * (blue / purple / orange / white — not UI --brand, --chrome, or --brand-green).
@@ -15,17 +26,28 @@ const PART_SELECTOR = "rect, circle, polygon, polyline, path, ellipse";
 const CELL = 0.5;
 const PACK = 1024;
 const GRID = 9;
-const UNIT_KINDS = ["square", "circle", "triangle"] as const;
-/** Relative mix boxes : spheres : triangles — boxes stay dominant (≈50/25/25). */
-const UNIT_KIND_WEIGHTS = { square: 66, circle: 33, triangle: 33 } as const;
+/** Relative mix — boxes stay dominant when present; extras match spheres/triangles. */
+const UNIT_KIND_WEIGHTS: Partial<Record<LogoShapeId, number>> = {
+  square: 66,
+  circle: 33,
+  triangle: 33,
+  ring: 33,
+  cross: 33,
+  wedges: 33,
+  checks: 33,
+  arrows: 33,
+  ex: 33,
+  star: 33,
+  quads: 33,
+};
 /** White dominant (60%); three chromatics at 10% each — all four always used. */
 const COLOR_WEIGHTS = [10, 10, 10, 60] as const;
 const NS = "http://www.w3.org/2000/svg";
+const BOX_ATTR = "data-logo-box";
 
-type UnitKind = (typeof UNIT_KINDS)[number];
 type Box = { minX: number; minY: number; maxX: number; maxY: number };
 type Corner = "tl" | "tr" | "bl" | "br";
-type UnitShape = { kind: UnitKind; corner: Corner };
+type UnitShape = { kind: LogoShapeId; corner: Corner };
 
 function shuffle<T>(items: T[]): T[] {
   const next = [...items];
@@ -80,7 +102,24 @@ function pointInPoly(x: number, y: number, pts: { x: number; y: number }[]): boo
   return inside;
 }
 
+function stampBox(el: Element, box: Box): Element {
+  el.setAttribute(BOX_ATTR, `${box.minX},${box.minY},${box.maxX},${box.maxY}`);
+  return el;
+}
+
+function readStamp(el: Element): Box | null {
+  const raw = el.getAttribute(BOX_ATTR);
+  if (!raw) return null;
+  const nums = raw.split(",").map(Number);
+  if (nums.length !== 4 || nums.some((n) => !Number.isFinite(n))) return null;
+  return { minX: nums[0], minY: nums[1], maxX: nums[2], maxY: nums[3] };
+}
+
 function covers(el: Element, x: number, y: number): boolean {
+  const stamped = readStamp(el);
+  if (stamped) {
+    return x > stamped.minX && x < stamped.maxX && y > stamped.minY && y < stamped.maxY;
+  }
   const tag = el.tagName.toLowerCase();
   if (tag === "rect") {
     const rx = attr(el, "x");
@@ -102,6 +141,8 @@ function covers(el: Element, x: number, y: number): boolean {
 }
 
 function bbox(el: Element): { minX: number; minY: number; maxX: number; maxY: number } {
+  const stamped = readStamp(el);
+  if (stamped) return stamped;
   const tag = el.tagName.toLowerCase();
   if (tag === "rect") {
     const x = attr(el, "x");
@@ -431,17 +472,22 @@ function collectTriangleCorners(slots: { el: Element; box: Box }[]): Corner[] {
   return corners.length > 0 ? corners : ["tr"];
 }
 
-/** Exact bag sized to `count` using 66:33:33 weights (largest remainder). */
-function unitShapeBag(count: number, triangleCorners: Corner[]): UnitShape[] {
+/** Exact bag sized to `count` using relative weights (largest remainder). */
+function unitShapeBag(
+  count: number,
+  triangleCorners: Corner[],
+  kinds: readonly LogoShapeId[],
+): UnitShape[] {
+  const pool = kinds.length > 0 ? kinds : normalizeLogoShapes(undefined);
   const floors = weightedCounts(
     count,
-    UNIT_KINDS.map((kind) => UNIT_KIND_WEIGHTS[kind]),
+    pool.map((kind) => UNIT_KIND_WEIGHTS[kind] ?? 33),
   );
 
   const corners = shuffle([...triangleCorners]);
   let cornerIdx = 0;
   const bag: UnitShape[] = [];
-  UNIT_KINDS.forEach((kind, i) => {
+  pool.forEach((kind, i) => {
     for (let n = 0; n < floors[i]; n++) {
       bag.push({
         kind,
@@ -450,6 +496,70 @@ function unitShapeBag(count: number, triangleCorners: Corner[]): UnitShape[] {
     }
   });
   return shuffle(bag);
+}
+
+function makeRingModule(doc: Document, box: Box): Element {
+  const { minX: x, minY: y, maxX, maxY } = box;
+  const w = maxX - x;
+  const h = maxY - y;
+  const cx = x + w / 2;
+  const cy = y + h / 2;
+  const r = Math.min(w, h) / 2;
+  const inner = r * 0.45;
+  const el = doc.createElementNS(NS, "path");
+  el.setAttribute("fill-rule", "evenodd");
+  el.setAttribute(
+    "d",
+    [
+      `M ${cx - r} ${cy}`,
+      `a ${r} ${r} 0 1 0 ${r * 2} 0`,
+      `a ${r} ${r} 0 1 0 ${-r * 2} 0`,
+      `M ${cx - inner} ${cy}`,
+      `a ${inner} ${inner} 0 1 1 ${inner * 2} 0`,
+      `a ${inner} ${inner} 0 1 1 ${-inner * 2} 0`,
+    ].join(" "),
+  );
+  return stampBox(el, box);
+}
+
+function makeCrossModule(doc: Document, box: Box): Element {
+  const { minX: x, minY: y, maxX, maxY } = box;
+  const w = maxX - x;
+  const h = maxY - y;
+  const armW = w / 3;
+  const armH = h / 3;
+  const el = doc.createElementNS(NS, "path");
+  el.setAttribute(
+    "d",
+    [
+      `M ${x} ${y + armH} H ${maxX} V ${y + 2 * armH} H ${x} Z`,
+      `M ${x + armW} ${y} H ${x + 2 * armW} V ${maxY} H ${x + armW} Z`,
+    ].join(" "),
+  );
+  return stampBox(el, box);
+}
+
+function makeGalleryModule(doc: Document, shape: LogoShapeId, box: Box): Element {
+  if (!isLogoGalleryShape(shape)) {
+    const { minX: x, minY: y, maxX, maxY } = box;
+    const el = doc.createElementNS(NS, "rect");
+    el.setAttribute("x", String(x));
+    el.setAttribute("y", String(y));
+    el.setAttribute("width", String(maxX - x));
+    el.setAttribute("height", String(maxY - y));
+    return stampBox(el, box);
+  }
+  const w = box.maxX - box.minX;
+  const h = box.maxY - box.minY;
+  const size = Math.min(w, h);
+  const x = box.minX + (w - size) / 2;
+  const y = box.minY + (h - size) / 2;
+  const scale = size / GALLERY_SHAPE_VIEWBOX;
+  const el = doc.createElementNS(NS, "path");
+  el.setAttribute("d", GALLERY_SHAPE_PATHS[shape]);
+  el.setAttribute("fill-rule", "evenodd");
+  el.setAttribute("transform", `translate(${x} ${y}) scale(${scale})`);
+  return stampBox(el, box);
 }
 
 function makeUnitModule(doc: Document, shape: UnitShape, box: Box): Element {
@@ -462,18 +572,23 @@ function makeUnitModule(doc: Document, shape: UnitShape, box: Box): Element {
     el.setAttribute("y", String(y));
     el.setAttribute("width", String(w));
     el.setAttribute("height", String(h));
-    return el;
+    return stampBox(el, box);
   }
   if (shape.kind === "circle") {
     const el = doc.createElementNS(NS, "circle");
     el.setAttribute("cx", String(x + w / 2));
     el.setAttribute("cy", String(y + h / 2));
     el.setAttribute("r", String(Math.min(w, h) / 2));
-    return el;
+    return stampBox(el, box);
   }
-  const el = doc.createElementNS(NS, "polygon");
-  el.setAttribute("points", trianglePoints(box, shape.corner));
-  return el;
+  if (shape.kind === "triangle") {
+    const el = doc.createElementNS(NS, "polygon");
+    el.setAttribute("points", trianglePoints(box, shape.corner));
+    return stampBox(el, box);
+  }
+  if (shape.kind === "ring") return makeRingModule(doc, box);
+  if (shape.kind === "cross") return makeCrossModule(doc, box);
+  return makeGalleryModule(doc, shape.kind, box);
 }
 
 function unitSlots(svg: Element, unitSize: number): { el: Element; box: Box }[] {
@@ -510,11 +625,16 @@ function subdivideUnitCells(svg: Element, slots: { el: Element; box: Box }[]): v
   }
 }
 
-function morphUnitModules(svg: Element, unitSize: number, triangleCorners: Corner[]): void {
+function morphUnitModules(
+  svg: Element,
+  unitSize: number,
+  triangleCorners: Corner[],
+  kinds: readonly LogoShapeId[],
+): void {
   const doc = svg.ownerDocument;
   if (!doc) return;
   const slots = unitSlots(svg, unitSize);
-  const shapes = unitShapeBag(slots.length, triangleCorners);
+  const shapes = unitShapeBag(slots.length, triangleCorners, kinds);
   slots.forEach((slot, i) => {
     slot.el.replaceWith(makeUnitModule(doc, shapes[i], slot.box));
   });
@@ -552,9 +672,38 @@ function mergeColorRuns(
   }
 }
 
+function setRectCornerRadius(el: Element, amount: number): void {
+  if (el.tagName.toLowerCase() !== "rect") return;
+  const radius = blockCornerRadiusPx(attr(el, "width"), attr(el, "height"), amount);
+  if (radius > 0) {
+    el.setAttribute("rx", String(radius));
+    el.setAttribute("ry", String(radius));
+  } else {
+    el.removeAttribute("rx");
+    el.removeAttribute("ry");
+  }
+}
+
+/** Round box tiles only (0 = square · 100 = pill). Does not remorph the mark. */
+export function applyLogoCornerRadius(svgMarkup: string, amount: number): string {
+  const doc = new DOMParser().parseFromString(svgMarkup, "image/svg+xml");
+  const svg = doc.documentElement;
+  if (svg.querySelector("parsererror")) return svgMarkup;
+  const n = Number(amount);
+  const radius = Number.isFinite(n) ? Math.min(100, Math.max(0, n)) : 0;
+  for (const el of svg.querySelectorAll("rect")) {
+    setRectCornerRadius(el, radius);
+  }
+  return new XMLSerializer().serializeToString(svg);
+}
+
 export function paintLogoWithBrandTokens(
   svgMarkup: string,
-  options?: { subdivide?: boolean },
+  options?: {
+    subdivide?: boolean;
+    shapes?: readonly LogoShapeId[];
+    cornerRadius?: number;
+  },
 ): string {
   const doc = new DOMParser().parseFromString(svgMarkup, "image/svg+xml");
   const svg = doc.documentElement;
@@ -564,12 +713,13 @@ export function paintLogoWithBrandTokens(
   const defs = svg.querySelector("defs");
   if (defs && defs.childElementCount === 0) defs.remove();
 
+  const kinds = normalizeLogoShapes(options?.shapes);
   const subdivide = Boolean(options?.subdivide);
   const coarse = unitSlots(svg, GRID);
   const triangleCorners = collectTriangleCorners(coarse);
   if (subdivide) subdivideUnitCells(svg, coarse);
   const unitSize = subdivide ? GRID / 2 : GRID;
-  morphUnitModules(svg, unitSize, triangleCorners);
+  morphUnitModules(svg, unitSize, triangleCorners, kinds);
 
   const parts = [...svg.querySelectorAll(PART_SELECTOR)];
   const cells = parts.map(occupancy);
@@ -580,10 +730,18 @@ export function paintLogoWithBrandTokens(
   const colors = colorGraph(adj, runs);
   parts.forEach((el, i) => {
     el.removeAttribute("class");
+    el.removeAttribute(BOX_ATTR);
     el.setAttribute("fill", LOGO_FILL_TOKENS[colors[i] ?? 0]);
   });
   // Collapse each same-colour square run into one rect — no shared edges, no seams.
   mergeColorRuns(doc, parts, boxes, colors, runs);
+
+  const cornerRadius = options?.cornerRadius ?? 0;
+  if (cornerRadius > 0) {
+    for (const el of svg.querySelectorAll("rect")) {
+      setRectCornerRadius(el, cornerRadius);
+    }
+  }
 
   svg.removeAttribute("id");
   svg.setAttribute("role", "img");
