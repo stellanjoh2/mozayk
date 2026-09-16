@@ -276,7 +276,7 @@ export function renderMosaicToSvg(options: SvgRenderOptions): string {
 
   const extrasOn = isExtrasEnabled(settings);
   const cornerRadius = extrasOn ? (settings.cornerRadius ?? 0) : 0;
-  const shapeGap = extrasOn ? (settings.shapeGap ?? 0) : 0;
+  const shapeGap = settings.shapeGap ?? 0;
   const fillRadius = largestRingRadius(blocks, grid);
   const peeled = peeledBlockSet(blocks, settings);
   const peelStroke = resolveWireframePeelStroke(settings.wireframePeelStroke);

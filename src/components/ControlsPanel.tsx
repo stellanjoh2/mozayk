@@ -1156,6 +1156,12 @@ export function ControlsPanel({
           checked={settings.randomWidth}
           onChange={(randomWidth) => onSettingsChange({ randomWidth }, true)}
         />
+        <SliderRow
+          label="Gap"
+          hint="0 = flush · 100 = uniform cell inset"
+          value={settings.shapeGap ?? 0}
+          onChange={(shapeGap) => onSettingsChange({ shapeGap }, false)}
+        />
       </section>
 
       <section className="panel-section">
@@ -1741,7 +1747,7 @@ export function ControlsPanel({
       >
         <HeadlineToggle
           title="Extras"
-          hint="Grain, colour grade, gaps, and outlines"
+          hint="Grain, colour grade, corners, and outlines"
           checked={extrasOn}
           onChange={(extrasEnabled) =>
             onSettingsChange({ extrasEnabled }, false)
@@ -1798,12 +1804,6 @@ export function ControlsPanel({
           onChange={(cornerRadius) =>
             onSettingsChange({ cornerRadius }, false)
           }
-        />
-        <SliderRow
-          label="Gap"
-          hint="0 = flush · 100 = uniform cell inset"
-          value={settings.shapeGap ?? 0}
-          onChange={(shapeGap) => onSettingsChange({ shapeGap }, false)}
         />
         <ToggleRow
           label="Wireframe peel"

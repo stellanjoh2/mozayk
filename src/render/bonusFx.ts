@@ -146,7 +146,6 @@ function hasActiveExtras(settings: FrameSettings): boolean {
     (settings.saturation ?? 0) !== 0 ||
     Boolean(settings.invert) ||
     (settings.cornerRadius ?? 0) !== 0 ||
-    (settings.shapeGap ?? 0) !== 0 ||
     Boolean(settings.wireframePeel)
   );
 }

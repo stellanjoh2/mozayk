@@ -336,7 +336,7 @@ export function renderMosaic(
   const grid = getGridDimensions(orientation, settings.density, width, height);
   const extrasOn = isExtrasEnabled(settings);
   const cornerRadius = extrasOn ? (settings.cornerRadius ?? 0) : 0;
-  const shapeGap = extrasOn ? (settings.shapeGap ?? 0) : 0;
+  const shapeGap = settings.shapeGap ?? 0;
 
   canvas.width = width;
   canvas.height = height;

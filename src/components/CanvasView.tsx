@@ -517,7 +517,7 @@ export function CanvasView({
           getNormalHoverEffects() ||
           hoverBlinkVisible(pulsePhase)),
       cornerRadius: extrasOn ? frame.settings.cornerRadius : 0,
-      shapeGap: extrasOn ? frame.settings.shapeGap : 0,
+      shapeGap: frame.settings.shapeGap ?? 0,
     });
   }, [
     grid,
