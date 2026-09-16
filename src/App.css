@@ -1910,8 +1910,8 @@ html.normal-hover
 .button-row--shape-icons .shape-icon--custom {
   width: 100%;
   height: 100%;
-  /* Contain so tall/wide cutouts stay fully visible in the slot. */
-  object-fit: contain;
+  /* Opaque photos fill the slot; cutouts opt into contain via fit. */
+  object-fit: cover;
   box-sizing: border-box;
   border: 0;
   outline: none;
@@ -1919,6 +1919,10 @@ html.normal-hover
   filter: none;
   box-shadow: none;
   pointer-events: none;
+}
+
+.button-row--shape-icons .shape-icon--custom-contain {
+  object-fit: contain;
 }
 
 .button-row--shape-icons .shape-slot--custom.is-active .shape-icon--custom {

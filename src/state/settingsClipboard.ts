@@ -255,11 +255,16 @@ function parseCustomShapes(value: unknown): CustomShapeSlot[] | undefined {
       typeof record.name === "string" && record.name.trim()
         ? record.name.trim()
         : undefined;
+    const fit =
+      record.fit === "cover" || record.fit === "contain"
+        ? record.fit
+        : undefined;
     slots.push({
       id,
       enabled: Boolean(record.enabled),
       ...(dataUrl ? { dataUrl } : {}),
       ...(name ? { name } : {}),
+      ...(fit ? { fit } : {}),
     });
   }
   return slots.length > 0 ? slots : undefined;

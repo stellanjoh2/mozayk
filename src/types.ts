@@ -88,6 +88,8 @@ export type CustomShapeSlot = {
   /** Data URL of an SVG or still image. Undefined = empty "?" slot. */
   dataUrl?: string;
   name?: string;
+  /** Opaque photos cover the cell; transparent cutouts contain. */
+  fit?: "cover" | "contain";
 };
 
 export type LayoutSource = "procedural" | "imported";

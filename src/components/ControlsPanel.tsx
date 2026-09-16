@@ -68,12 +68,16 @@ import {
   CUSTOM_SHAPE_ACCEPT,
   MAX_CUSTOM_SHAPE_SLOTS,
   createCustomShapeSlotId,
+  fitForCustomShapeImage,
   toCustomShapeRef,
   unsupportedCustomShapeMessage,
   UnsupportedCustomShapeError,
   validateCustomShapeFile,
 } from "../shapes/customShapes";
-import { readImageFileAsDataUrl } from "../import/imageSource";
+import {
+  ensureCachedSourceImage,
+  readImageFileAsDataUrl,
+} from "../import/imageSource";
 import { createDefaultShapePalette } from "../state/frameUtils";
 import {
   ORIENTATION_LABELS,
@@ -429,11 +433,13 @@ export function ControlsPanel({
 
     try {
       const dataUrl = await readImageFileAsDataUrl(file);
+      const image = await ensureCachedSourceImage(dataUrl);
+      const fit = fitForCustomShapeImage(image);
       playUiSound("ok");
       onSettingsChange({
         customShapes: customShapes.map((item) =>
           item.id === slotId
-            ? { ...item, dataUrl, name: file.name, enabled: true }
+            ? { ...item, dataUrl, name: file.name, enabled: true, fit }
             : item,
         ),
       });
@@ -1049,7 +1055,13 @@ export function ControlsPanel({
                   >
                     {slot.dataUrl ? (
                       <img
-                        className="shape-icon shape-icon--custom"
+                        className={`shape-icon shape-icon--custom${
+                          slot.fit === "contain" ||
+                          (!slot.fit &&
+                            slot.dataUrl.startsWith("data:image/svg"))
+                            ? " shape-icon--custom-contain"
+                            : ""
+                        }`}
                         src={slot.dataUrl}
                         alt=""
                         draggable={false}

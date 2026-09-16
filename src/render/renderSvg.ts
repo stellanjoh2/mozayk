@@ -24,9 +24,11 @@ import {
 } from "../shapes/galleryShapes";
 import {
   findCustomShapeSlot,
+  fitForCustomShapeImage,
   isCustomShapeRef,
   svgCustomShape,
 } from "../shapes/customShapes";
+import { getCachedSourceImage } from "../import/imageSource";
 import {
   insetCrossRects,
   insetPixelRect,
@@ -145,11 +147,16 @@ function svgBlock(
   if (isCustomShapeRef(block.shape)) {
     const slot = findCustomShapeSlot(settings, block.shape);
     if (slot?.dataUrl) {
+      const cached = getCachedSourceImage(slot.dataUrl);
+      const fit =
+        slot.fit ??
+        (cached ? fitForCustomShapeImage(cached) : "contain");
       return svgCustomShape(
         slot.dataUrl,
         { x, y, width: drawW, height: drawH },
         cornerRadius,
         `cs${block.col}-${block.row}-${block.width}x${block.height}`,
+        fit,
       );
     }
     return "";
