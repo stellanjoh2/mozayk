@@ -3,6 +3,7 @@ import {
   GALLERY_SHAPE_VIEWBOX,
 } from "../shapes/galleryShapes";
 import { blockCornerRadiusPx } from "../render/cornerRadius";
+import { shapeGapInsetPx } from "../render/shapeGap";
 import {
   isLogoGalleryShape,
   normalizeLogoShapes,
@@ -44,6 +45,7 @@ const UNIT_KIND_WEIGHTS: Partial<Record<LogoShapeId, number>> = {
 const COLOR_WEIGHTS = [10, 10, 10, 60] as const;
 const NS = "http://www.w3.org/2000/svg";
 const BOX_ATTR = "data-logo-box";
+const BASE_TRANSFORM_ATTR = "data-logo-tf";
 
 type Box = { minX: number; minY: number; maxX: number; maxY: number };
 type Corner = "tl" | "tr" | "bl" | "br";
@@ -261,18 +263,26 @@ function axisAlignedNeighbor(boxes: Box[], i: number, j: number, unitSize: numbe
  * Collinear same-colour tiles that collapse into one rect.
  * Coarse: one run of 2–4 cells per letter.
  * Subdivided: a few runs of 2–4 cells (occasionally a bit longer), not 1×1 and not full-letter bars.
+ * `allow` limits which indices may join a run (boxes only — never absorb circles/stars/etc.).
  */
-function pickSameColorRuns(adj: number[][], boxes: Box[], unitSize: number): number[][] {
+function pickSameColorRuns(
+  adj: number[][],
+  boxes: Box[],
+  unitSize: number,
+  allow: (i: number) => boolean = () => true,
+): number[][] {
   const subdivided = unitSize < GRID - 0.5;
   const minLen = 2;
   const maxLen = subdivided ? 6 : 4;
   const runsWanted = subdivided ? 3 : 1;
   const runs: number[][] = [];
   for (const letter of letterClusters(boxes, unitSize)) {
-    const set = new Set(letter);
+    const squareLetter = letter.filter(allow);
+    if (squareLetter.length < minLen) continue;
+    const set = new Set(squareLetter);
     const axisAdj = new Map<number, number[]>();
-    for (const i of letter) axisAdj.set(i, []);
-    for (const i of letter) {
+    for (const i of squareLetter) axisAdj.set(i, []);
+    for (const i of squareLetter) {
       for (const j of adj[i]) {
         if (!set.has(j) || j <= i) continue;
         if (!axisAlignedNeighbor(boxes, i, j, unitSize)) continue;
@@ -305,7 +315,7 @@ function pickSameColorRuns(adj: number[][], boxes: Box[], unitSize: number): num
         dfs([...path, next]);
       }
     };
-    for (const start of letter) dfs([start]);
+    for (const start of squareLetter) dfs([start]);
     if (candidates.length === 0) continue;
 
     const used = new Set<number>();
@@ -479,6 +489,15 @@ function unitShapeBag(
   kinds: readonly LogoShapeId[],
 ): UnitShape[] {
   const pool = kinds.length > 0 ? kinds : normalizeLogoShapes(undefined);
+  // One shape selected → every cell is that shape (no leftover mix).
+  if (pool.length === 1) {
+    const kind = pool[0]!;
+    const corners = shuffle([...triangleCorners]);
+    return Array.from({ length: count }, (_, i) => ({
+      kind,
+      corner: kind === "triangle" ? corners[i % corners.length]! : "tr",
+    }));
+  }
   const floors = weightedCounts(
     count,
     pool.map((kind) => UNIT_KIND_WEIGHTS[kind] ?? 33),
@@ -667,6 +686,7 @@ function mergeColorRuns(
     rect.setAttribute("width", String(maxX - minX));
     rect.setAttribute("height", String(maxY - minY));
     rect.setAttribute("fill", LOGO_FILL_TOKENS[colors[run[0]] ?? 0]);
+    stampBox(rect, { minX, minY, maxX, maxY });
     parts[run[0]].replaceWith(rect);
     for (let k = 1; k < run.length; k++) parts[run[k]].remove();
   }
@@ -684,15 +704,63 @@ function setRectCornerRadius(el: Element, amount: number): void {
   }
 }
 
+function clampAmount(amount: number | undefined): number {
+  const n = Number(amount);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return Math.min(100, n);
+}
+
+function rememberBaseTransform(el: Element): void {
+  if (el.hasAttribute(BASE_TRANSFORM_ATTR)) return;
+  el.setAttribute(BASE_TRANSFORM_ATTR, el.getAttribute("transform") ?? "");
+}
+
+function applyGapTransform(el: Element, amount: number): void {
+  rememberBaseTransform(el);
+  const base = el.getAttribute(BASE_TRANSFORM_ATTR) ?? "";
+  const box = readStamp(el);
+  const gap = clampAmount(amount);
+  if (!box || gap <= 0) {
+    if (base) el.setAttribute("transform", base);
+    else el.removeAttribute("transform");
+    return;
+  }
+  const w = box.maxX - box.minX;
+  const h = box.maxY - box.minY;
+  if (w <= 0 || h <= 0) return;
+  const inset = shapeGapInsetPx(gap, Math.min(w, h));
+  if (inset <= 0) {
+    if (base) el.setAttribute("transform", base);
+    else el.removeAttribute("transform");
+    return;
+  }
+  const sx = Math.max(0, (w - 2 * inset) / w);
+  const sy = Math.max(0, (h - 2 * inset) / h);
+  const cx = (box.minX + box.maxX) / 2;
+  const cy = (box.minY + box.maxY) / 2;
+  const gapTf = `translate(${cx} ${cy}) scale(${sx} ${sy}) translate(${-cx} ${-cy})`;
+  el.setAttribute("transform", base ? `${gapTf} ${base}` : gapTf);
+}
+
 /** Round box tiles only (0 = square · 100 = pill). Does not remorph the mark. */
 export function applyLogoCornerRadius(svgMarkup: string, amount: number): string {
   const doc = new DOMParser().parseFromString(svgMarkup, "image/svg+xml");
   const svg = doc.documentElement;
   if (svg.querySelector("parsererror")) return svgMarkup;
-  const n = Number(amount);
-  const radius = Number.isFinite(n) ? Math.min(100, Math.max(0, n)) : 0;
   for (const el of svg.querySelectorAll("rect")) {
-    setRectCornerRadius(el, radius);
+    setRectCornerRadius(el, clampAmount(amount));
+  }
+  return new XMLSerializer().serializeToString(svg);
+}
+
+/** Uniform cell inset (0 = flush · 100 = Extras max gap). Does not remorph the mark. */
+export function applyLogoShapeGap(svgMarkup: string, amount: number): string {
+  const doc = new DOMParser().parseFromString(svgMarkup, "image/svg+xml");
+  const svg = doc.documentElement;
+  if (svg.querySelector("parsererror")) return svgMarkup;
+  const gap = clampAmount(amount);
+  for (const el of svg.querySelectorAll(PART_SELECTOR)) {
+    applyGapTransform(el, gap);
   }
   return new XMLSerializer().serializeToString(svg);
 }
@@ -703,6 +771,7 @@ export function paintLogoWithBrandTokens(
     subdivide?: boolean;
     shapes?: readonly LogoShapeId[];
     cornerRadius?: number;
+    shapeGap?: number;
   },
 ): string {
   const doc = new DOMParser().parseFromString(svgMarkup, "image/svg+xml");
@@ -726,17 +795,35 @@ export function paintLogoWithBrandTokens(
   const boxes = parts.map(bbox);
   const adj = adjacency(cells);
 
-  const runs = pickSameColorRuns(adj, boxes, unitSize);
+  // Bar-merge only when squares are in the mix, and only among actual <rect> tiles —
+  // otherwise a star-only (etc.) mark gets eaten into solid boxes.
+  const runs = kinds.includes("square")
+    ? pickSameColorRuns(
+        adj,
+        boxes,
+        unitSize,
+        (i) => parts[i]!.tagName.toLowerCase() === "rect",
+      )
+    : [];
   const colors = colorGraph(adj, runs);
   parts.forEach((el, i) => {
     el.removeAttribute("class");
-    el.removeAttribute(BOX_ATTR);
     el.setAttribute("fill", LOGO_FILL_TOKENS[colors[i] ?? 0]);
   });
-  // Collapse each same-colour square run into one rect — no shared edges, no seams.
-  mergeColorRuns(doc, parts, boxes, colors, runs);
+  if (runs.length > 0) mergeColorRuns(doc, parts, boxes, colors, runs);
 
-  const cornerRadius = options?.cornerRadius ?? 0;
+  const finished = [...svg.querySelectorAll(PART_SELECTOR)];
+  for (const el of finished) {
+    if (!readStamp(el)) stampBox(el, bbox(el));
+    el.setAttribute(BASE_TRANSFORM_ATTR, el.getAttribute("transform") ?? "");
+  }
+
+  const shapeGap = clampAmount(options?.shapeGap);
+  if (shapeGap > 0) {
+    for (const el of finished) applyGapTransform(el, shapeGap);
+  }
+
+  const cornerRadius = clampAmount(options?.cornerRadius);
   if (cornerRadius > 0) {
     for (const el of svg.querySelectorAll("rect")) {
       setRectCornerRadius(el, cornerRadius);

@@ -20,7 +20,7 @@ import {
   setPieceVisible,
   type Speed,
 } from "./logoReveal";
-import { applyLogoCornerRadius, paintLogoWithBrandTokens } from "./paintLogo";
+import { applyLogoCornerRadius, applyLogoShapeGap, paintLogoWithBrandTokens } from "./paintLogo";
 import {
   DEFAULT_LOGO_SHAPES,
   LOGO_SHAPE_IDS,
@@ -164,6 +164,7 @@ export function LogoCreator() {
     ...DEFAULT_LOGO_SHAPES,
   ]);
   const [cornerRadius, setCornerRadius] = useState(0);
+  const [shapeGap, setShapeGap] = useState(0);
   const [exporting, setExporting] = useState(false);
   const speedMenuRef = useRef<HTMLDivElement>(null);
   const exportRef = useRef<HTMLDivElement>(null);
@@ -174,12 +175,14 @@ export function LogoCreator() {
   const subdividedRef = useRef(false);
   const enabledShapesRef = useRef(enabledShapes);
   const cornerRadiusRef = useRef(0);
+  const shapeGapRef = useRef(0);
   speedRef.current = speed;
   playingRef.current = playing;
   uiHiddenRef.current = uiHidden;
   subdividedRef.current = subdivided;
   enabledShapesRef.current = enabledShapes;
   cornerRadiusRef.current = cornerRadius;
+  shapeGapRef.current = shapeGap;
 
   const markStyle = useMemo(
     () =>
@@ -242,12 +245,14 @@ export function LogoCreator() {
     pausePlayback();
   };
 
-  const paintLogo = () =>
-    paintLogoWithBrandTokens(logoSvg, {
-      subdivide: subdividedRef.current,
-      shapes: enabledShapesRef.current,
-      cornerRadius: cornerRadiusRef.current,
-    });
+  const paintOptions = () => ({
+    subdivide: subdividedRef.current,
+    shapes: enabledShapesRef.current,
+    cornerRadius: cornerRadiusRef.current,
+    shapeGap: shapeGapRef.current,
+  });
+
+  const paintLogo = () => paintLogoWithBrandTokens(logoSvg, paintOptions());
 
   const randomizeLayout = () => {
     if (playingRef.current || loopRef.current) stopPlayback();
@@ -258,13 +263,7 @@ export function LogoCreator() {
     const next = !subdividedRef.current;
     subdividedRef.current = next;
     setSubdivided(next);
-    setMarkup(
-      paintLogoWithBrandTokens(logoSvg, {
-        subdivide: next,
-        shapes: enabledShapesRef.current,
-        cornerRadius: cornerRadiusRef.current,
-      }),
-    );
+    setMarkup(paintLogoWithBrandTokens(logoSvg, { ...paintOptions(), subdivide: next }));
   };
   const toggleShape = (shape: LogoShapeId) => {
     if (playingRef.current || loopRef.current) stopPlayback();
@@ -273,13 +272,7 @@ export function LogoCreator() {
       if (on && prev.length <= 1) return prev;
       const next = on ? prev.filter((s) => s !== shape) : [...prev, shape];
       enabledShapesRef.current = next;
-      setMarkup(
-        paintLogoWithBrandTokens(logoSvg, {
-          subdivide: subdividedRef.current,
-          shapes: next,
-          cornerRadius: cornerRadiusRef.current,
-        }),
-      );
+      setMarkup(paintLogoWithBrandTokens(logoSvg, { ...paintOptions(), shapes: next }));
       return next;
     });
   };
@@ -287,6 +280,11 @@ export function LogoCreator() {
     cornerRadiusRef.current = value;
     setCornerRadius(value);
     setMarkup((prev) => applyLogoCornerRadius(prev, value));
+  };
+  const onShapeGapChange = (value: number) => {
+    shapeGapRef.current = value;
+    setShapeGap(value);
+    setMarkup((prev) => applyLogoShapeGap(prev, value));
   };
   const randomizeColours = () => {
     if (playingRef.current) pausePlayback();
@@ -612,10 +610,10 @@ export function LogoCreator() {
               );
             })}
           </div>
-          <label className="logo-creator__radius" title="0 = square · 100 = pill · boxes only">
-            <span className="logo-creator__radius-label">
+          <label className="logo-creator__slider" title="0 = square · 100 = pill · boxes only">
+            <span className="logo-creator__slider-label">
               Corner radius
-              <span className="logo-creator__radius-value">{cornerRadius}</span>
+              <span className="logo-creator__slider-value">{cornerRadius}</span>
             </span>
             <input
               type="range"
@@ -626,6 +624,22 @@ export function LogoCreator() {
               aria-label="Corner radius"
               style={{ ["--val" as string]: cornerRadius } as CSSProperties}
               onChange={(e) => onCornerRadiusChange(Number(e.target.value))}
+            />
+          </label>
+          <label className="logo-creator__slider" title="0 = flush · 100 = uniform cell inset">
+            <span className="logo-creator__slider-label">
+              Gap
+              <span className="logo-creator__slider-value">{shapeGap}</span>
+            </span>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={1}
+              value={shapeGap}
+              aria-label="Gap"
+              style={{ ["--val" as string]: shapeGap } as CSSProperties}
+              onChange={(e) => onShapeGapChange(Number(e.target.value))}
             />
           </label>
         </div>

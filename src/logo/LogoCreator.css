@@ -134,7 +134,7 @@ body,
   flex-shrink: 0;
 }
 
-.logo-creator__radius {
+.logo-creator__slider {
   display: grid;
   grid-template-rows: auto auto;
   gap: 6px;
@@ -146,19 +146,19 @@ body,
   cursor: default;
 }
 
-.logo-creator__radius-label {
+.logo-creator__slider-label {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
 
-.logo-creator__radius-value {
+.logo-creator__slider-value {
   color: rgba(255, 255, 255, 0.92);
   font-variant-numeric: tabular-nums;
 }
 
-.logo-creator__radius input[type="range"] {
+.logo-creator__slider input[type="range"] {
   --val: 0;
   --pos: calc(var(--val) * 1%);
   --fill: #ff5300;
@@ -183,29 +183,29 @@ body,
   cursor: pointer;
 }
 
-.logo-creator__radius input[type="range"]:focus-visible {
+.logo-creator__slider input[type="range"]:focus-visible {
   outline: 1px solid rgba(255, 255, 255, 0.35);
   outline-offset: 4px;
 }
 
-.logo-creator__radius input[type="range"]::-webkit-slider-runnable-track {
+.logo-creator__slider input[type="range"]::-webkit-slider-runnable-track {
   -webkit-appearance: none;
   height: 14px;
   background: transparent;
   border: none;
 }
 
-.logo-creator__radius input[type="range"]::-moz-range-track {
+.logo-creator__slider input[type="range"]::-moz-range-track {
   height: 4px;
   background: transparent;
   border: none;
 }
 
-.logo-creator__radius input[type="range"]::-moz-range-progress {
+.logo-creator__slider input[type="range"]::-moz-range-progress {
   background: transparent;
 }
 
-.logo-creator__radius input[type="range"]::-webkit-slider-thumb {
+.logo-creator__slider input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
   width: var(--thumb);
@@ -217,7 +217,7 @@ body,
   box-shadow: none;
 }
 
-.logo-creator__radius input[type="range"]::-moz-range-thumb {
+.logo-creator__slider input[type="range"]::-moz-range-thumb {
   width: var(--thumb);
   height: var(--thumb);
   border: none;

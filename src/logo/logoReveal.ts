@@ -59,15 +59,24 @@ export function setPieceVisible(el: SVGElement, visible: boolean): void {
 }
 
 function pieceBox(el: Element): { x: number; y: number } {
-  const svgEl = el as SVGElement;
+  const svgEl = el as SVGGraphicsElement;
   const wasHidden = svgEl.style.display === "none" || svgEl.getAttribute("display") === "none";
   if (wasHidden) {
     svgEl.style.display = "";
     svgEl.removeAttribute("display");
   }
   try {
-    const box = (el as SVGGraphicsElement).getBBox();
-    return { x: box.x, y: box.y };
+    const box = svgEl.getBBox();
+    // Centre in local space — gallery paths live in a 0..256 viewBox with a
+    // translate/scale transform; getBBox alone ignores that and clusters them at 0.
+    const lx = box.x + box.width / 2;
+    const ly = box.y + box.height / 2;
+    const ctm = svgEl.getCTM();
+    if (!ctm) return { x: lx, y: ly };
+    return {
+      x: ctm.a * lx + ctm.c * ly + ctm.e,
+      y: ctm.b * lx + ctm.d * ly + ctm.f,
+    };
   } catch {
     return { x: 0, y: 0 };
   } finally {
