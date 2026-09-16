@@ -1943,6 +1943,9 @@ html.normal-hover .button-row--choice button.is-active:hover::before {
 .has-hint:focus-visible::after {
   opacity: 1;
   transform: translateY(0);
+  transition:
+    opacity 0.075s var(--ui-ease),
+    transform 0.075s var(--ui-ease);
 }
 
 .has-hint:focus-visible {
@@ -2856,7 +2859,12 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 0;
+}
+
+/* Gap above the strip lives inside the collapsible so it retracts with it. */
+.timeline > .collapsible-controls > .collapsible-controls__inner {
+  padding-top: 16px;
 }
 
 .timeline__frame-index,

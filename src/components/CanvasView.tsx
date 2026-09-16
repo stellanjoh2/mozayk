@@ -46,6 +46,7 @@ import type { Frame, Orientation } from "../types";
 import { PlayIcon, StopIcon } from "../ui/icons";
 import { playUiSound } from "../ui/sounds";
 import { getNormalHoverEffects } from "../ui/hover";
+import { CollapsibleControls } from "./ControlRow";
 import { FrameContextMenu } from "./FrameContextMenu";
 import { PhaseOrb } from "./PhaseOrb";
 import { UiSelect } from "./UiSelect";
@@ -1721,7 +1722,8 @@ export function Timeline({
     playUiSound("ok");
     addingRef.current = true;
     pendingAddRef.current = true;
-    if (strip && !reduceMotion) {
+    // No Flip when the strip is still collapsed (single frame).
+    if (strip && !reduceMotion && frames.length > 1) {
       pendingFlipRef.current = Flip.getState(
         strip.querySelectorAll(".timeline-strip-item"),
       );
@@ -1747,7 +1749,8 @@ export function Timeline({
     const reduceMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
     ).matches;
-    if (reduceMotion || !stripRef.current) {
+    // Last multi-frame → single: let the strip retract be the animation.
+    if (reduceMotion || !stripRef.current || frames.length === 2) {
       onRemove(index);
       return;
     }
@@ -1937,92 +1940,94 @@ export function Timeline({
           </div>
         ) : null}
       </div>
-      <div ref={stripRef} className="timeline__scroll">
-        <div
-          className={`timeline__strip${dragIndex !== null ? " is-dragging" : ""}`}
-          style={{ height: thumbH }}
-        >
-          {visualItems.map((item, visualIndex) => {
-            if (item.kind === "insert") {
+      <CollapsibleControls open={frames.length > 1}>
+        <div ref={stripRef} className="timeline__scroll">
+          <div
+            className={`timeline__strip${dragIndex !== null ? " is-dragging" : ""}`}
+            style={{ height: thumbH }}
+          >
+            {visualItems.map((item, visualIndex) => {
+              if (item.kind === "insert") {
+                return (
+                  <div
+                    key={`insert-${visualIndex}`}
+                    className="timeline-insert-slot"
+                    data-timeline-slot
+                    data-insert-index={insertIndex ?? 0}
+                    style={{ width: thumbW, height: thumbH }}
+                    aria-hidden
+                  >
+                    <div className="timeline-insert-line" />
+                  </div>
+                );
+              }
+
+              const { index } = item;
+              const frame = frames[index];
+
               return (
                 <div
-                  key={`insert-${visualIndex}`}
-                  className="timeline-insert-slot"
+                  key={frame.id}
+                  className={`timeline-strip-item${index === removingIndex ? " is-removing" : ""}`}
                   data-timeline-slot
-                  data-insert-index={insertIndex ?? 0}
-                  style={{ width: thumbW, height: thumbH }}
-                  aria-hidden
+                  data-frame-index={index}
+                  style={{
+                    height: thumbH,
+                    ...(index === removingIndex ? {} : { width: thumbW }),
+                  }}
                 >
-                  <div className="timeline-insert-line" />
+                  <div
+                    className="timeline-thumb-cell"
+                    style={{ width: thumbW, height: thumbH }}
+                  >
+                    <FrameThumbnail
+                      frame={frame}
+                      orientation={orientation}
+                      active={index === activeIndex}
+                      dropFlashToken={
+                        dropFlash?.index === index ? dropFlash.token : undefined
+                      }
+                      onSelect={() => onSelect(index)}
+                      onPointerDown={(event) => handleThumbPointerDown(index, event)}
+                      onContextMenu={(event) => {
+                        if (removing || dragIndex !== null) return;
+                        onSelect(index);
+                        playUiSound("push");
+                        setMenu({
+                          index,
+                          x: event.clientX,
+                          y: event.clientY,
+                        });
+                      }}
+                    />
+                  </div>
                 </div>
               );
-            }
-
-            const { index } = item;
-            const frame = frames[index];
-
-            return (
-              <div
-                key={frame.id}
-                className={`timeline-strip-item${index === removingIndex ? " is-removing" : ""}`}
-                data-timeline-slot
-                data-frame-index={index}
-                style={{
-                  height: thumbH,
-                  ...(index === removingIndex ? {} : { width: thumbW }),
-                }}
-              >
-                <div
-                  className="timeline-thumb-cell"
-                  style={{ width: thumbW, height: thumbH }}
-                >
-                  <FrameThumbnail
-                    frame={frame}
-                    orientation={orientation}
-                    active={index === activeIndex}
-                    dropFlashToken={
-                      dropFlash?.index === index ? dropFlash.token : undefined
-                    }
-                    onSelect={() => onSelect(index)}
-                    onPointerDown={(event) => handleThumbPointerDown(index, event)}
-                    onContextMenu={(event) => {
-                      if (removing || dragIndex !== null) return;
-                      onSelect(index);
-                      playUiSound("push");
-                      setMenu({
-                        index,
-                        x: event.clientX,
-                        y: event.clientY,
-                      });
-                    }}
-                  />
-                </div>
-              </div>
-            );
-          })}
+            })}
+          </div>
         </div>
-      </div>
-      {scrollbar.overflow ? (
-        <div
-          className="timeline__scrollbar"
-          role="scrollbar"
-          aria-orientation="horizontal"
-          aria-label="Timeline frames"
-          onPointerDown={handleScrollbarPointerDown}
-          onPointerMove={handleScrollbarPointerMove}
-          onPointerUp={handleScrollbarPointerUp}
-          onPointerCancel={handleScrollbarPointerUp}
-          onLostPointerCapture={handleScrollbarPointerUp}
-        >
+        {scrollbar.overflow ? (
           <div
-            className="timeline__scrollbar-thumb"
-            style={{
-              width: scrollbar.thumbWidth,
-              left: scrollbar.thumbLeft,
-            }}
-          />
-        </div>
-      ) : null}
+            className="timeline__scrollbar"
+            role="scrollbar"
+            aria-orientation="horizontal"
+            aria-label="Timeline frames"
+            onPointerDown={handleScrollbarPointerDown}
+            onPointerMove={handleScrollbarPointerMove}
+            onPointerUp={handleScrollbarPointerUp}
+            onPointerCancel={handleScrollbarPointerUp}
+            onLostPointerCapture={handleScrollbarPointerUp}
+          >
+            <div
+              className="timeline__scrollbar-thumb"
+              style={{
+                width: scrollbar.thumbWidth,
+                left: scrollbar.thumbLeft,
+              }}
+            />
+          </div>
+        ) : null}
+      </CollapsibleControls>
       {draggedFrame && pointer && dragIndex !== null
         ? createPortal(
             <div
