@@ -2328,6 +2328,7 @@ export function ControlsPanel({
       )}
 
       <footer className="panel-credit">
+        <span className="panel-credit__s" aria-hidden="true" />
         <p>
           Mozayk is created by
           <br />

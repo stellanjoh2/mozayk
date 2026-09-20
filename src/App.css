@@ -946,6 +946,24 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
   margin: 0;
 }
 
+/* Personal S-mark from Cyborg splash — follows --chrome with the theme. */
+.panel-credit__s {
+  display: block;
+  width: calc(48px * 198 / 248.77);
+  height: 48px;
+  margin: 0 auto 24px;
+  color: var(--chrome);
+  background-color: currentColor;
+  -webkit-mask-image: url("./assets/s-logo.svg");
+  mask-image: url("./assets/s-logo.svg");
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
 .panel-credit__social {
   display: inline-flex;
   align-items: center;
