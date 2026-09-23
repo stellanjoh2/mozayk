@@ -934,7 +934,8 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
 
 .panel-credit {
   margin-top: 32px;
-  padding-top: 32px;
+  /* Gap 1: rule → S-mark. Gap 3 (icons → edge) is controls-panel__zoom padding-bottom. */
+  padding-top: 48px;
   border-top: 1px solid var(--panel-border);
   color: var(--muted);
   font-size: 15px;
@@ -942,15 +943,35 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
   text-align: center;
 }
 
-.panel-credit p {
+.panel-credit__copy {
   margin: 0;
 }
 
+/* Personal S-mark from Cyborg splash — follows --chrome with the theme. */
+.panel-credit__s {
+  display: block;
+  width: calc(48px * 198 / 248.77);
+  height: 48px;
+  margin: 0 auto 24px;
+  color: var(--chrome);
+  background-color: currentColor;
+  -webkit-mask-image: url("./assets/s-logo.svg");
+  mask-image: url("./assets/s-logo.svg");
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+/* Gap 2: last copy → social icons. */
 .panel-credit__social {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
   gap: 24px;
+  margin: 48px 0 0;
 }
 
 .panel-credit__social a {
