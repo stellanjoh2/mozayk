@@ -12,7 +12,11 @@
 const REDIS_PAGE_KEY = "mozayk:stats:page_views";
 const REDIS_EXPORT_KEY = "mozayk:stats:visuals_exported";
 const EVENTS = new Set(["page_view", "visual_exported"]);
-const PRODUCTION_ORIGINS = ["https://stellanjoh2.github.io"];
+const PRODUCTION_ORIGINS = [
+  "https://mozayk.design",
+  "https://www.mozayk.design",
+  "https://stellanjoh2.github.io",
+];
 
 function redisConfig() {
   const url = process.env.UPSTASH_REDIS_REST_URL?.trim();

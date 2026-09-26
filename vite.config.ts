@@ -7,7 +7,8 @@ const root = fileURLToPath(new URL(".", import.meta.url));
 
 export default defineConfig({
   plugins: [react()],
-  base: process.env.GITHUB_ACTIONS ? "/mozayk/" : "/",
+  // Custom domain (mozayk.design) serves from the site root.
+  base: "/",
   // LightningCSS minify rewrites `backdrop-filter` to `-webkit-backdrop-filter`
   // only. Chrome ignores the prefixed property, so frost works in `vite dev`
   // (unminified) and dies on GitHub Pages.
