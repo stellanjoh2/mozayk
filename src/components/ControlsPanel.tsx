@@ -69,6 +69,7 @@ import {
   MAX_CUSTOM_SHAPE_SLOTS,
   createCustomShapeSlotId,
   fitForCustomShapeImage,
+  normalizeCustomShapeDataUrl,
   toCustomShapeRef,
   unsupportedCustomShapeMessage,
   UnsupportedCustomShapeError,
@@ -458,7 +459,8 @@ export function ControlsPanel({
     }
 
     try {
-      const dataUrl = await readImageFileAsDataUrl(file);
+      const rawDataUrl = await readImageFileAsDataUrl(file);
+      const dataUrl = normalizeCustomShapeDataUrl(rawDataUrl);
       const image = await ensureCachedSourceImage(dataUrl);
       const fit = fitForCustomShapeImage(image, dataUrl);
       playUiSound("ok");
@@ -1091,7 +1093,7 @@ export function ControlsPanel({
                             ? " shape-icon--custom-contain"
                             : ""
                         }`}
-                        src={slot.dataUrl}
+                        src={normalizeCustomShapeDataUrl(slot.dataUrl)}
                         alt=""
                         draggable={false}
                       />

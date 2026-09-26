@@ -1,6 +1,9 @@
 import {
+  decodeSvgDataUrl,
+  encodeSvgDataUrl,
   isSvgDataUrl,
   svgCustomShape,
+  tightSvgSizing,
   tintCustomShapeWithBlockColor,
 } from "./customShapes";
 
@@ -13,6 +16,26 @@ function run(): void {
   assert(!isSvgDataUrl("data:image/png;base64,abc"), "png data url not svg");
   assert(tintCustomShapeWithBlockColor("contain"), "contain cutouts tint");
   assert(!tintCustomShapeWithBlockColor("cover"), "cover photos do not tint");
+
+  const square = tightSvgSizing({ x: 400, y: 400, width: 200, height: 200 });
+  assert(square !== null, "square box sizes");
+  assert(square.viewBox === "396 396 208 208", "viewBox crops to content + pad");
+  assert(square.width === "512" && square.height === "512", "square intrinsic size");
+
+  const wide = tightSvgSizing({ x: 0, y: 100, width: 400, height: 100 });
+  assert(wide !== null, "wide box sizes");
+  assert(wide.width === "512" && wide.height === "143", "wide mark keeps aspect");
+
+  const round = tightSvgSizing({ x: 380, y: 380, width: 240, height: 240 });
+  assert(round !== null, "circle-like box sizes");
+  assert(round.viewBox === "375.2 375.2 249.6 249.6", "circle whitespace trimmed");
+  assert(round.width === "512" && round.height === "512", "round mark is square");
+
+  const sample = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><circle cx="5" cy="5" r="2"/></svg>`;
+  const encoded = encodeSvgDataUrl(sample);
+  assert(encoded.startsWith("data:image/svg+xml;base64,"), "encodes base64 svg");
+  const decoded = decodeSvgDataUrl(encoded);
+  assert(decoded !== null && decoded.includes("viewBox="), "round-trips svg text");
 
   const tinted = svgCustomShape(
     "data:image/svg+xml;base64,PHN2Zy4uLjwvY3ZnPg==",

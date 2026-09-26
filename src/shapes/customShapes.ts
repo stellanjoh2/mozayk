@@ -106,6 +106,173 @@ export function isSvgDataUrl(dataUrl: string | undefined): boolean {
   );
 }
 
+const SVG_TRIM_PAD_RATIO = 0.02;
+const SVG_INTRINSIC_MAX = 512;
+
+function formatSvgNumber(n: number): string {
+  if (!Number.isFinite(n)) return "0";
+  const rounded = Math.round(n * 1000) / 1000;
+  return String(rounded);
+}
+
+export function decodeSvgDataUrl(dataUrl: string): string | null {
+  const comma = dataUrl.indexOf(",");
+  if (comma < 0) return null;
+  const header = dataUrl.slice(0, comma);
+  const payload = dataUrl.slice(comma + 1);
+  if (!/data:image\/svg\+xml/i.test(header)) return null;
+  try {
+    if (/;base64/i.test(header)) {
+      const binary = atob(payload);
+      const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+      return new TextDecoder().decode(bytes);
+    }
+    return decodeURIComponent(payload);
+  } catch {
+    return null;
+  }
+}
+
+export function encodeSvgDataUrl(svgText: string): string {
+  const bytes = new TextEncoder().encode(svgText);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]!);
+  return `data:image/svg+xml;base64,${btoa(binary)}`;
+}
+
+export type SvgContentBox = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+/** Compute a tight viewBox + intrinsic size from a content bounding box. */
+export function tightSvgSizing(box: SvgContentBox): {
+  viewBox: string;
+  width: string;
+  height: string;
+} | null {
+  if (box.width <= 0 || box.height <= 0) return null;
+  const pad = Math.max(box.width, box.height) * SVG_TRIM_PAD_RATIO;
+  const x = box.x - pad;
+  const y = box.y - pad;
+  const w = box.width + pad * 2;
+  const h = box.height + pad * 2;
+  const viewBox = `${formatSvgNumber(x)} ${formatSvgNumber(y)} ${formatSvgNumber(w)} ${formatSvgNumber(h)}`;
+  if (w >= h) {
+    return {
+      viewBox,
+      width: String(SVG_INTRINSIC_MAX),
+      height: String(Math.max(1, Math.round(SVG_INTRINSIC_MAX * (h / w)))),
+    };
+  }
+  return {
+    viewBox,
+    height: String(SVG_INTRINSIC_MAX),
+    width: String(Math.max(1, Math.round(SVG_INTRINSIC_MAX * (w / h)))),
+  };
+}
+
+/** Rewrite viewBox (+ intrinsic width/height) so the mark fills mosaic cells. */
+export function applyTightSvgViewBox(
+  svgText: string,
+  box: SvgContentBox,
+): string {
+  const sizing = tightSvgSizing(box);
+  if (!sizing) return svgText;
+  if (typeof DOMParser === "undefined" || typeof XMLSerializer === "undefined") {
+    return svgText;
+  }
+  const doc = new DOMParser().parseFromString(svgText, "image/svg+xml");
+  const svg = doc.documentElement;
+  if (!(svg instanceof Element) || svg.querySelector("parsererror")) {
+    return svgText;
+  }
+
+  svg.setAttribute("viewBox", sizing.viewBox);
+  svg.setAttribute("width", sizing.width);
+  svg.setAttribute("height", sizing.height);
+  svg.removeAttribute("x");
+  svg.removeAttribute("y");
+
+  return new XMLSerializer().serializeToString(svg);
+}
+
+function measureSvgContentBox(svgText: string): SvgContentBox | null {
+  if (typeof document === "undefined") return null;
+  const doc = new DOMParser().parseFromString(svgText, "image/svg+xml");
+  const parsed = doc.documentElement;
+  if (!(parsed instanceof SVGElement) || parsed.querySelector("parsererror")) {
+    return null;
+  }
+
+  const host = document.createElement("div");
+  host.setAttribute("aria-hidden", "true");
+  host.style.cssText =
+    "position:fixed;left:0;top:0;width:0;height:0;overflow:hidden;opacity:0;pointer-events:none";
+  const svg = document.importNode(parsed, true);
+  if (!(svg instanceof SVGSVGElement)) {
+    return null;
+  }
+  if (!svg.getAttribute("xmlns")) {
+    svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+  }
+  host.appendChild(svg);
+  document.body.appendChild(host);
+  try {
+    const bbox = svg.getBBox();
+    if (
+      !Number.isFinite(bbox.x) ||
+      !Number.isFinite(bbox.y) ||
+      !Number.isFinite(bbox.width) ||
+      !Number.isFinite(bbox.height) ||
+      bbox.width <= 0 ||
+      bbox.height <= 0
+    ) {
+      return null;
+    }
+    return {
+      x: bbox.x,
+      y: bbox.y,
+      width: bbox.width,
+      height: bbox.height,
+    };
+  } catch {
+    return null;
+  } finally {
+    host.remove();
+  }
+}
+
+/** Crop SVG whitespace to the drawn content so marks sit like gallery icons. */
+export function trimSvgWhitespace(svgText: string): string {
+  const box = measureSvgContentBox(svgText);
+  if (!box) return svgText;
+  return applyTightSvgViewBox(svgText, box);
+}
+
+/**
+ * SVGs: tight viewBox + real intrinsic size. Raster: unchanged.
+ * Safe to call on every load — results are cached per data URL.
+ */
+const normalizedCustomShapeCache = new Map<string, string>();
+
+export function normalizeCustomShapeDataUrl(dataUrl: string): string {
+  if (!isSvgDataUrl(dataUrl)) return dataUrl;
+  const cached = normalizedCustomShapeCache.get(dataUrl);
+  if (cached) return cached;
+  const svgText = decodeSvgDataUrl(dataUrl);
+  if (!svgText) {
+    normalizedCustomShapeCache.set(dataUrl, dataUrl);
+    return dataUrl;
+  }
+  const normalized = encodeSvgDataUrl(trimSvgWhitespace(svgText));
+  normalizedCustomShapeCache.set(dataUrl, normalized);
+  normalizedCustomShapeCache.set(normalized, normalized);
+  return normalized;
+}
+
 /**
  * Opaque photos cover the cell; transparent cutouts (and all SVGs) letterbox
  * so the silhouette isn't cropped. SVGs always contain — they are marks, not photos.
@@ -321,7 +488,8 @@ export async function loadCustomShapeImages(
     slots.map(async (slot) => {
       if (!slot.dataUrl) return;
       try {
-        const image = await ensureCachedSourceImage(slot.dataUrl);
+        const prepared = normalizeCustomShapeDataUrl(slot.dataUrl);
+        const image = await ensureCachedSourceImage(prepared);
         map.set(slot.id, image);
       } catch {
         /* skip broken assets */

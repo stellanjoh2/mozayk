@@ -27,6 +27,7 @@ import {
   fitForCustomShapeImage,
   isCustomShapeRef,
   isSvgDataUrl,
+  normalizeCustomShapeDataUrl,
   svgCustomShape,
 } from "../shapes/customShapes";
 import { getCachedSourceImage } from "../import/imageSource";
@@ -148,15 +149,16 @@ function svgBlock(
   if (isCustomShapeRef(block.shape)) {
     const slot = findCustomShapeSlot(settings, block.shape);
     if (slot?.dataUrl) {
-      const cached = getCachedSourceImage(slot.dataUrl);
+      const prepared = normalizeCustomShapeDataUrl(slot.dataUrl);
+      const cached = getCachedSourceImage(prepared);
       const fit = isSvgDataUrl(slot.dataUrl)
         ? "contain"
         : (slot.fit ??
           (cached
-            ? fitForCustomShapeImage(cached, slot.dataUrl)
+            ? fitForCustomShapeImage(cached, prepared)
             : "contain"));
       return svgCustomShape(
-        slot.dataUrl,
+        prepared,
         { x, y, width: drawW, height: drawH },
         cornerRadius,
         `cs${block.col}-${block.row}-${block.width}x${block.height}`,
