@@ -10,10 +10,12 @@ Mozayk uses open-source software, browser platform APIs, and adapted UI patterns
 | [React DOM](https://react.dev/) | Rendering | MIT |
 | [GSAP](https://gsap.com/) | Timeline and thumbnail animations; Flip plugin for frame reordering | [GSAP Standard License](https://gsap.com/standard-license) |
 | [@gsap/react](https://gsap.com/docs/v3/Plugins/React/) | `useGSAP` hook for React lifecycle-safe animations | GSAP Standard License |
-| [fflate](https://github.com/101arrowz/fflate) | ZIP bundling for multi-frame PNG export | MIT |
+| [fflate](https://github.com/101arrowz/fflate) | ZIP bundling for multi-frame PNG / JPG export | MIT |
 | [gifski-wasm](https://www.npmjs.com/package/gifski-wasm) / [gifski](https://gif.ski/) | GIF encoding | AGPL-3.0-or-later |
 | [mediabunny](https://github.com/Vanilagy/mediabunny) | MP4 export via WebCodecs (H.264) | MPL-2.0 |
-| [SUSE Mono](https://fontsource.org/fonts/suse-mono) via [@fontsource-variable/suse-mono](https://www.npmjs.com/package/@fontsource-variable/suse-mono) | UI typography | OFL-1.1 |
+| [three.js](https://threejs.org/) | WebGL ring gallery (bent panels, fisheye, textures) | MIT |
+| [gifuct-js](https://github.com/matt-way/gifuct-js) | Decode animated GIFs for gallery texture playback | MIT |
+| [Bitcount Grid Single](https://fontsource.org/fonts/bitcount-grid-single) via [@fontsource-variable/bitcount-grid-single](https://www.npmjs.com/package/@fontsource-variable/bitcount-grid-single) | UI typography | OFL-1.1 |
 
 ## Build tools
 

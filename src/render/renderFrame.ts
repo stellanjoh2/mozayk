@@ -31,6 +31,7 @@ import {
 } from "../shapes/galleryShapes";
 import {
   fillCustomShape,
+  fitForCustomShapeImage,
   isCustomShapeRef,
   customShapeSlotId,
 } from "../shapes/customShapes";
@@ -213,7 +214,10 @@ function drawBlock(
 
   if (isCustomShapeRef(block.shape)) {
     const image = customShapeImages?.get(customShapeSlotId(block.shape));
-    if (image) fillCustomShape(ctx, image, rect, cornerRadius);
+    if (image) {
+      const fit = fitForCustomShapeImage(image);
+      fillCustomShape(ctx, image, rect, cornerRadius, fit, block.color);
+    }
     return;
   }
 

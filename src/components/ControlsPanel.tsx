@@ -343,6 +343,10 @@ export function ControlsPanel({
   const extrasOn = isExtrasEnabled(settings);
   const customShapeInputRef = useRef<HTMLInputElement>(null);
   const pendingCustomSlotIdRef = useRef<string | null>(null);
+  const pendingScrollCustomSlotIdRef = useRef<string | null>(null);
+  const [pulsingCustomSlotId, setPulsingCustomSlotId] = useState<string | null>(
+    null,
+  );
   const shapePoolWouldEmpty = (nextShapes: typeof shapes, nextCustoms = customShapes) =>
     !nextShapes.block &&
     !anyOptionalShapeEnabled(nextShapes, nextCustoms);
@@ -370,15 +374,36 @@ export function ControlsPanel({
       return;
     }
     playUiSound("ok");
+    const id = createCustomShapeSlotId();
+    pendingScrollCustomSlotIdRef.current = id;
+    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setPulsingCustomSlotId(id);
+    }
     onSettingsChange({
-      customShapes: [
-        ...customShapes,
-        { id: createCustomShapeSlotId(), enabled: false },
-      ],
+      customShapes: [...customShapes, { id, enabled: false }],
     });
   };
 
+  useLayoutEffect(() => {
+    const id = pendingScrollCustomSlotIdRef.current;
+    if (!id || !customShapes.some((slot) => slot.id === id)) return;
+    pendingScrollCustomSlotIdRef.current = null;
+    const el = panelRef.current?.querySelector<HTMLElement>(
+      `[data-custom-slot-id="${CSS.escape(id)}"]`,
+    );
+    if (!el) return;
+    el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    el.focus({ preventScroll: true });
+  }, [customShapes]);
+
+  useLayoutEffect(() => {
+    if (!pulsingCustomSlotId) return;
+    const timer = window.setTimeout(() => setPulsingCustomSlotId(null), 2400);
+    return () => window.clearTimeout(timer);
+  }, [pulsingCustomSlotId]);
+
   const handleCustomSlotClick = (slotId: string) => {
+    if (pulsingCustomSlotId === slotId) setPulsingCustomSlotId(null);
     const slot = customShapes.find((item) => item.id === slotId);
     if (!slot) return;
     if (!slot.dataUrl) {
@@ -408,6 +433,7 @@ export function ControlsPanel({
   };
 
   const handleRemoveCustomSlot = (slotId: string) => {
+    if (pulsingCustomSlotId === slotId) setPulsingCustomSlotId(null);
     onSettingsChange({
       customShapes: customShapes.filter((item) => item.id !== slotId),
     });
@@ -434,7 +460,7 @@ export function ControlsPanel({
     try {
       const dataUrl = await readImageFileAsDataUrl(file);
       const image = await ensureCachedSourceImage(dataUrl);
-      const fit = fitForCustomShapeImage(image);
+      const fit = fitForCustomShapeImage(image, dataUrl);
       playUiSound("ok");
       onSettingsChange({
         customShapes: customShapes.map((item) =>
@@ -1042,6 +1068,7 @@ export function ControlsPanel({
                 <div key={slot.id} className="shape-slot-wrap">
                   <button
                     type="button"
+                    data-custom-slot-id={slot.id}
                     aria-label={
                       slot.dataUrl
                         ? slot.name
@@ -1050,7 +1077,9 @@ export function ControlsPanel({
                         : "Choose custom shape file"
                     }
                     aria-pressed={isOn}
-                    className={`shape-slot--custom${slotClass ? ` ${slotClass}` : ""}`}
+                    className={`shape-slot--custom${slotClass ? ` ${slotClass}` : ""}${
+                      slot.id === pulsingCustomSlotId ? " is-pulse" : ""
+                    }`}
                     onClick={() => handleCustomSlotClick(slot.id)}
                   >
                     {slot.dataUrl ? (
