@@ -2,7 +2,7 @@
 
 **Mozayk** is a browser-based mosaic generator for creating abstract grid compositions, animated sequences, and image-driven layouts. It runs in the browser — no install, no account. Your mosaics and files stay on your device.
 
-**Live app:** [stellanjoh2.github.io/mozayk](https://stellanjoh2.github.io/mozayk/)  
+**Live app:** [mozayk.design](https://mozayk.design/)  
 **Source:** [github.com/stellanjoh2/mozayk](https://github.com/stellanjoh2/mozayk)
 
 Created by [Stellan Johansson](https://github.com/stellanjoh2).
@@ -87,7 +87,7 @@ Save and load `.mzk` project files to preserve frames, settings, orientation, an
 
 The live site keeps two anonymous running counts: **site visits** (page loads) and **visuals exported**. These are totals only — Mozayk does not identify people, does not use cookies or accounts for this, and never receives the files you open or export.
 
-The counts are shown at [stellanjoh2.github.io/mozayk/stats](https://stellanjoh2.github.io/mozayk/stats/). That page is not linked from the app chrome. Environment variables for the counters are listed in [stats.env.example](./stats.env.example).
+The counts are shown at [mozayk.design/stats](https://mozayk.design/stats/). That page is not linked from the app chrome. Environment variables for the counters are listed in [stats.env.example](./stats.env.example).
 
 ---
 
