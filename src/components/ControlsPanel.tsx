@@ -455,10 +455,10 @@ export function ControlsPanel({
     if (paintId.startsWith("custom:")) {
       const slotId = paintId.slice("custom:".length);
       const slot = customShapes.find((item) => item.id === slotId);
-      enable = !Boolean(slot?.enabled);
+      enable = !slot?.enabled;
     } else {
       const key = paintId as keyof ShapePalette;
-      enable = !Boolean(shapes[key]);
+      enable = !shapes[key];
     }
 
     shapePaintSuppressClickRef.current = true;
