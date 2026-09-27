@@ -160,7 +160,7 @@ export function createDefaultSettings(): FrameSettings {
     randomHeight: true,
     maxWidth: Math.max(1, Math.round(widthMax / 2)),
     randomWidth: true,
-    fillAmount: 1,
+    fillAmount: 10,
     weight: 50,
     scaleBlend: 3,
     colors: ["#4b4b4b"],
