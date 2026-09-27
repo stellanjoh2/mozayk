@@ -113,6 +113,9 @@ export function createDefaultShapePalette(): FrameSettings["shapes"] {
     arches: false,
     tiles: false,
     scallops: false,
+    rays: false,
+    targets: false,
+    pluses: false,
   };
 }
 

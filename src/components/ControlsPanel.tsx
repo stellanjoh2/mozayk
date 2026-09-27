@@ -1,4 +1,10 @@
-import { useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import {
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import {
@@ -84,12 +90,14 @@ import { createDefaultShapePalette } from "../state/frameUtils";
 import {
   ORIENTATION_LABELS,
   ORIENTATIONS,
+  type CustomShapeSlot,
   type DataFieldsValueType,
   type Density,
   type Frame,
   type FrameSettings,
   type GridBlendMode,
   type Orientation,
+  type ShapePalette,
   type ShapeType,
   type TextureOverlayBlendMode,
 } from "../types";
@@ -358,7 +366,202 @@ export function ControlsPanel({
   })();
   const shapeBtnClass = (on: boolean, id: ShapeType) =>
     on ? (soleShape === id ? "is-active is-sole" : "is-active") : "";
+
+  /** Drag across icons paints the same on/off as the first icon hit. */
+  const shapeLibraryRef = useRef<HTMLDivElement>(null);
+  const shapePaintSuppressClickRef = useRef(false);
+  const shapePaintRef = useRef<{
+    enable: boolean;
+    sounded: boolean;
+    visited: Set<string>;
+    draftShapes: ShapePalette;
+    draftCustoms: CustomShapeSlot[];
+    lastX: number;
+    lastY: number;
+  } | null>(null);
+  const shapePaintListenersRef = useRef<{
+    move: (event: PointerEvent) => void;
+    up: (event: PointerEvent) => void;
+    cancel: (event: PointerEvent) => void;
+  } | null>(null);
+
+  const shapePaintIdFromEventTarget = (target: EventTarget | null) => {
+    if (!(target instanceof Element)) return null;
+    if (target.closest(".ui-icon-btn--remove")) return null;
+    const host = target.closest<HTMLElement>("[data-shape-paint]");
+    if (!host || !shapeLibraryRef.current?.contains(host)) return null;
+    return host.dataset.shapePaint ?? null;
+  };
+
+  const shapePaintIdFromPoint = (clientX: number, clientY: number) => {
+    const root = shapeLibraryRef.current;
+    if (!root) return null;
+    // elementsFromPoint matches the pointer's coordinate space (incl. CSS zoom).
+    for (const node of document.elementsFromPoint(clientX, clientY)) {
+      if (!(node instanceof Element)) continue;
+      if (node.closest(".ui-icon-btn--remove")) return null;
+      const host = node.closest<HTMLElement>("[data-shape-paint]");
+      if (host && root.contains(host)) return host.dataset.shapePaint ?? null;
+    }
+    return null;
+  };
+
+  const applyShapePaint = (paintId: string) => {
+    const session = shapePaintRef.current;
+    if (!session || session.visited.has(paintId)) return;
+
+    const playPaintSound = () => {
+      if (session.sounded) return;
+      session.sounded = true;
+      playUiSound(session.enable ? "ok" : "close");
+    };
+
+    if (paintId.startsWith("custom:")) {
+      const slotId = paintId.slice("custom:".length);
+      const slot = session.draftCustoms.find((item) => item.id === slotId);
+      if (!slot?.dataUrl) return;
+      const isOn = Boolean(slot.enabled);
+      if (isOn === session.enable) {
+        session.visited.add(paintId);
+        return;
+      }
+      const nextCustoms = session.draftCustoms.map((item) =>
+        item.id === slotId ? { ...item, enabled: session.enable } : item,
+      );
+      if (!session.enable && shapePoolWouldEmpty(session.draftShapes, nextCustoms)) {
+        playUiSound("delete");
+        session.visited.add(paintId);
+        return;
+      }
+      session.visited.add(paintId);
+      session.draftCustoms = nextCustoms;
+      playPaintSound();
+      onSettingsChange({ customShapes: nextCustoms });
+      return;
+    }
+
+    const key = paintId as keyof ShapePalette;
+    if (!(key in session.draftShapes)) return;
+    const isOn = Boolean(session.draftShapes[key]);
+    if (isOn === session.enable) {
+      session.visited.add(paintId);
+      return;
+    }
+    const nextShapes = { ...session.draftShapes, [key]: session.enable };
+    if (!session.enable && shapePoolWouldEmpty(nextShapes, session.draftCustoms)) {
+      playUiSound("delete");
+      session.visited.add(paintId);
+      return;
+    }
+    session.visited.add(paintId);
+    session.draftShapes = nextShapes;
+    playPaintSound();
+    onSettingsChange({ shapes: nextShapes });
+  };
+
+  const paintShapeStroke = (
+    fromX: number,
+    fromY: number,
+    toX: number,
+    toY: number,
+  ) => {
+    const dx = toX - fromX;
+    const dy = toY - fromY;
+    const dist = Math.hypot(dx, dy);
+    // Sample along the stroke so fast drags don't skip icons between events.
+    const steps = Math.max(1, Math.ceil(dist / 6));
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const paintId = shapePaintIdFromPoint(fromX + dx * t, fromY + dy * t);
+      if (paintId) applyShapePaint(paintId);
+    }
+  };
+
+  const detachShapePaintListeners = () => {
+    const listeners = shapePaintListenersRef.current;
+    if (!listeners) return;
+    window.removeEventListener("pointermove", listeners.move);
+    window.removeEventListener("pointerup", listeners.up);
+    window.removeEventListener("pointercancel", listeners.cancel);
+    shapePaintListenersRef.current = null;
+  };
+
+  const endShapePaint = () => {
+    detachShapePaintListeners();
+    shapeLibraryRef.current?.classList.remove("is-painting");
+    shapePaintRef.current = null;
+  };
+
+  const beginShapePaint = (
+    paintId: string,
+    clientX: number,
+    clientY: number,
+  ): boolean => {
+    if (paintId.startsWith("custom:")) {
+      const slotId = paintId.slice("custom:".length);
+      const slot = customShapes.find((item) => item.id === slotId);
+      // Empty slots open the file picker via click — don't start a paint.
+      if (!slot?.dataUrl) return false;
+    }
+
+    let enable = true;
+    if (paintId.startsWith("custom:")) {
+      const slotId = paintId.slice("custom:".length);
+      const slot = customShapes.find((item) => item.id === slotId);
+      enable = !slot?.enabled;
+    } else {
+      const key = paintId as keyof ShapePalette;
+      enable = !shapes[key];
+    }
+
+    shapePaintSuppressClickRef.current = true;
+    shapePaintRef.current = {
+      enable,
+      sounded: false,
+      visited: new Set(),
+      draftShapes: { ...shapes },
+      draftCustoms: customShapes.map((slot) => ({ ...slot })),
+      lastX: clientX,
+      lastY: clientY,
+    };
+    shapeLibraryRef.current?.classList.add("is-painting");
+    applyShapePaint(paintId);
+
+    // Window listeners: no setPointerCapture (blocks sibling hits under CSS zoom),
+    // and move keeps working when the pointer leaves the library mid-stroke.
+    const onMove = (event: PointerEvent) => {
+      const session = shapePaintRef.current;
+      if (!session) return;
+      paintShapeStroke(session.lastX, session.lastY, event.clientX, event.clientY);
+      session.lastX = event.clientX;
+      session.lastY = event.clientY;
+    };
+    const onUp = () => endShapePaint();
+    shapePaintListenersRef.current = { move: onMove, up: onUp, cancel: onUp };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+    return true;
+  };
+
+  const onShapeLibraryPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return;
+    const paintId =
+      shapePaintIdFromEventTarget(event.target) ??
+      shapePaintIdFromPoint(event.clientX, event.clientY);
+    if (!paintId) return;
+    if (!beginShapePaint(paintId, event.clientX, event.clientY)) return;
+    // Keep the gesture from selecting text / scrolling the panel mid-drag.
+    event.preventDefault();
+  };
+
+  useLayoutEffect(() => () => endShapePaint(), []);
+
   const toggleShape = (key: keyof typeof shapes) => {
+    if (shapePaintSuppressClickRef.current) {
+      shapePaintSuppressClickRef.current = false;
+      return;
+    }
     const next = !shapes[key];
     if (!next && shapePoolWouldEmpty({ ...shapes, [key]: false })) {
       playUiSound("delete");
@@ -405,6 +608,10 @@ export function ControlsPanel({
   }, [pulsingCustomSlotId]);
 
   const handleCustomSlotClick = (slotId: string) => {
+    if (shapePaintSuppressClickRef.current) {
+      shapePaintSuppressClickRef.current = false;
+      return;
+    }
     if (pulsingCustomSlotId === slotId) setPulsingCustomSlotId(null);
     const slot = customShapes.find((item) => item.id === slotId);
     if (!slot) return;
@@ -819,9 +1026,15 @@ export function ControlsPanel({
             void handleCustomShapeFile(file);
           }}
         />
+        <div
+          ref={shapeLibraryRef}
+          className="shape-library"
+          onPointerDown={onShapeLibraryPointerDown}
+        >
         <div className="button-row button-row--4 button-row--shape-icons">
           <button
             type="button"
+            data-shape-paint="block"
             aria-label="Boxes"
             aria-pressed={shapes.block}
             className={shapeBtnClass(shapes.block, "block")}
@@ -833,6 +1046,7 @@ export function ControlsPanel({
           </button>
           <button
             type="button"
+            data-shape-paint="sphere"
             aria-label="Spheres"
             aria-pressed={shapes.sphere}
             className={shapeBtnClass(shapes.sphere, "sphere")}
@@ -844,6 +1058,7 @@ export function ControlsPanel({
           </button>
           <button
             type="button"
+            data-shape-paint="triangle"
             aria-label="Triangles"
             aria-pressed={Boolean(shapes.triangle)}
             className={shapeBtnClass(Boolean(shapes.triangle), "triangle")}
@@ -855,6 +1070,7 @@ export function ControlsPanel({
           </button>
           <button
             type="button"
+            data-shape-paint="ring"
             aria-label="Rings"
             aria-pressed={shapes.ring}
             className={shapeBtnClass(shapes.ring, "ring")}
@@ -875,6 +1091,7 @@ export function ControlsPanel({
         <div className="button-row button-row--4 button-row--shape-icons">
           <button
             type="button"
+            data-shape-paint="ex"
             aria-label="Xs"
             aria-pressed={Boolean(shapes.ex)}
             className={shapeBtnClass(Boolean(shapes.ex), "ex")}
@@ -884,6 +1101,27 @@ export function ControlsPanel({
           </button>
           <button
             type="button"
+            data-shape-paint="rays"
+            aria-label="Rays"
+            aria-pressed={Boolean(shapes.rays)}
+            className={shapeBtnClass(Boolean(shapes.rays), "rays")}
+            onClick={() => toggleShape("rays")}
+          >
+            <GalleryShapeIcon shape="rays" />
+          </button>
+          <button
+            type="button"
+            data-shape-paint="pluses"
+            aria-label="Pluses"
+            aria-pressed={Boolean(shapes.pluses)}
+            className={shapeBtnClass(Boolean(shapes.pluses), "pluses")}
+            onClick={() => toggleShape("pluses")}
+          >
+            <GalleryShapeIcon shape="pluses" />
+          </button>
+          <button
+            type="button"
+            data-shape-paint="clover"
             aria-label="Clovers"
             aria-pressed={Boolean(shapes.clover)}
             className={shapeBtnClass(Boolean(shapes.clover), "clover")}
@@ -891,28 +1129,11 @@ export function ControlsPanel({
           >
             <GalleryShapeIcon shape="clover" />
           </button>
-          <button
-            type="button"
-            aria-label="Waves"
-            aria-pressed={Boolean(shapes.waves)}
-            className={shapeBtnClass(Boolean(shapes.waves), "waves")}
-            onClick={() => toggleShape("waves")}
-          >
-            <GalleryShapeIcon shape="waves" />
-          </button>
-          <button
-            type="button"
-            aria-label="Gates"
-            aria-pressed={Boolean(shapes.gates)}
-            className={shapeBtnClass(Boolean(shapes.gates), "gates")}
-            onClick={() => toggleShape("gates")}
-          >
-            <GalleryShapeIcon shape="gates" />
-          </button>
         </div>
         <div className="button-row button-row--4 button-row--shape-icons">
           <button
             type="button"
+            data-shape-paint="star"
             aria-label="Stars"
             aria-pressed={Boolean(shapes.star)}
             className={shapeBtnClass(Boolean(shapes.star), "star")}
@@ -922,6 +1143,7 @@ export function ControlsPanel({
           </button>
           <button
             type="button"
+            data-shape-paint="bloom"
             aria-label="Blooms"
             aria-pressed={Boolean(shapes.bloom)}
             className={shapeBtnClass(Boolean(shapes.bloom), "bloom")}
@@ -931,6 +1153,7 @@ export function ControlsPanel({
           </button>
           <button
             type="button"
+            data-shape-paint="flower"
             aria-label="Flowers"
             aria-pressed={Boolean(shapes.flower)}
             className={shapeBtnClass(Boolean(shapes.flower), "flower")}
@@ -940,6 +1163,7 @@ export function ControlsPanel({
           </button>
           <button
             type="button"
+            data-shape-paint="arches"
             aria-label="Arches"
             aria-pressed={Boolean(shapes.arches)}
             className={shapeBtnClass(Boolean(shapes.arches), "arches")}
@@ -951,6 +1175,7 @@ export function ControlsPanel({
         <div className="button-row button-row--4 button-row--shape-icons">
           <button
             type="button"
+            data-shape-paint="quads"
             aria-label="Quads"
             aria-pressed={Boolean(shapes.quads)}
             className={shapeBtnClass(Boolean(shapes.quads), "quads")}
@@ -960,6 +1185,7 @@ export function ControlsPanel({
           </button>
           <button
             type="button"
+            data-shape-paint="blossom"
             aria-label="Blossoms"
             aria-pressed={Boolean(shapes.blossom)}
             className={shapeBtnClass(Boolean(shapes.blossom), "blossom")}
@@ -969,6 +1195,7 @@ export function ControlsPanel({
           </button>
           <button
             type="button"
+            data-shape-paint="dots"
             aria-label="Dots"
             aria-pressed={Boolean(shapes.dots)}
             className={shapeBtnClass(Boolean(shapes.dots), "dots")}
@@ -978,6 +1205,7 @@ export function ControlsPanel({
           </button>
           <button
             type="button"
+            data-shape-paint="checks"
             aria-label="Checks"
             aria-pressed={Boolean(shapes.checks)}
             className={shapeBtnClass(Boolean(shapes.checks), "checks")}
@@ -989,6 +1217,7 @@ export function ControlsPanel({
         <div className="button-row button-row--4 button-row--shape-icons">
           <button
             type="button"
+            data-shape-paint="spots"
             aria-label="Spots"
             aria-pressed={Boolean(shapes.spots)}
             className={shapeBtnClass(Boolean(shapes.spots), "spots")}
@@ -998,6 +1227,17 @@ export function ControlsPanel({
           </button>
           <button
             type="button"
+            data-shape-paint="targets"
+            aria-label="Targets"
+            aria-pressed={Boolean(shapes.targets)}
+            className={shapeBtnClass(Boolean(shapes.targets), "targets")}
+            onClick={() => toggleShape("targets")}
+          >
+            <GalleryShapeIcon shape="targets" />
+          </button>
+          <button
+            type="button"
+            data-shape-paint="arcs"
             aria-label="Arcs"
             aria-pressed={Boolean(shapes.arcs)}
             className={shapeBtnClass(Boolean(shapes.arcs), "arcs")}
@@ -1007,6 +1247,7 @@ export function ControlsPanel({
           </button>
           <button
             type="button"
+            data-shape-paint="moons"
             aria-label="Moons"
             aria-pressed={Boolean(shapes.moons)}
             className={shapeBtnClass(Boolean(shapes.moons), "moons")}
@@ -1014,19 +1255,11 @@ export function ControlsPanel({
           >
             <GalleryShapeIcon shape="moons" />
           </button>
-          <button
-            type="button"
-            aria-label="Scallops"
-            aria-pressed={Boolean(shapes.scallops)}
-            className={shapeBtnClass(Boolean(shapes.scallops), "scallops")}
-            onClick={() => toggleShape("scallops")}
-          >
-            <GalleryShapeIcon shape="scallops" />
-          </button>
         </div>
         <div className="button-row button-row--4 button-row--shape-icons">
           <button
             type="button"
+            data-shape-paint="wedges"
             aria-label="Wedges"
             aria-pressed={Boolean(shapes.wedges)}
             className={shapeBtnClass(Boolean(shapes.wedges), "wedges")}
@@ -1036,6 +1269,7 @@ export function ControlsPanel({
           </button>
           <button
             type="button"
+            data-shape-paint="steps"
             aria-label="Steps"
             aria-pressed={Boolean(shapes.steps)}
             className={shapeBtnClass(Boolean(shapes.steps), "steps")}
@@ -1045,6 +1279,7 @@ export function ControlsPanel({
           </button>
           <button
             type="button"
+            data-shape-paint="chevrons"
             aria-label="Chevrons"
             aria-pressed={Boolean(shapes.chevrons)}
             className={shapeBtnClass(Boolean(shapes.chevrons), "chevrons")}
@@ -1054,12 +1289,13 @@ export function ControlsPanel({
           </button>
           <button
             type="button"
-            aria-label="Tiles"
-            aria-pressed={Boolean(shapes.tiles)}
-            className={shapeBtnClass(Boolean(shapes.tiles), "tiles")}
-            onClick={() => toggleShape("tiles")}
+            data-shape-paint="waves"
+            aria-label="Waves"
+            aria-pressed={Boolean(shapes.waves)}
+            className={shapeBtnClass(Boolean(shapes.waves), "waves")}
+            onClick={() => toggleShape("waves")}
           >
-            <GalleryShapeIcon shape="tiles" />
+            <GalleryShapeIcon shape="waves" />
           </button>
         </div>
         {customShapes.length > 0 ? (
@@ -1078,6 +1314,7 @@ export function ControlsPanel({
                   <button
                     type="button"
                     data-custom-slot-id={slot.id}
+                    data-shape-paint={toCustomShapeRef(slot.id)}
                     aria-label={
                       slot.dataUrl
                         ? slot.name
@@ -1137,6 +1374,7 @@ export function ControlsPanel({
             })}
           </div>
         ) : null}
+        </div>
         <SliderRow
           label="Shape Mix"
           hint="0 = blocks only · 100 = mix all enabled"

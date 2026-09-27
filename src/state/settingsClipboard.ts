@@ -64,6 +64,9 @@ const SHAPE_TYPES = new Set<ShapeType>([
   "arches",
   "tiles",
   "scallops",
+  "rays",
+  "targets",
+  "pluses",
 ]);
 
 export type SettingsClipboardPayload = {
@@ -206,6 +209,9 @@ function parseShapePalette(value: unknown): ShapePalette {
       arches: true,
       tiles: true,
       scallops: true,
+      rays: true,
+      targets: true,
+      pluses: true,
     };
   }
   const record = value as Record<string, unknown>;
@@ -236,6 +242,9 @@ function parseShapePalette(value: unknown): ShapePalette {
     arches: Boolean(record.arches),
     tiles: Boolean(record.tiles),
     scallops: Boolean(record.scallops ?? record.brackets),
+    rays: Boolean(record.rays),
+    targets: Boolean(record.targets),
+    pluses: Boolean(record.pluses),
   };
 }
 

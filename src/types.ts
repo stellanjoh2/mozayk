@@ -75,7 +75,10 @@ export type BuiltinShapeType =
   | "waves"
   | "arches"
   | "tiles"
-  | "scallops";
+  | "scallops"
+  | "rays"
+  | "targets"
+  | "pluses";
 /** User-uploaded SVG / still image mixed like a prefab shape. */
 export type CustomShapeRef = `custom:${string}`;
 export type ShapeType = BuiltinShapeType | CustomShapeRef;
@@ -158,6 +161,12 @@ export type ShapePalette = {
   tiles: boolean;
   /** Scalloped vertical side bars. */
   scallops: boolean;
+  /** Four corner arrows pointing outward. */
+  rays: boolean;
+  /** Concentric rings with a solid centre. */
+  targets: boolean;
+  /** Corner wedges with a centre plus. */
+  pluses: boolean;
 };
 
 export type MosaicBlock = {

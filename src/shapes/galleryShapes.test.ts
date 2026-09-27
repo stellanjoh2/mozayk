@@ -54,6 +54,9 @@ function run(): void {
       arches: true,
       tiles: true,
       scallops: true,
+      rays: true,
+      targets: true,
+      pluses: true,
     },
     shapeMix: 100,
   };
@@ -73,11 +76,14 @@ function run(): void {
   assert(pool.includes("moons"), "enabled moons join the mix");
   assert(pool.includes("steps"), "enabled steps join the mix");
   assert(pool.includes("chevrons"), "enabled chevrons join the mix");
-  assert(pool.includes("gates"), "enabled gates join the mix");
   assert(pool.includes("waves"), "enabled waves join the mix");
   assert(pool.includes("arches"), "enabled arches join the mix");
-  assert(pool.includes("tiles"), "enabled tiles join the mix");
-  assert(pool.includes("scallops"), "enabled scallops join the mix");
+  assert(pool.includes("rays"), "enabled rays join the mix");
+  assert(pool.includes("targets"), "enabled targets join the mix");
+  assert(pool.includes("pluses"), "enabled pluses join the mix");
+  assert(!pool.includes("gates"), "gates are no longer in the mix");
+  assert(!pool.includes("scallops"), "scallops are no longer in the mix");
+  assert(!pool.includes("tiles"), "tiles are no longer in the mix");
   assert(pool.includes("block"), "blocks stay in the pool");
   assert(!pool.includes("cross"), "cross is no longer in the mix");
 
@@ -119,6 +125,9 @@ function run(): void {
       { col: 4, row: 8, width: 4, height: 4, shape: "arches", color: "#bbbbbb" },
       { col: 8, row: 8, width: 4, height: 4, shape: "tiles", color: "#cccccc" },
       { col: 12, row: 8, width: 4, height: 4, shape: "scallops", color: "#dddddd" },
+      { col: 16, row: 8, width: 4, height: 4, shape: "rays", color: "#eeeeee" },
+      { col: 20, row: 8, width: 4, height: 4, shape: "targets", color: "#f0f0f0" },
+      { col: 24, row: 8, width: 4, height: 4, shape: "pluses", color: "#f8f8f8" },
     ],
     width: 256,
     height: 256,
@@ -143,6 +152,9 @@ function run(): void {
   assert(svg.includes(GALLERY_SHAPE_PATHS.arches), "svg export embeds the arches path");
   assert(svg.includes(GALLERY_SHAPE_PATHS.tiles), "svg export embeds the tiles path");
   assert(svg.includes(GALLERY_SHAPE_PATHS.scallops), "svg export embeds the scallops path");
+  assert(svg.includes(GALLERY_SHAPE_PATHS.rays), "svg export embeds the rays path");
+  assert(svg.includes(GALLERY_SHAPE_PATHS.targets), "svg export embeds the targets path");
+  assert(svg.includes(GALLERY_SHAPE_PATHS.pluses), "svg export embeds the pluses path");
   assert(svg.includes('fill-rule="evenodd"'), "svg export punches gallery holes");
   assert(svg.includes('fill="#ff0000"'), "svg export fills clover with block colour");
 }
