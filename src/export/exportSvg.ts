@@ -1,7 +1,6 @@
 import { getExportSize, type ExportPreset } from "../config";
 import { downloadBlob, mosaicFrameFileName } from "./downloadBlob";
 import { renderMosaicToSvg } from "../render/renderSvg";
-import { lockedColorsSet } from "../state/frameUtils";
 import type { Frame, Orientation } from "../types";
 
 export function exportCurrentFrameSvg(
@@ -18,7 +17,6 @@ export function exportCurrentFrameSvg(
     blocks: frame.blocks,
     width,
     height,
-    omitColors: lockedColorsSet(frame.settings),
     sourceDataUrl:
       frame.settings.showSourceImage && frame.imageSource
         ? frame.imageSource.dataUrl

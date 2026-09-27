@@ -2,8 +2,10 @@ import {
   applyLookToAllFrames,
   applyLookToFrame,
   applyPalettePresetToFrame,
+  canRestorePhotoColors,
   cloneFrameLook,
   createDefaultSettings,
+  restorePhotoColorsToFrame,
 } from "./frameUtils";
 import type { Frame, MosaicBlock } from "../types";
 
@@ -179,6 +181,32 @@ function run(): void {
   assert(
     themedEight.blocks[0].color === "#111111",
     "shorter theme remaps by slot",
+  );
+
+  assert(
+    !canRestorePhotoColors(imported),
+    "fresh import matches photo palette — nothing to restore",
+  );
+  assert(
+    canRestorePhotoColors(withTheme),
+    "theme override offers restore from photo",
+  );
+  const restored = restorePhotoColorsToFrame(withTheme);
+  assert(
+    restored.settings.colors.join(",") === importColors.join(","),
+    "restore puts photo palette back",
+  );
+  assert(
+    restored.blocks[0].color === "#ff0000",
+    "restore remaps slot 0 to photo colour",
+  );
+  assert(
+    restored.blocks[0].width === 4,
+    "restore keeps tile geometry",
+  );
+  assert(
+    !canRestorePhotoColors(restored),
+    "after restore the button should hide",
   );
 }
 

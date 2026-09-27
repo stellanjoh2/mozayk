@@ -107,6 +107,10 @@ export function findDropTargets(
     targets.push({ col, row });
   };
 
+  // Home stays a valid hover/release target so the origin isn't a dead hole
+  // inside the drop-zone wall (preview would vanish and feel "blocked").
+  add(block.col, block.row);
+
   for (let row = 0; row <= rows - height; row++) {
     for (let col = 0; col <= columns - width; col++) {
       if (block.col === col && block.row === row) continue;
@@ -204,7 +208,7 @@ export function slotMatchesTarget(
   );
 }
 
-/** Closest slot origin to (cursor − grab) among slots that contain the cursor. */
+/** Prefer exact (cursor − grab) origin; else nearest slot that contains the cursor. */
 export function pickDropTarget(
   targets: GridSlot[],
   cursorCol: number,
@@ -216,6 +220,12 @@ export function pickDropTarget(
 ): GridSlot | null {
   const intendedCol = cursorCol - grabCol;
   const intendedRow = cursorRow - grabRow;
+  for (const target of targets) {
+    if (target.col === intendedCol && target.row === intendedRow) {
+      return target;
+    }
+  }
+
   let best: GridSlot | null = null;
   let bestDist = Infinity;
   for (const target of targets) {
@@ -248,17 +258,18 @@ function edgeId(edge: GridEdge): string {
   return `${edge.from.col},${edge.from.row}-${edge.to.col},${edge.to.row}`;
 }
 
+/**
+ * Cells where the cursor can sit to drop, given the grab offset inside the piece.
+ * (Not the full piece footprint — footprint unions falsely merge disconnected slots.)
+ */
 export function getDropTargetCellSet(
   dropTargets: GridSlot[],
-  blockSize: { width: number; height: number },
+  grabCol = 0,
+  grabRow = 0,
 ): Set<string> {
   const cells = new Set<string>();
   for (const slot of dropTargets) {
-    for (let row = slot.row; row < slot.row + blockSize.height; row++) {
-      for (let col = slot.col; col < slot.col + blockSize.width; col++) {
-        cells.add(cellKey(col, row));
-      }
-    }
+    cells.add(cellKey(slot.col + grabCol, slot.row + grabRow));
   }
   return cells;
 }
@@ -326,10 +337,10 @@ export function chainDropZoneBoundaryLoops(edges: GridEdge[]): GridCorner[][] {
 
 export function buildDropZoneLoops(
   dropTargets: GridSlot[],
-  blockSize: { width: number; height: number },
+  grab: { col: number; row: number } = { col: 0, row: 0 },
 ): GridCorner[][] {
   if (dropTargets.length === 0) return [];
-  const cells = getDropTargetCellSet(dropTargets, blockSize);
+  const cells = getDropTargetCellSet(dropTargets, grab.col, grab.row);
   const edges = buildDropZoneBoundaryEdges(cells);
   return chainDropZoneBoundaryLoops(edges);
 }

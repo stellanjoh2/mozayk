@@ -11,7 +11,9 @@ import {
   type ExportPreset,
   type GifExportPreset,
 } from "./config";
+import { ActionNotice } from "./components/ActionNotice";
 import { CanvasView, Timeline } from "./components/CanvasView";
+import { ProTipToast } from "./components/ProTipToast";
 import { ControlsPanel, MAX_FRAMES } from "./components/ControlsPanel";
 import { ConfirmDialog } from "./components/ConfirmDialog";
 import { ImportErrorDialog } from "./components/ImportErrorDialog";
@@ -19,6 +21,7 @@ import { MobileGate } from "./components/MobileGate";
 import { ResetCanvasDialog } from "./components/ResetCanvasDialog";
 import { VideoImportDialog } from "./components/VideoImportDialog";
 import { VideoImportOverlay } from "./components/VideoImportOverlay";
+import { dismissActionNotice, showActionNotice } from "./ui/actionNotices";
 import { exportGif, gifExportToast } from "./export/exportGif";
 import { exportMp4, mp4ExportToast } from "./export/exportMp4";
 import { downloadBlob } from "./export/downloadBlob";
@@ -53,6 +56,7 @@ import {
   randomizeFrameCurrentColors,
   randomizeFrameNewColors,
   applyPalettePresetToFrame,
+  restorePhotoColorsToFrame,
   randomizeFrameLayout,
   removeColorFromFrame,
   transposeFrameBlocks,
@@ -707,6 +711,7 @@ export default function App() {
       setActiveIndex(next.length - 1);
       return next;
     });
+    dismissActionNotice();
   }, [pushUndoCheckpoint]);
 
   const handleDuplicateCurrent = useCallback((index: number) => {
@@ -722,6 +727,7 @@ export default function App() {
       setActiveIndex(insertAt);
       return next;
     });
+    dismissActionNotice();
   }, [pushUndoCheckpoint]);
 
   const handleRemoveFrame = useCallback((index: number) => {
@@ -1281,6 +1287,14 @@ export default function App() {
   }, [playing, frames.length, playbackFps]);
 
   const togglePlay = useCallback(() => {
+    if (framesRef.current.length <= 1) {
+      if (playingRef.current) {
+        setPlaying(false);
+        return;
+      }
+      showActionNotice("single-frame-play");
+      return;
+    }
     setPlaying((value) => !value);
   }, []);
 
@@ -1392,6 +1406,10 @@ export default function App() {
       } else if (event.code === "Space" || key === " ") {
         event.preventDefault();
         if (!event.repeat) triggerShortcutButton("Space");
+        if (framesRef.current.length <= 1) {
+          togglePlay();
+          return;
+        }
         const next = !playingRef.current;
         togglePlay();
         flashLegend(next ? "Play" : "Stop");
@@ -1480,6 +1498,8 @@ export default function App() {
       {toast && !isFullscreen && !isMobileGate ? (
         <div className="app-toast">{toast}</div>
       ) : null}
+      <ActionNotice enabled={!isFullscreen && !isMobileGate} />
+      <ProTipToast enabled={!isFullscreen && !isMobileGate} />
       {importingLabel || exportingLabel ? (
         <VideoImportOverlay label={importingLabel ?? exportingLabel ?? ""} />
       ) : null}
@@ -1551,6 +1571,10 @@ export default function App() {
         onApplyPalettePreset={(preset) => {
           pushUndoCheckpoint();
           updateActiveFrame((frame) => applyPalettePresetToFrame(frame, preset));
+        }}
+        onRestorePhotoColors={() => {
+          pushUndoCheckpoint();
+          updateActiveFrame((frame) => restorePhotoColorsToFrame(frame));
         }}
         onAddColor={() => {
           pushUndoCheckpoint();

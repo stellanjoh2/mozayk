@@ -7,6 +7,8 @@ const FILES = {
   sliderLeft: "sounds/uisound-slider.wav",
   hover: "sounds/uisound-hover.wav",
   drop: "sounds/uisound-drop.wav",
+  /** Soft pro-tip toast — same clip as hover, quieter. */
+  tip: "sounds/uisound-hover.wav",
   // hoverBlink: "sounds/uisound-hoverblink.wav",
 } as const;
 
@@ -27,6 +29,7 @@ const SOUND_GAIN: Partial<Record<UiSound, number>> = {
   sliderLeft: 0.7532,
   hover: 0.9189 * 10 ** (5 / 20),
   drop: 1.8205 * 10 ** (-5 / 20),
+  tip: 0.9189 * 10 ** (-6 / 20),
   // hoverBlink: 5.8449 * 10 ** (-20 / 20),
 };
 

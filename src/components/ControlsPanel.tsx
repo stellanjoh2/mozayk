@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useLayoutEffect,
   useRef,
   useState,
@@ -86,7 +87,10 @@ import {
   ensureCachedSourceImage,
   readImageFileAsDataUrl,
 } from "../import/imageSource";
-import { createDefaultShapePalette } from "../state/frameUtils";
+import {
+  canRestorePhotoColors,
+  createDefaultShapePalette,
+} from "../state/frameUtils";
 import {
   ORIENTATION_LABELS,
   ORIENTATIONS,
@@ -124,6 +128,11 @@ import {
   getNormalHoverEffects,
   setNormalHoverEffects,
 } from "../ui/hover";
+import {
+  getProTipsEnabled,
+  PRO_TIPS_ENABLED_EVENT,
+  setProTipsEnabled,
+} from "../ui/proTips";
 import {
   getShortcutLegendEnabled,
   setShortcutLegendEnabled,
@@ -209,6 +218,7 @@ type ControlsPanelProps = {
   onRandomizeCurrentColors: () => void;
   onRandomizeNewColors: () => void;
   onApplyPalettePreset: (preset: PalettePreset) => void;
+  onRestorePhotoColors: () => void;
   onAddColor: () => void;
   onRemoveColor: (index: number) => void;
   onColorChange: (index: number, hex: string) => void;
@@ -280,6 +290,7 @@ export function ControlsPanel({
   onRandomizeCurrentColors,
   onRandomizeNewColors,
   onApplyPalettePreset,
+  onRestorePhotoColors,
   onAddColor,
   onRemoveColor,
   onColorChange,
@@ -332,6 +343,12 @@ export function ControlsPanel({
   const [shortcutLegendOn, setShortcutLegendOn] = useState(
     getShortcutLegendEnabled,
   );
+  const [proTipsOn, setProTipsOn] = useState(getProTipsEnabled);
+  useEffect(() => {
+    const sync = () => setProTipsOn(getProTipsEnabled());
+    window.addEventListener(PRO_TIPS_ENABLED_EVENT, sync);
+    return () => window.removeEventListener(PRO_TIPS_ENABLED_EVENT, sync);
+  }, []);
   const [chromeAppearance, setChromeAppearanceOn] = useState(getChromeAppearance);
   const [chromeColor, setChromeColorOn] = useState(getChromeColor);
   const [aboutOpen, setAboutOpen] = useState(false);
@@ -339,6 +356,7 @@ export function ControlsPanel({
   const [highQualityDialogOpen, setHighQualityDialogOpen] = useState(false);
   const [themesOpen, setThemesOpen] = useState(false);
   const [themesAnimating, setThemesAnimating] = useState(false);
+  const [restorePhotoDialogOpen, setRestorePhotoDialogOpen] = useState(false);
   const shapes = {
     ...createDefaultShapePalette(),
     ...settings.shapes,
@@ -832,6 +850,17 @@ export function ControlsPanel({
         setHighQualityDialogOpen(false);
       }}
       onCancel={() => setHighQualityDialogOpen(false)}
+    />
+    <ConfirmDialog
+      open={restorePhotoDialogOpen}
+      title="Restore colours from photo?"
+      message="This replaces your current colour palette with the colours taken from the photo. You will lose your custom colour assignments."
+      confirmLabel="Restore"
+      onConfirm={() => {
+        onRestorePhotoColors();
+        setRestorePhotoDialogOpen(false);
+      }}
+      onCancel={() => setRestorePhotoDialogOpen(false)}
     />
     <aside ref={panelRef} className="controls-panel">
       <div className="controls-panel__zoom">
@@ -1466,6 +1495,16 @@ export function ControlsPanel({
         >
           View Themes
         </button>
+        {canRestorePhotoColors(frame) ? (
+          <button
+            type="button"
+            className="panel-btn"
+            data-ui-sound="ok"
+            onClick={() => setRestorePhotoDialogOpen(true)}
+          >
+            Restore Colours from Photo
+          </button>
+        ) : null}
         {settings.colors.length < MAX_COLORS ? (
           <button
             type="button"
@@ -2192,7 +2231,7 @@ export function ControlsPanel({
         <button
           type="button"
           className="panel-btn panel-btn--ghost has-hint"
-          data-hint="Transparent background · paused colours become holes"
+          data-hint="Transparent background · no fill behind the mosaic"
           onClick={onExportPngTransparent}
         >
           Export Transparent PNG
@@ -2316,7 +2355,7 @@ export function ControlsPanel({
             value={gifPreset}
             options={Object.entries(GIF_EXPORT_PRESETS).map(([key, preset]) => ({
               value: key,
-              label: `${preset.label} — ${preset.note}`,
+              label: preset.label,
             }))}
             onChange={(preset) =>
               onGifPresetChange(preset as GifExportPreset)
@@ -2325,7 +2364,7 @@ export function ControlsPanel({
         </label>
         <label className="control-row">
           <span className="control-row__label">
-            <HintLabel hint="GIF frame holds — approximate timing · use MP4 for exact fps">
+            <HintLabel hint="GIF frame holds · approximate timing · use MP4 for exact FPS">
               Frame duration
             </HintLabel>
           </span>
@@ -2333,7 +2372,7 @@ export function ControlsPanel({
             value={clampGifFrameDelayCs(gifFrameDelayCs, frameCount)}
             options={GIF_FRAME_DELAY_PRESETS.map((preset) => ({
               value: String(preset.cs),
-              label: `${preset.label} — ${preset.note}`,
+              label: preset.label,
               disabled:
                 gifDurationSeconds(frameCount, preset.cs) >
                 GIPHY_DURATION_MAX_S,
@@ -2361,12 +2400,7 @@ export function ControlsPanel({
         <p className="export-group__meta">
           Shapes and grids · no blur, grain, or texture
         </p>
-        <button
-          type="button"
-          className="panel-btn has-hint"
-          data-hint="Paused colours export as transparent holes"
-          onClick={onExportSvgFrame}
-        >
+        <button type="button" className="panel-btn" onClick={onExportSvgFrame}>
           Export SVG Frame
         </button>
         </HeadlineDisclosure>
@@ -2487,6 +2521,15 @@ export function ControlsPanel({
           onChange={(next) => {
             setShortcutLegendEnabled(next);
             setShortcutLegendOn(next);
+          }}
+        />
+        <ToggleRow
+          label="Tips"
+          hint="Occasional hints on the canvas"
+          checked={proTipsOn}
+          onChange={(next) => {
+            setProTipsEnabled(next);
+            setProTipsOn(next);
           }}
         />
         <div className="control-row">

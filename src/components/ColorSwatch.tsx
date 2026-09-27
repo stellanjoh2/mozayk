@@ -54,7 +54,7 @@ export function ColorSwatch({
           {onToggleLock ? (
             <PauseButton
               paused={locked}
-              hint="Keep this colour when randomizing · omit from SVG & transparent PNG export"
+              hint="Keep this colour when you Randomize the rest"
               ariaLabel={
                 locked
                   ? "Include colour in randomization"

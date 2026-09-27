@@ -276,7 +276,6 @@ export function renderMosaicToSvg(options: SvgRenderOptions): string {
     sourceDataUrl,
     sourceImageFit = "cover",
     backgroundDataUrl,
-    omitColors,
     transparentBackground,
   } = options;
   const grid = getGridDimensions(orientation, settings.density, width, height);
@@ -288,7 +287,7 @@ export function renderMosaicToSvg(options: SvgRenderOptions): string {
   const peeled = peeledBlockSet(blocks, settings);
   const peelStroke = resolveWireframePeelStroke(settings.wireframePeelStroke);
   const shapes = blocks
-    .filter((block) => block.color && !omitColors?.has(block.color))
+    .filter((block) => block.color)
     .map((block, index) =>
       peeled.has(block)
         ? svgWireframeBlock(

@@ -12,7 +12,7 @@ export type PlaybackFps = (typeof PLAYBACK_FPS_OPTIONS)[number];
 
 import type { Orientation } from "./types";
 
-export type ExportPreset = "1080p" | "1440p" | "2160p";
+export type ExportPreset = "1080p" | "1440p" | "2160p" | "3240p" | "4320p";
 
 type CanvasSizeSet = Record<Orientation, [number, number]>;
 
@@ -42,6 +42,22 @@ export const EXPORT_PRESETS: Record<
     square: [2160, 2160],
     photo: [2160, 2880],
   },
+  /** 6K — 120px cells at density 3. Still exports only (not MP4). */
+  "3240p": {
+    label: "6K",
+    landscape: [5760, 3240],
+    portrait: [3240, 5760],
+    square: [3240, 3240],
+    photo: [3240, 4320],
+  },
+  /** 8K — 160px cells at density 3. Still exports only (not MP4). */
+  "4320p": {
+    label: "8K",
+    landscape: [7680, 4320],
+    portrait: [4320, 7680],
+    square: [4320, 4320],
+    photo: [4320, 5760],
+  },
 };
 
 export function getPreviewSize(orientation: Orientation): [number, number] {
@@ -70,6 +86,9 @@ export function clampMp4ExportPreset(
   preset: ExportPreset,
 ): ExportPreset {
   if (orientation === "portrait") return "1080p";
+  if (!MP4_EXPORT_PRESET_ORDER.includes(preset)) {
+    return MP4_EXPORT_PRESET_ORDER[MP4_EXPORT_PRESET_ORDER.length - 1];
+  }
   return preset;
 }
 
@@ -86,12 +105,11 @@ export type GifExportPreset = "480p" | "720p";
 
 export const GIF_EXPORT_PRESETS: Record<
   GifExportPreset,
-  { label: string; note: string } & CanvasSizeSet
+  { label: string } & CanvasSizeSet
 > = {
   /** 18px cells at density 3; exact 16:9 near 480p. */
   "480p": {
     label: "480p",
-    note: "recommended",
     landscape: [864, 486],
     portrait: [486, 864],
     square: [486, 486],
@@ -99,7 +117,6 @@ export const GIF_EXPORT_PRESETS: Record<
   },
   "720p": {
     label: "720p",
-    note: "max",
     landscape: [1280, 720],
     portrait: [720, 1280],
     square: [720, 720],
@@ -112,19 +129,18 @@ export const GIPHY_DURATION_MAX_S = 15;
 export const GIPHY_FILE_SIZE_RECOMMENDED = 8 * 1024 * 1024;
 export const GIPHY_FILE_SIZE_MAX = 100 * 1024 * 1024;
 
-/** Discrete GIF holds in centiseconds. */
+/** Discrete GIF holds in centiseconds (nominal fps matches timeline labels). */
 export const GIF_FRAME_DELAY_PRESETS: readonly {
   cs: number;
   fps: number;
   label: string;
-  note: string;
 }[] = [
-  { cs: 3, fps: 30, label: "0.03s", note: "~30 fps (GIF)" },
-  { cs: 4, fps: 24, label: "0.04s", note: "24 fps" },
-  { cs: 7, fps: 15, label: "0.07s", note: "15 fps" },
-  { cs: 10, fps: 10, label: "0.10s", note: "10 fps" },
-  { cs: 20, fps: 5, label: "0.20s", note: "5 fps" },
-  { cs: 50, fps: 2, label: "0.50s", note: "2 fps" },
+  { cs: 3, fps: 30, label: "0.03s · 30 FPS" },
+  { cs: 4, fps: 24, label: "0.04s · 24 FPS" },
+  { cs: 7, fps: 15, label: "0.07s · 15 FPS" },
+  { cs: 10, fps: 10, label: "0.10s · 10 FPS" },
+  { cs: 20, fps: 5, label: "0.20s · 5 FPS" },
+  { cs: 50, fps: 2, label: "0.50s · 2 FPS" },
 ];
 
 export const GIF_FRAME_DELAY_CS_DEFAULT = 7;

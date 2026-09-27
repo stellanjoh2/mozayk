@@ -31,8 +31,8 @@ function run(): void {
   const targets = findDropTargets(blocks, 0, 6, 4);
   assert(targets.length > 0, "2×2 block has drop targets on sparse grid");
   assert(
-    !targets.some((t) => t.col === 0 && t.row === 0),
-    "current position excluded",
+    targets.some((t) => t.col === 0 && t.row === 0),
+    "current position stays a release target",
   );
 
   assert(canMoveBlock(blocks, 0, 2, 2, 6, 4), "valid move to empty 2×2 slot");
@@ -89,7 +89,11 @@ function run(): void {
     { col: 1, row: 1, width: 1, height: 1, shape: "block", color: "#444444" },
   ];
   const packedTargets = findDropTargets(packed, 0, 2, 2);
-  assert(packedTargets.length === 3, "packed same-size pieces are swap targets");
+  assert(packedTargets.length === 4, "home + three same-size swap targets");
+  assert(
+    packedTargets.some((t) => t.col === 0 && t.row === 0),
+    "home slot included",
+  );
   assert(
     packedTargets.some((t) => t.col === 1 && t.row === 1),
     "opposite packed cell is a swap target",
@@ -113,8 +117,8 @@ function run(): void {
     { col: 3, row: 1, width: 1, height: 1, shape: "block", color: "#eeeeee" },
   ];
   assert(
-    findDropTargets(uniquePacked, 0, 4, 2).length === 0,
-    "unique size on a packed board has nowhere to go",
+    findDropTargets(uniquePacked, 0, 4, 2).length === 1,
+    "unique size on a packed board only has home",
   );
 
   const loops = buildDropZoneLoops(
@@ -123,10 +127,41 @@ function run(): void {
       { col: 1, row: 0 },
       { col: 2, row: 0 },
     ],
-    { width: 2, height: 2 },
+    { col: 0, row: 0 },
   );
-  assert(loops.length === 1, "horizontal drop band merges to one loop");
+  assert(loops.length === 1, "horizontal grab-cell band merges to one loop");
   assert(loops[0].length >= 4, "loop traces the outer boundary");
+
+  // Grab shift moves the OK cells with the held point inside the piece.
+  const shifted = buildDropZoneLoops(
+    [
+      { col: 0, row: 0 },
+      { col: 1, row: 0 },
+    ],
+    { col: 1, row: 0 },
+  );
+  assert(shifted.length === 1, "grab-shifted band still one loop");
+
+  // Ring of 1×1 slots around a missing centre — outer + hole loops.
+  const ringSlots: GridSlot[] = [];
+  for (let row = 0; row < 3; row++) {
+    for (let col = 0; col < 3; col++) {
+      if (col === 1 && row === 1) continue;
+      ringSlots.push({ col, row });
+    }
+  }
+  const ringLoops = buildDropZoneLoops(ringSlots, { col: 0, row: 0 });
+  assert(ringLoops.length === 2, "drop zone keeps a hole loop for the void cell");
+
+  // Disconnected origins must not glue into one OK island via footprint overhang.
+  const sparse = buildDropZoneLoops(
+    [
+      { col: 0, row: 0 },
+      { col: 5, row: 0 },
+    ],
+    { col: 0, row: 0 },
+  );
+  assert(sparse.length === 2, "sparse origins stay separate OK islands");
 
   console.log("blockPlacement.test.ts: all passed");
 }

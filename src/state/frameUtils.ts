@@ -144,14 +144,8 @@ export function colorsLockedForSettings(settings: FrameSettings): boolean[] {
   return colors.map(() => false);
 }
 
-/** Hex values currently paused / excluded from randomization & transparent export. */
-export function lockedColorsSet(settings: FrameSettings): Set<string> {
-  const locked = colorsLockedForSettings(settings);
-  return new Set(settings.colors.filter((_, index) => locked[index]));
-}
-
 export function createDefaultSettings(): FrameSettings {
-  const density = 6 as Density;
+  const density = 8 as Density;
   const orientation: Orientation = "landscape";
   const heightMax = maxHeightSliderMax(density, orientation);
   const widthMax = maxWidthSliderMax(density, orientation);
@@ -701,6 +695,32 @@ export function applyPalettePresetToFrame(
     Math.random,
     colorsLocked,
   );
+  return { ...frame, settings, blocks };
+}
+
+/** True when an import exists and the working palette differs from the photo's. */
+export function canRestorePhotoColors(frame: Frame): boolean {
+  const photo = frame.imageSource?.palette;
+  if (!photo || photo.length === 0) return false;
+  const current = frame.settings.colors;
+  if (current.length !== photo.length) return true;
+  return current.some((color, index) => color !== photo[index]);
+}
+
+/** Put the photo-extracted palette back, remapping slots (same path as themes). */
+export function restorePhotoColorsToFrame(frame: Frame): Frame {
+  if (!canRestorePhotoColors(frame) || !frame.imageSource) return frame;
+  const colors = frame.imageSource.palette.slice(0, MAX_COLORS);
+  if (colors.length === 0) return frame;
+  const colorAmounts = equalColorAmounts(colors.length);
+  const colorsLocked = colors.map(() => false);
+  const settings: FrameSettings = {
+    ...frame.settings,
+    colors,
+    colorAmounts,
+    colorsLocked,
+  };
+  const blocks = remapBlockColors(frame.blocks, frame.settings.colors, colors);
   return { ...frame, settings, blocks };
 }
 

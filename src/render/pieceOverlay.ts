@@ -16,6 +16,8 @@ export type PieceOverlayOptions = {
   shapeGap?: number;
   /** Canvas backing pixels per CSS pixel — keeps stroke width on screen. */
   displayScale?: number;
+  /** Fade for drop-zone fill + wall stroke (0–1). */
+  guideOpacity?: number;
 };
 
 function addLoopToPath(
@@ -43,10 +45,13 @@ export function drawDensityGrid(
   ctx: CanvasRenderingContext2D,
   grid: GridDimensions,
   displayScale: number,
+  opacity = 1,
 ): void {
+  if (opacity <= 0) return;
   const strokeWidth = DENSITY_GRID_STROKE_CSS_PX * displayScale;
 
   ctx.save();
+  ctx.globalAlpha = opacity;
   ctx.beginPath();
   for (let c = 1; c < grid.columns; c++) {
     const x = gridEdge(c, grid.columns, grid.width);
@@ -61,6 +66,24 @@ export function drawDensityGrid(
   ctx.strokeStyle = resolveCssColor("--piece-guide-grid");
   ctx.lineWidth = strokeWidth;
   ctx.stroke();
+  ctx.restore();
+}
+
+function drawDropZoneFill(
+  ctx: CanvasRenderingContext2D,
+  loops: GridCorner[][],
+  grid: GridDimensions,
+): void {
+  if (loops.length === 0) return;
+
+  ctx.save();
+  ctx.beginPath();
+  for (const loop of loops) {
+    addLoopToPath(ctx, loop, grid);
+  }
+  // evenodd keeps obstacle holes as void while brightening OK cells.
+  ctx.fillStyle = resolveCssColor("--piece-guide-dropzone-fill");
+  ctx.fill("evenodd");
   ctx.restore();
 }
 
@@ -98,6 +121,7 @@ export function renderPieceOverlay(
     cornerRadius,
     shapeGap,
     displayScale = 1,
+    guideOpacity = 1,
   } = options;
 
   canvas.width = grid.width;
@@ -107,7 +131,13 @@ export function renderPieceOverlay(
   if (!ctx) return;
 
   ctx.clearRect(0, 0, grid.width, grid.height);
-  drawDropZoneOutline(ctx, dropZoneLoops, grid, displayScale);
+  if (guideOpacity > 0 && dropZoneLoops.length > 0) {
+    ctx.save();
+    ctx.globalAlpha = guideOpacity;
+    drawDropZoneFill(ctx, dropZoneLoops, grid);
+    drawDropZoneOutline(ctx, dropZoneLoops, grid, displayScale);
+    ctx.restore();
+  }
   if (heldStrokeVisible && heldBlock) {
     drawBlockInnerStroke(
       ctx,

@@ -3,7 +3,6 @@ import { getExportSize, type ExportPreset } from "../config";
 import { ensureCachedSourceImage } from "../import/imageSource";
 import { loadCustomShapeImages } from "../shapes/customShapes";
 import { renderMosaicToBlob } from "../render/renderFrame";
-import { lockedColorsSet } from "../state/frameUtils";
 import type { Frame, Orientation } from "../types";
 import { downloadBlob, mosaicFrameFileName } from "./downloadBlob";
 
@@ -128,7 +127,6 @@ export async function exportCurrentFrameTransparent(
     backgroundImage,
     textureOverlayImage,
     customShapeImages,
-    omitColors: lockedColorsSet(frame.settings),
     transparentBackground: true,
   });
   if (!blob) throw new Error("PNG export failed");

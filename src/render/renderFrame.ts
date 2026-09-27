@@ -64,8 +64,6 @@ export type RenderOptions = {
   textureOverlayImage?: HTMLImageElement | null;
   /** Loaded images for custom shape slots, keyed by slot id. */
   customShapeImages?: ReadonlyMap<string, HTMLImageElement> | null;
-  /** Skip drawing blocks with these colours (export holes). */
-  omitColors?: ReadonlySet<string>;
   /** Clear alpha background instead of black/checkerboard. */
   transparentBackground?: boolean;
   /** Pulse the selected block between 0.5 and 1.0 opacity. */
@@ -80,6 +78,8 @@ export type RenderOptions = {
   dropBlinkT?: number | null;
   /** Layout-density skeleton, drawn above background while grabbing a piece. */
   showDensityGrid?: boolean;
+  /** Fade for the density skeleton (0–1). */
+  densityGridOpacity?: number;
   /** Canvas backing pixels per CSS pixel — keeps skeleton stroke at 1px on screen. */
   displayScale?: number;
   /** Skip Gaussian blur — live 30fps playback OOMs the GPU tab. Export is unchanged. */
@@ -333,7 +333,6 @@ export function renderMosaic(
     sourceImageFit = "cover",
     backgroundImage,
     textureOverlayImage,
-    omitColors,
     transparentBackground,
   } = options;
   const customShapeImages = options.customShapeImages;
@@ -366,7 +365,12 @@ export function renderMosaic(
   }
 
   if (options.showDensityGrid) {
-    drawDensityGrid(ctx, grid, options.displayScale ?? 1);
+    drawDensityGrid(
+      ctx,
+      grid,
+      options.displayScale ?? 1,
+      options.densityGridOpacity ?? 1,
+    );
   }
 
   const fillRadius = largestRingRadius(blocks, grid);
@@ -383,7 +387,6 @@ export function renderMosaic(
   for (let index = 0; index < blocks.length; index++) {
     const block = blocks[index];
     if (!block.color) continue;
-    if (omitColors?.has(block.color)) continue;
 
     const isDropBlink =
       dropBlinkBlockIndex === index &&
@@ -463,7 +466,7 @@ export function renderMosaic(
 
   if (dragPreview) {
     const block = blocks[dragPreview.blockIndex];
-    if (block?.color && !omitColors?.has(block.color)) {
+    if (block?.color) {
       const previewBlock = {
         ...block,
         col: dragPreview.col,

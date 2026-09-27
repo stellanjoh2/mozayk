@@ -36,6 +36,8 @@
       color-mix(in srgb, var(--brand) var(--glow-mix-wide), transparent);
   --piece-guide: var(--chrome);
   --piece-guide-dropzone: color-mix(in srgb, var(--piece-guide) 75%, transparent);
+  /* ~5% brighter than the void outside the drop-zone wall. */
+  --piece-guide-dropzone-fill: color-mix(in srgb, white 5%, transparent);
   --piece-guide-grid: color-mix(in srgb, var(--piece-guide) 25%, transparent);
   --ui-chevron: conic-gradient(
     from 225deg at 50% 50%,
@@ -303,6 +305,7 @@ body {
   }
 
   .panel-hint,
+  .pro-tip__opt-out,
   .shortcut-list__keys kbd,
   .export-group__title,
   .export-group__meta,
@@ -338,6 +341,10 @@ body {
   }
 
   .panel-section h2,
+  .pro-tip__title,
+  .pro-tip__body,
+  .action-notice__title,
+  .action-notice__body,
   .import-error-dialog__title,
   .reset-canvas-dialog__title,
   .palette-panel__title,
@@ -389,6 +396,7 @@ body {
   }
 
   .panel-hint,
+  .pro-tip__opt-out,
   .shortcut-list__keys kbd,
   .panel-credit,
   .export-group__title,
@@ -425,6 +433,10 @@ body {
   }
 
   .panel-section h2,
+  .pro-tip__title,
+  .pro-tip__body,
+  .action-notice__title,
+  .action-notice__body,
   .import-error-dialog__title,
   .reset-canvas-dialog__title,
   .palette-panel__title,
@@ -1222,10 +1234,167 @@ a.panel-btn {
   font-size: 15px;
   color: var(--text);
   background: color-mix(in srgb, var(--panel) 94%, transparent);
-  border: 1px solid var(--panel-border);
+  border: none;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
   pointer-events: none;
   zoom: var(--ui-compact-zoom);
+}
+
+.action-notice {
+  /* Portaled to body. Top-centered on the canvas; slide with top (not
+     transform/opacity) so frost still samples the mosaic. */
+  position: fixed;
+  z-index: 40;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  top: calc(var(--action-notice-top) - var(--action-notice-travel, 200px));
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  pointer-events: none;
+  transition: top 0.45s ease;
+}
+
+.action-notice.is-visible {
+  top: var(--action-notice-top);
+}
+
+.action-notice__badge {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  max-width: min(504px, calc(100vw - 48px));
+  margin: 0;
+  /* Match .pro-tip padding (16/20). */
+  padding: 16px 20px;
+  border: none;
+  border-radius: var(--control-radius);
+  background: var(--glass);
+  backdrop-filter: blur(36px);
+  -webkit-backdrop-filter: blur(36px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  color: var(--text);
+  font: inherit;
+  text-align: center;
+  cursor: var(--cursor-pointer);
+  pointer-events: none;
+}
+
+.action-notice.is-visible .action-notice__badge {
+  pointer-events: auto;
+}
+
+.action-notice__title {
+  color: var(--chrome);
+  font-size: 18px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.action-notice__body {
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1.35;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .action-notice,
+  .action-notice.is-visible {
+    transition: none;
+  }
+}
+
+.pro-tip {
+  /* Portaled to body. Slide with left — never transform/opacity on this node
+     or backdrop-filter samples empty instead of the mosaic (same as themes). */
+  position: fixed;
+  z-index: 40;
+  box-sizing: border-box;
+  left: 100vw;
+  margin: 0;
+  padding: 16px 20px 16px 16px;
+  border: none;
+  /* Flush to the viewport right — badge / shelf, not a floating card. */
+  border-radius: var(--control-radius) 0 0 var(--control-radius);
+  background: var(--glass);
+  backdrop-filter: blur(36px);
+  -webkit-backdrop-filter: blur(36px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--panel-label-size);
+  text-align: left;
+  cursor: var(--cursor-pointer);
+  pointer-events: none;
+  transition: left 0.5s ease-out;
+}
+
+.pro-tip.is-visible {
+  left: var(--pro-tip-left);
+  pointer-events: auto;
+  transition: left 0.5s ease-in-out;
+}
+
+.pro-tip__copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  max-width: 384px;
+  transition: opacity 0.28s ease-out;
+}
+
+.pro-tip__copy.is-fading {
+  opacity: 0;
+}
+
+.pro-tip__title {
+  color: var(--chrome);
+  font-size: 18px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.pro-tip__body {
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1.35;
+}
+
+.pro-tip__opt-out {
+  appearance: none;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: left;
+  cursor: var(--cursor-pointer);
+}
+
+.pro-tip__opt-out:hover {
+  color: var(--text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pro-tip {
+    transition: none;
+  }
+
+  .pro-tip.is-visible {
+    left: var(--pro-tip-left);
+  }
+
+  .pro-tip__copy {
+    transition: none;
+  }
 }
 
 .import-error-backdrop {
@@ -1244,7 +1413,7 @@ a.panel-btn {
   padding: 20px;
   border-radius: 10px;
   background: var(--panel);
-  border: 1px solid var(--panel-border);
+  border: none;
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
   zoom: calc(var(--ui-compact-zoom) * 1.2);
 }
@@ -1306,7 +1475,7 @@ a.panel-btn {
   padding: 20px;
   border-radius: var(--control-radius);
   background: var(--panel);
-  border: 1px solid var(--panel-border);
+  border: none;
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
   opacity: 0;
   transform: translateY(12px) scale(0.98);
@@ -2061,14 +2230,20 @@ html.normal-hover
   cursor: var(--cursor-default);
 }
 
+/* Lift the whole control above later siblings so the ::after tip isn't buried. */
+.has-hint:hover,
+.has-hint:focus-visible {
+  z-index: 60;
+}
+
 .has-hint::after {
   content: attr(data-hint);
   position: absolute;
   left: 0;
   bottom: calc(100% + 8px);
-  z-index: 30;
+  z-index: 60;
   width: max-content;
-  max-width: 240px;
+  max-width: 288px;
   padding: 8px 10px;
   border-radius: 4px;
   background: var(--panel);
@@ -2078,6 +2253,8 @@ html.normal-hover
   line-height: 1.45;
   font-weight: 400;
   white-space: normal;
+  text-transform: none;
+  letter-spacing: normal;
   pointer-events: none;
   opacity: 0;
   transform: translateY(4px);
@@ -2346,27 +2523,33 @@ html.normal-hover .ui-select__option.is-active:not(.is-disabled)::before {
 
 .ui-icon-btn--pause {
   color: #fff;
+  /* Opacity on the button would also fade the ::after tooltip — dim the icon only. */
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.ui-icon-btn--pause svg {
   opacity: 0.28;
-  transition: opacity 0.15s ease, color 0.15s ease, background 0.15s ease;
+  transition: opacity 0.15s ease;
 }
 
 .ui-icon-btn--pause.has-hint::after {
   left: auto;
-  right: calc(-1 * var(--ui-icon-btn-size) - 8px);
-  max-width: 216px;
+  right: 0;
+  bottom: calc(100% + 8px);
+  max-width: 259px;
 }
 
-.ui-icon-btn--pause:hover:not(:disabled) {
+.ui-icon-btn--pause:hover:not(:disabled) svg {
   opacity: 0.85;
 }
 
 .ui-icon-btn--pause.is-locked {
-  opacity: 1;
   color: #ff3b3b;
   background: rgba(0, 0, 0, 0.72);
 }
 
-.ui-icon-btn--pause.is-locked:hover:not(:disabled) {
+.ui-icon-btn--pause.is-locked svg,
+.ui-icon-btn--pause.is-locked:hover:not(:disabled) svg {
   opacity: 1;
 }
 
@@ -2999,10 +3182,16 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
   gap: 4px;
 }
 
+.color-swatch__actions:has(.has-hint:hover),
+.color-swatch__actions:has(.has-hint:focus-visible) {
+  z-index: 60;
+}
+
 .color-swatch__actions .ui-icon-btn--pause.has-hint::after {
   left: auto;
-  right: calc(-1 * var(--ui-icon-btn-size) - 12px);
-  max-width: 216px;
+  right: 0;
+  bottom: calc(100% + 8px);
+  max-width: 259px;
 }
 
 .timeline {
@@ -3483,7 +3672,9 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
 
   .controls-panel,
   .timeline,
-  .app-toast {
+  .app-toast,
+  .pro-tip,
+  .action-notice {
     display: none;
   }
 

@@ -47,7 +47,13 @@ export type MzkProjectPayload = {
 };
 
 function isExportPreset(value: unknown): value is ExportPreset {
-  return value === "1080p" || value === "1440p" || value === "2160p";
+  return (
+    value === "1080p" ||
+    value === "1440p" ||
+    value === "2160p" ||
+    value === "3240p" ||
+    value === "4320p"
+  );
 }
 
 function isGifExportPreset(value: unknown): value is GifExportPreset {

@@ -53,7 +53,9 @@ import { UiSelect } from "./UiSelect";
 
 const STAGE_PADDING = 24;
 const PIECE_DRAG_THRESHOLD = 4;
+const GUIDE_FADE_MS = 120;
 const EMPTY_DROP_TARGETS: GridSlot[] = [];
+const EMPTY_GUIDE_LOOPS: ReturnType<typeof buildDropZoneLoops> = [];
 
 function stageAvailableSize(
   stageWidth: number,
@@ -151,6 +153,7 @@ export function CanvasView({
   const [dropTargets, setDropTargets] = useState<GridSlot[]>([]);
   const [hoveredTarget, setHoveredTarget] = useState<GridSlot | null>(null);
   const [pulsePhase, setPulsePhase] = useState(0);
+  const [guideOpacity, setGuideOpacity] = useState(0);
   const [pieceDropBlink, setPieceDropBlink] = useState<{
     blockIndex: number;
   } | null>(null);
@@ -158,6 +161,9 @@ export function CanvasView({
   const pulseRafRef = useRef<number | null>(null);
   const pulseStartRef = useRef(0);
   const dropBlinkRafRef = useRef<number | null>(null);
+  const guideFadeRafRef = useRef<number | null>(null);
+  const guideOpacityRef = useRef(0);
+  const guideLoopsRef = useRef<ReturnType<typeof buildDropZoneLoops>>([]);
   const dragPointerIdRef = useRef<number | null>(null);
   const dragStartRef = useRef<{ x: number; y: number } | null>(null);
   const grabOffsetRef = useRef({ col: 0, row: 0 });
@@ -210,6 +216,9 @@ export function CanvasView({
     setDropTargets(EMPTY_DROP_TARGETS);
     setHoveredTarget(null);
     setPieceDropBlink(null);
+    guideOpacityRef.current = 0;
+    setGuideOpacity(0);
+    guideLoopsRef.current = EMPTY_GUIDE_LOOPS;
   }, [frame.id]);
 
   useEffect(() => {
@@ -286,14 +295,74 @@ export function CanvasView({
   const selectedBlock =
     selectedBlockIndex != null ? frame.blocks[selectedBlockIndex] ?? null : null;
   const dropZoneLoops = useMemo(() => {
-    if (!isDraggingPiece || !selectedBlock || dropTargets.length === 0) {
+    if (!selectedBlock || dropTargets.length === 0) {
       return [];
     }
-    return buildDropZoneLoops(dropTargets, {
-      width: selectedBlock.width,
-      height: selectedBlock.height,
-    });
-  }, [isDraggingPiece, selectedBlock, dropTargets]);
+    // Grab-aligned cursor cells — footprint unions painted false OK corridors.
+    return buildDropZoneLoops(dropTargets, grabOffsetRef.current);
+  }, [selectedBlock, dropTargets]);
+
+  useEffect(() => {
+    if (dropZoneLoops.length > 0) {
+      guideLoopsRef.current = dropZoneLoops;
+    }
+  }, [dropZoneLoops]);
+
+  useEffect(() => {
+    const target = isDraggingPiece ? 1 : 0;
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+
+    if (guideFadeRafRef.current != null) {
+      cancelAnimationFrame(guideFadeRafRef.current);
+      guideFadeRafRef.current = null;
+    }
+
+    if (reduceMotion) {
+      guideOpacityRef.current = target;
+      setGuideOpacity(target);
+      if (target === 0) guideLoopsRef.current = [];
+      return;
+    }
+
+    const from = guideOpacityRef.current;
+    if (Math.abs(from - target) < 0.001) {
+      guideOpacityRef.current = target;
+      setGuideOpacity(target);
+      if (target === 0) guideLoopsRef.current = [];
+      return;
+    }
+
+    const start = performance.now();
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / GUIDE_FADE_MS);
+      const value = from + (target - from) * t;
+      guideOpacityRef.current = value;
+      setGuideOpacity(value);
+      if (t < 1) {
+        guideFadeRafRef.current = requestAnimationFrame(tick);
+        return;
+      }
+      guideFadeRafRef.current = null;
+      if (target === 0) guideLoopsRef.current = [];
+    };
+    guideFadeRafRef.current = requestAnimationFrame(tick);
+
+    return () => {
+      if (guideFadeRafRef.current != null) {
+        cancelAnimationFrame(guideFadeRafRef.current);
+        guideFadeRafRef.current = null;
+      }
+    };
+  }, [isDraggingPiece]);
+
+  const activeGuideLoops =
+    guideOpacity > 0
+      ? dropZoneLoops.length > 0
+        ? dropZoneLoops
+        : guideLoopsRef.current
+      : EMPTY_GUIDE_LOOPS;
 
   useEffect(() => {
     const needsSource =
@@ -433,7 +502,8 @@ export function CanvasView({
             : undefined,
           dropBlinkBlockIndex: pieceDropBlink?.blockIndex ?? null,
           dropBlinkT,
-          showDensityGrid: isDraggingPiece,
+          showDensityGrid: guideOpacity > 0,
+          densityGridOpacity: guideOpacity,
           displayScale,
           skipGridBlur: playing && !highQualityMode,
         });
@@ -481,6 +551,7 @@ export function CanvasView({
     hoveredTarget,
     pieceDropBlink,
     dropBlinkT,
+    guideOpacity,
     playing,
     highQualityMode,
   ]);
@@ -508,7 +579,8 @@ export function CanvasView({
 
     const extrasOn = isExtrasEnabled(frame.settings);
     renderPieceOverlay(overlay, grid, {
-      dropZoneLoops: isDraggingPiece ? dropZoneLoops : [],
+      dropZoneLoops: activeGuideLoops,
+      guideOpacity,
       displayScale,
       heldBlock: heldPreview,
       heldStrokeVisible:
@@ -522,7 +594,8 @@ export function CanvasView({
   }, [
     grid,
     isDraggingPiece,
-    dropZoneLoops,
+    activeGuideLoops,
+    guideOpacity,
     selectedBlock,
     hoveredTarget,
     pulsePhase,

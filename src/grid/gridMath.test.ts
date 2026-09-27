@@ -23,6 +23,8 @@ const CANVASES: Record<Orientation, [number, number][]> = {
     [1920, 1080],
     [2400, 1350],
     [3840, 2160],
+    [5760, 3240],
+    [7680, 4320],
   ],
   portrait: [
     [486, 864],
@@ -30,6 +32,8 @@ const CANVASES: Record<Orientation, [number, number][]> = {
     [1080, 1920],
     [1350, 2400],
     [2160, 3840],
+    [3240, 5760],
+    [4320, 7680],
   ],
   square: [
     [486, 486],
@@ -37,6 +41,8 @@ const CANVASES: Record<Orientation, [number, number][]> = {
     [1080, 1080],
     [1350, 1350],
     [2160, 2160],
+    [3240, 3240],
+    [4320, 4320],
   ],
   photo: [
     [486, 648],
@@ -44,6 +50,8 @@ const CANVASES: Record<Orientation, [number, number][]> = {
     [1080, 1440],
     [1350, 1800],
     [2160, 2880],
+    [3240, 4320],
+    [4320, 5760],
   ],
 };
 
