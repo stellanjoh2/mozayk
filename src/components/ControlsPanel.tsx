@@ -960,21 +960,21 @@ export function ControlsPanel({
           </button>
           <button
             type="button"
-            aria-label="Dots"
-            aria-pressed={Boolean(shapes.dots)}
-            className={shapeBtnClass(Boolean(shapes.dots), "dots")}
-            onClick={() => toggleShape("dots")}
-          >
-            <GalleryShapeIcon shape="dots" />
-          </button>
-          <button
-            type="button"
             aria-label="Blossoms"
             aria-pressed={Boolean(shapes.blossom)}
             className={shapeBtnClass(Boolean(shapes.blossom), "blossom")}
             onClick={() => toggleShape("blossom")}
           >
             <GalleryShapeIcon shape="blossom" />
+          </button>
+          <button
+            type="button"
+            aria-label="Dots"
+            aria-pressed={Boolean(shapes.dots)}
+            className={shapeBtnClass(Boolean(shapes.dots), "dots")}
+            onClick={() => toggleShape("dots")}
+          >
+            <GalleryShapeIcon shape="dots" />
           </button>
           <button
             type="button"
