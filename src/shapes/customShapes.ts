@@ -290,6 +290,19 @@ export function tintCustomShapeWithBlockColor(fit: ImageFitMode): boolean {
   return fit === "contain";
 }
 
+/**
+ * Library preview: SVG / transparent cutouts are accent-tinted via CSS mask
+ * (same idea as mosaic tint). Opaque photos stay as plain <img> pixels.
+ */
+export function customShapeIconUsesAccentMask(
+  slot: Pick<CustomShapeSlot, "dataUrl" | "fit">,
+): boolean {
+  if (!slot.dataUrl) return false;
+  if (slot.fit === "contain") return true;
+  if (slot.fit === "cover") return false;
+  return isSvgDataUrl(slot.dataUrl);
+}
+
 let tintScratch: HTMLCanvasElement | null = null;
 let tintScratchCtx: CanvasRenderingContext2D | null = null;
 
