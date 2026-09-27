@@ -342,6 +342,7 @@ export function ProTipToast({ enabled = true }: ProTipToastProps) {
           as="span"
           className="pro-tip__body"
           text={tip.body}
+          keys={tip.keys}
           active={Boolean(bodyRun)}
           hold
           caret={false}

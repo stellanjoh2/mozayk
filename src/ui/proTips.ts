@@ -1,19 +1,37 @@
 export type ProTip = {
   id: string;
   body: string;
+  /** Keyboard keys (or other tokens) to accent in the body. */
+  keys?: readonly string[];
 };
 
 /** Bump when tip copy/order changes so seen tips reset for everyone. */
-const CATALOG_VERSION = 12;
+const CATALOG_VERSION = 14;
 
 export const PRO_TIPS: readonly ProTip[] = [
   {
     id: "randomize-qw",
-    body: "Q reshuffles the layout. W reshuffles the layout and every slider.",
+    body: "Q randomizes the layout. W randomizes the layout and every slider.",
+    keys: ["Q", "W"],
+  },
+  {
+    id: "randomize-colours-e",
+    body: "E randomizes the current colours only.",
+    keys: ["E"],
   },
   {
     id: "pause-colour",
-    body: "Hit the pause icon on a colour swatch to keep it while you Randomize the rest.",
+    body: "Hit the pause icon on a colour swatch to keep it while you randomize the rest.",
+  },
+  {
+    id: "grid-density",
+    body: "↑ and ↓ change the grid density.",
+    keys: ["↑", "↓"],
+  },
+  {
+    id: "toggle-original",
+    body: "O toggles the original photo so you can compare while you work.",
+    keys: ["O"],
   },
   {
     id: "shape-paint",
@@ -21,7 +39,7 @@ export const PRO_TIPS: readonly ProTip[] = [
   },
   {
     id: "drag-pieces",
-    body: "Drag any piece on the canvas to re-arrange the mosaic yourself.",
+    body: "Drag any piece on the canvas to rearrange the mosaic — you can only move them to free slots.",
   },
 ];
 

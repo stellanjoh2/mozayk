@@ -1575,6 +1575,10 @@ a.panel-btn {
   white-space: pre-wrap;
 }
 
+.typewriter-reveal__key {
+  color: var(--accent);
+}
+
 @keyframes typewriter-reveal-caret-blink {
   50% {
     opacity: 0;
@@ -2544,8 +2548,8 @@ html.normal-hover .ui-select__option.is-active:not(.is-disabled)::before {
 }
 
 .ui-icon-btn--pause.is-locked {
-  color: #ff3b3b;
-  background: rgba(0, 0, 0, 0.72);
+  color: var(--on-chrome);
+  background: var(--chrome-fill);
 }
 
 .ui-icon-btn--pause.is-locked svg,

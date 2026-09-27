@@ -21,36 +21,101 @@ type TypewriterRevealProps = {
   hold?: boolean;
   className?: string;
   links?: TypewriterLink[];
+  /** Substrings to paint with the accent colour (e.g. keyboard keys). */
+  keys?: readonly string[];
   onComplete?: () => void;
 } & Omit<React.HTMLAttributes<HTMLElement>, "children">;
 
 const DEFAULT_SPEED_MS = 10;
 
-function renderWithLinks(value: string, links: TypewriterLink[] | undefined) {
-  if (!links?.length) return value;
+type TextHit =
+  | { start: number; end: number; kind: "link"; href: string }
+  | { start: number; end: number; kind: "key" };
 
-  const hits: { start: number; end: number; href: string }[] = [];
-  for (const link of links) {
+function isAlphanumericKey(key: string): boolean {
+  return /^[A-Za-z0-9]+$/.test(key);
+}
+
+function collectKeyHits(value: string, keys: readonly string[]): TextHit[] {
+  const sorted = [...keys].sort((a, b) => b.length - a.length);
+  const claimed = new Array<boolean>(value.length).fill(false);
+  const hits: TextHit[] = [];
+
+  for (const key of sorted) {
+    if (!key) continue;
     let from = 0;
     while (from < value.length) {
-      const index = value.indexOf(link.text, from);
+      const index = value.indexOf(key, from);
       if (index === -1) break;
-      hits.push({ start: index, end: index + link.text.length, href: link.href });
-      from = index + link.text.length;
+      const end = index + key.length;
+      if (isAlphanumericKey(key)) {
+        const beforeOk =
+          index === 0 || !/[A-Za-z0-9]/.test(value[index - 1] ?? "");
+        const afterOk =
+          end >= value.length || !/[A-Za-z0-9]/.test(value[end] ?? "");
+        if (!beforeOk || !afterOk) {
+          from = index + 1;
+          continue;
+        }
+      }
+      if (claimed.slice(index, end).some(Boolean)) {
+        from = end;
+        continue;
+      }
+      for (let i = index; i < end; i += 1) claimed[i] = true;
+      hits.push({ start: index, end, kind: "key" });
+      from = end;
     }
   }
-  hits.sort((a, b) => a.start - b.start);
+  return hits;
+}
+
+function renderTypedText(
+  value: string,
+  links: TypewriterLink[] | undefined,
+  keys: readonly string[] | undefined,
+) {
+  if (!links?.length && !keys?.length) return value;
+
+  const hits: TextHit[] = [];
+  if (links?.length) {
+    for (const link of links) {
+      let from = 0;
+      while (from < value.length) {
+        const index = value.indexOf(link.text, from);
+        if (index === -1) break;
+        hits.push({
+          start: index,
+          end: index + link.text.length,
+          kind: "link",
+          href: link.href,
+        });
+        from = index + link.text.length;
+      }
+    }
+  }
+  if (keys?.length) hits.push(...collectKeyHits(value, keys));
+  hits.sort((a, b) => a.start - b.start || b.end - a.end);
 
   const nodes: React.ReactNode[] = [];
   let cursor = 0;
   hits.forEach((hit, key) => {
     if (hit.start < cursor) return;
     if (hit.start > cursor) nodes.push(value.slice(cursor, hit.start));
-    nodes.push(
-      <a key={key} href={hit.href} target="_blank" rel="noopener noreferrer">
-        {value.slice(hit.start, hit.end)}
-      </a>,
-    );
+    const slice = value.slice(hit.start, hit.end);
+    if (hit.kind === "link") {
+      nodes.push(
+        <a key={key} href={hit.href} target="_blank" rel="noopener noreferrer">
+          {slice}
+        </a>,
+      );
+    } else {
+      nodes.push(
+        <span key={key} className="typewriter-reveal__key">
+          {slice}
+        </span>,
+      );
+    }
     cursor = hit.end;
   });
   if (cursor < value.length) nodes.push(value.slice(cursor));
@@ -74,6 +139,7 @@ export function TypewriterReveal({
   hold = false,
   className,
   links,
+  keys,
   onComplete,
   ...restProps
 }: TypewriterRevealProps) {
@@ -189,10 +255,10 @@ export function TypewriterReveal({
   return (
     <Tag className={combinedClassName} {...restProps}>
       <span className="typewriter-reveal__ghost" aria-hidden>
-        {renderWithLinks(text, links)}
+        {renderTypedText(text, links, keys)}
       </span>
       <span className="typewriter-reveal__live">
-        {renderWithLinks(typed, links)}
+        {renderTypedText(typed, links, keys)}
         {caret && !isComplete ? (
           <span className="typewriter-reveal__caret" aria-hidden />
         ) : null}
