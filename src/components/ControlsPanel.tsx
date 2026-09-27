@@ -875,42 +875,13 @@ export function ControlsPanel({
         <div className="button-row button-row--4 button-row--shape-icons">
           <button
             type="button"
-            aria-label="Wedges"
-            aria-pressed={Boolean(shapes.wedges)}
-            className={shapeBtnClass(Boolean(shapes.wedges), "wedges")}
-            onClick={() => toggleShape("wedges")}
+            aria-label="Xs"
+            aria-pressed={Boolean(shapes.ex)}
+            className={shapeBtnClass(Boolean(shapes.ex), "ex")}
+            onClick={() => toggleShape("ex")}
           >
-            <GalleryShapeIcon shape="wedges" />
+            <GalleryShapeIcon shape="ex" />
           </button>
-          <button
-            type="button"
-            aria-label="Spots"
-            aria-pressed={Boolean(shapes.spots)}
-            className={shapeBtnClass(Boolean(shapes.spots), "spots")}
-            onClick={() => toggleShape("spots")}
-          >
-            <GalleryShapeIcon shape="spots" />
-          </button>
-          <button
-            type="button"
-            aria-label="Quads"
-            aria-pressed={Boolean(shapes.quads)}
-            className={shapeBtnClass(Boolean(shapes.quads), "quads")}
-            onClick={() => toggleShape("quads")}
-          >
-            <GalleryShapeIcon shape="quads" />
-          </button>
-          <button
-            type="button"
-            aria-label="Checks"
-            aria-pressed={Boolean(shapes.checks)}
-            className={shapeBtnClass(Boolean(shapes.checks), "checks")}
-            onClick={() => toggleShape("checks")}
-          >
-            <GalleryShapeIcon shape="checks" />
-          </button>
-        </div>
-        <div className="button-row button-row--4 button-row--shape-icons">
           <button
             type="button"
             aria-label="Clovers"
@@ -922,30 +893,21 @@ export function ControlsPanel({
           </button>
           <button
             type="button"
-            aria-label="Dots"
-            aria-pressed={Boolean(shapes.dots)}
-            className={shapeBtnClass(Boolean(shapes.dots), "dots")}
-            onClick={() => toggleShape("dots")}
+            aria-label="Waves"
+            aria-pressed={Boolean(shapes.waves)}
+            className={shapeBtnClass(Boolean(shapes.waves), "waves")}
+            onClick={() => toggleShape("waves")}
           >
-            <GalleryShapeIcon shape="dots" />
+            <GalleryShapeIcon shape="waves" />
           </button>
           <button
             type="button"
-            aria-label="Xs"
-            aria-pressed={Boolean(shapes.ex)}
-            className={shapeBtnClass(Boolean(shapes.ex), "ex")}
-            onClick={() => toggleShape("ex")}
+            aria-label="Gates"
+            aria-pressed={Boolean(shapes.gates)}
+            className={shapeBtnClass(Boolean(shapes.gates), "gates")}
+            onClick={() => toggleShape("gates")}
           >
-            <GalleryShapeIcon shape="ex" />
-          </button>
-          <button
-            type="button"
-            aria-label="Arcs"
-            aria-pressed={Boolean(shapes.arcs)}
-            className={shapeBtnClass(Boolean(shapes.arcs), "arcs")}
-            onClick={() => toggleShape("arcs")}
-          >
-            <GalleryShapeIcon shape="arcs" />
+            <GalleryShapeIcon shape="gates" />
           </button>
         </div>
         <div className="button-row button-row--4 button-row--shape-icons">
@@ -978,6 +940,26 @@ export function ControlsPanel({
           </button>
           <button
             type="button"
+            aria-label="Arches"
+            aria-pressed={Boolean(shapes.arches)}
+            className={shapeBtnClass(Boolean(shapes.arches), "arches")}
+            onClick={() => toggleShape("arches")}
+          >
+            <GalleryShapeIcon shape="arches" />
+          </button>
+        </div>
+        <div className="button-row button-row--4 button-row--shape-icons">
+          <button
+            type="button"
+            aria-label="Quads"
+            aria-pressed={Boolean(shapes.quads)}
+            className={shapeBtnClass(Boolean(shapes.quads), "quads")}
+            onClick={() => toggleShape("quads")}
+          >
+            <GalleryShapeIcon shape="quads" />
+          </button>
+          <button
+            type="button"
             aria-label="Blossoms"
             aria-pressed={Boolean(shapes.blossom)}
             className={shapeBtnClass(Boolean(shapes.blossom), "blossom")}
@@ -985,8 +967,44 @@ export function ControlsPanel({
           >
             <GalleryShapeIcon shape="blossom" />
           </button>
+          <button
+            type="button"
+            aria-label="Dots"
+            aria-pressed={Boolean(shapes.dots)}
+            className={shapeBtnClass(Boolean(shapes.dots), "dots")}
+            onClick={() => toggleShape("dots")}
+          >
+            <GalleryShapeIcon shape="dots" />
+          </button>
+          <button
+            type="button"
+            aria-label="Checks"
+            aria-pressed={Boolean(shapes.checks)}
+            className={shapeBtnClass(Boolean(shapes.checks), "checks")}
+            onClick={() => toggleShape("checks")}
+          >
+            <GalleryShapeIcon shape="checks" />
+          </button>
         </div>
         <div className="button-row button-row--4 button-row--shape-icons">
+          <button
+            type="button"
+            aria-label="Spots"
+            aria-pressed={Boolean(shapes.spots)}
+            className={shapeBtnClass(Boolean(shapes.spots), "spots")}
+            onClick={() => toggleShape("spots")}
+          >
+            <GalleryShapeIcon shape="spots" />
+          </button>
+          <button
+            type="button"
+            aria-label="Arcs"
+            aria-pressed={Boolean(shapes.arcs)}
+            className={shapeBtnClass(Boolean(shapes.arcs), "arcs")}
+            onClick={() => toggleShape("arcs")}
+          >
+            <GalleryShapeIcon shape="arcs" />
+          </button>
           <button
             type="button"
             aria-label="Moons"
@@ -995,6 +1013,26 @@ export function ControlsPanel({
             onClick={() => toggleShape("moons")}
           >
             <GalleryShapeIcon shape="moons" />
+          </button>
+          <button
+            type="button"
+            aria-label="Scallops"
+            aria-pressed={Boolean(shapes.scallops)}
+            className={shapeBtnClass(Boolean(shapes.scallops), "scallops")}
+            onClick={() => toggleShape("scallops")}
+          >
+            <GalleryShapeIcon shape="scallops" />
+          </button>
+        </div>
+        <div className="button-row button-row--4 button-row--shape-icons">
+          <button
+            type="button"
+            aria-label="Wedges"
+            aria-pressed={Boolean(shapes.wedges)}
+            className={shapeBtnClass(Boolean(shapes.wedges), "wedges")}
+            onClick={() => toggleShape("wedges")}
+          >
+            <GalleryShapeIcon shape="wedges" />
           </button>
           <button
             type="button"
@@ -1016,50 +1054,12 @@ export function ControlsPanel({
           </button>
           <button
             type="button"
-            aria-label="Gates"
-            aria-pressed={Boolean(shapes.gates)}
-            className={shapeBtnClass(Boolean(shapes.gates), "gates")}
-            onClick={() => toggleShape("gates")}
-          >
-            <GalleryShapeIcon shape="gates" />
-          </button>
-        </div>
-        <div className="button-row button-row--4 button-row--shape-icons">
-          <button
-            type="button"
-            aria-label="Waves"
-            aria-pressed={Boolean(shapes.waves)}
-            className={shapeBtnClass(Boolean(shapes.waves), "waves")}
-            onClick={() => toggleShape("waves")}
-          >
-            <GalleryShapeIcon shape="waves" />
-          </button>
-          <button
-            type="button"
-            aria-label="Arches"
-            aria-pressed={Boolean(shapes.arches)}
-            className={shapeBtnClass(Boolean(shapes.arches), "arches")}
-            onClick={() => toggleShape("arches")}
-          >
-            <GalleryShapeIcon shape="arches" />
-          </button>
-          <button
-            type="button"
             aria-label="Tiles"
             aria-pressed={Boolean(shapes.tiles)}
             className={shapeBtnClass(Boolean(shapes.tiles), "tiles")}
             onClick={() => toggleShape("tiles")}
           >
             <GalleryShapeIcon shape="tiles" />
-          </button>
-          <button
-            type="button"
-            aria-label="Scallops"
-            aria-pressed={Boolean(shapes.scallops)}
-            className={shapeBtnClass(Boolean(shapes.scallops), "scallops")}
-            onClick={() => toggleShape("scallops")}
-          >
-            <GalleryShapeIcon shape="scallops" />
           </button>
         </div>
         {customShapes.length > 0 ? (
