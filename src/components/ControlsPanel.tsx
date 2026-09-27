@@ -376,6 +376,8 @@ export function ControlsPanel({
     visited: Set<string>;
     draftShapes: ShapePalette;
     draftCustoms: CustomShapeSlot[];
+    lastX: number;
+    lastY: number;
   } | null>(null);
 
   const shapePaintIdFromPoint = (clientX: number, clientY: number) => {
@@ -397,6 +399,19 @@ export function ControlsPanel({
       }
     }
     return null;
+  };
+
+  const paintShapeStroke = (fromX: number, fromY: number, toX: number, toY: number) => {
+    const dx = toX - fromX;
+    const dy = toY - fromY;
+    const dist = Math.hypot(dx, dy);
+    // Sample along the stroke so fast drags don't skip icons between events.
+    const steps = Math.max(1, Math.ceil(dist / 6));
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const paintId = shapePaintIdFromPoint(fromX + dx * t, fromY + dy * t);
+      if (paintId) applyShapePaint(paintId);
+    }
   };
 
   const applyShapePaint = (paintId: string) => {
@@ -452,7 +467,11 @@ export function ControlsPanel({
     onSettingsChange({ shapes: nextShapes });
   };
 
-  const beginShapePaint = (paintId: string): boolean => {
+  const beginShapePaint = (
+    paintId: string,
+    clientX: number,
+    clientY: number,
+  ): boolean => {
     if (paintId.startsWith("custom:")) {
       const slotId = paintId.slice("custom:".length);
       const slot = customShapes.find((item) => item.id === slotId);
@@ -477,6 +496,8 @@ export function ControlsPanel({
       visited: new Set(),
       draftShapes: { ...shapes },
       draftCustoms: customShapes.map((slot) => ({ ...slot })),
+      lastX: clientX,
+      lastY: clientY,
     };
     shapeLibraryRef.current?.classList.add("is-painting");
     applyShapePaint(paintId);
@@ -484,9 +505,9 @@ export function ControlsPanel({
   };
 
   const endShapePaint = (event?: ReactPointerEvent<HTMLDivElement>) => {
-    if (event && shapePaintRef.current) {
-      const paintId = shapePaintIdFromPoint(event.clientX, event.clientY);
-      if (paintId) applyShapePaint(paintId);
+    const session = shapePaintRef.current;
+    if (event && session) {
+      paintShapeStroke(session.lastX, session.lastY, event.clientX, event.clientY);
     }
     if (event && shapeLibraryRef.current?.hasPointerCapture(event.pointerId)) {
       shapeLibraryRef.current.releasePointerCapture(event.pointerId);
@@ -500,14 +521,16 @@ export function ControlsPanel({
     if ((event.target as Element | null)?.closest?.(".ui-icon-btn--remove")) return;
     const paintId = shapePaintIdFromPoint(event.clientX, event.clientY);
     if (!paintId) return;
-    if (!beginShapePaint(paintId)) return;
+    if (!beginShapePaint(paintId, event.clientX, event.clientY)) return;
     event.currentTarget.setPointerCapture(event.pointerId);
   };
 
   const onShapeLibraryPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (!shapePaintRef.current) return;
-    const paintId = shapePaintIdFromPoint(event.clientX, event.clientY);
-    if (paintId) applyShapePaint(paintId);
+    const session = shapePaintRef.current;
+    if (!session) return;
+    paintShapeStroke(session.lastX, session.lastY, event.clientX, event.clientY);
+    session.lastX = event.clientX;
+    session.lastY = event.clientY;
   };
 
   const toggleShape = (key: keyof typeof shapes) => {
