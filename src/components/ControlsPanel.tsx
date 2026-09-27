@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import {
@@ -68,6 +68,7 @@ import {
   CUSTOM_SHAPE_ACCEPT,
   MAX_CUSTOM_SHAPE_SLOTS,
   createCustomShapeSlotId,
+  customShapeIconUsesAccentMask,
   fitForCustomShapeImage,
   normalizeCustomShapeDataUrl,
   toCustomShapeRef,
@@ -1066,6 +1067,12 @@ export function ControlsPanel({
             {customShapes.map((slot) => {
               const isOn = Boolean(slot.enabled && slot.dataUrl);
               const slotClass = shapeBtnClass(isOn, toCustomShapeRef(slot.id));
+              const preparedUrl = slot.dataUrl
+                ? normalizeCustomShapeDataUrl(slot.dataUrl)
+                : undefined;
+              const accentMask = Boolean(
+                preparedUrl && customShapeIconUsesAccentMask(slot),
+              );
               return (
                 <div key={slot.id} className="shape-slot-wrap">
                   <button
@@ -1079,24 +1086,36 @@ export function ControlsPanel({
                         : "Choose custom shape file"
                     }
                     aria-pressed={isOn}
-                    className={`shape-slot--custom${slotClass ? ` ${slotClass}` : ""}${
+                    className={`shape-slot--custom${
+                      accentMask
+                        ? " shape-slot--custom-mark"
+                        : preparedUrl
+                          ? " shape-slot--custom-photo"
+                          : ""
+                    }${slotClass ? ` ${slotClass}` : ""}${
                       slot.id === pulsingCustomSlotId ? " is-pulse" : ""
                     }`}
                     onClick={() => handleCustomSlotClick(slot.id)}
                   >
-                    {slot.dataUrl ? (
-                      <img
-                        className={`shape-icon shape-icon--custom${
-                          slot.fit === "contain" ||
-                          (!slot.fit &&
-                            slot.dataUrl.startsWith("data:image/svg"))
-                            ? " shape-icon--custom-contain"
-                            : ""
-                        }`}
-                        src={normalizeCustomShapeDataUrl(slot.dataUrl)}
-                        alt=""
-                        draggable={false}
-                      />
+                    {preparedUrl ? (
+                      accentMask ? (
+                        <span
+                          className="shape-icon shape-icon--custom shape-icon--custom-mask"
+                          style={
+                            {
+                              "--shape-icon-url": `url(${JSON.stringify(preparedUrl)})`,
+                            } as CSSProperties
+                          }
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <img
+                          className="shape-icon shape-icon--custom"
+                          src={preparedUrl}
+                          alt=""
+                          draggable={false}
+                        />
+                      )
                     ) : (
                       <span className="shape-slot-placeholder" aria-hidden="true">
                         ?

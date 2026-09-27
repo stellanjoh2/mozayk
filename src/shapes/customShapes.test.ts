@@ -1,6 +1,7 @@
 import {
   decodeSvgDataUrl,
   encodeSvgDataUrl,
+  customShapeIconUsesAccentMask,
   isSvgDataUrl,
   svgCustomShape,
   tightSvgSizing,
@@ -16,6 +17,26 @@ function run(): void {
   assert(!isSvgDataUrl("data:image/png;base64,abc"), "png data url not svg");
   assert(tintCustomShapeWithBlockColor("contain"), "contain cutouts tint");
   assert(!tintCustomShapeWithBlockColor("cover"), "cover photos do not tint");
+  assert(
+    customShapeIconUsesAccentMask({
+      dataUrl: "data:image/svg+xml;base64,abc",
+    }),
+    "svg preview uses accent mask",
+  );
+  assert(
+    customShapeIconUsesAccentMask({
+      dataUrl: "data:image/png;base64,abc",
+      fit: "contain",
+    }),
+    "contain cutout preview uses accent mask",
+  );
+  assert(
+    !customShapeIconUsesAccentMask({
+      dataUrl: "data:image/png;base64,abc",
+      fit: "cover",
+    }),
+    "cover photo preview stays as pixels",
+  );
 
   const square = tightSvgSizing({ x: 400, y: 400, width: 200, height: 200 });
   assert(square !== null, "square box sizes");
