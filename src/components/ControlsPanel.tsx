@@ -1,4 +1,10 @@
-import { useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import {
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import {
@@ -84,12 +90,14 @@ import { createDefaultShapePalette } from "../state/frameUtils";
 import {
   ORIENTATION_LABELS,
   ORIENTATIONS,
+  type CustomShapeSlot,
   type DataFieldsValueType,
   type Density,
   type Frame,
   type FrameSettings,
   type GridBlendMode,
   type Orientation,
+  type ShapePalette,
   type ShapeType,
   type TextureOverlayBlendMode,
 } from "../types";
@@ -358,7 +366,142 @@ export function ControlsPanel({
   })();
   const shapeBtnClass = (on: boolean, id: ShapeType) =>
     on ? (soleShape === id ? "is-active is-sole" : "is-active") : "";
+
+  /** Drag across icons paints the same on/off as the first icon hit. */
+  const shapeLibraryRef = useRef<HTMLDivElement>(null);
+  const shapePaintSuppressClickRef = useRef(false);
+  const shapePaintRef = useRef<{
+    enable: boolean;
+    sounded: boolean;
+    visited: Set<string>;
+    draftShapes: ShapePalette;
+    draftCustoms: CustomShapeSlot[];
+  } | null>(null);
+
+  const shapePaintIdFromPoint = (clientX: number, clientY: number) => {
+    const stack = document.elementsFromPoint(clientX, clientY);
+    for (const node of stack) {
+      if (!(node instanceof Element)) continue;
+      if (node.closest(".ui-icon-btn--remove")) return null;
+      const host = node.closest<HTMLElement>("[data-shape-paint]");
+      if (!host || !shapeLibraryRef.current?.contains(host)) continue;
+      return host.dataset.shapePaint ?? null;
+    }
+    return null;
+  };
+
+  const applyShapePaint = (paintId: string) => {
+    const session = shapePaintRef.current;
+    if (!session || session.visited.has(paintId)) return;
+
+    const playPaintSound = () => {
+      if (session.sounded) return;
+      session.sounded = true;
+      playUiSound(session.enable ? "ok" : "close");
+    };
+
+    if (paintId.startsWith("custom:")) {
+      const slotId = paintId.slice("custom:".length);
+      const slot = session.draftCustoms.find((item) => item.id === slotId);
+      if (!slot?.dataUrl) return;
+      const isOn = Boolean(slot.enabled);
+      if (isOn === session.enable) {
+        session.visited.add(paintId);
+        return;
+      }
+      const nextCustoms = session.draftCustoms.map((item) =>
+        item.id === slotId ? { ...item, enabled: session.enable } : item,
+      );
+      if (!session.enable && shapePoolWouldEmpty(session.draftShapes, nextCustoms)) {
+        playUiSound("delete");
+        session.visited.add(paintId);
+        return;
+      }
+      session.visited.add(paintId);
+      session.draftCustoms = nextCustoms;
+      playPaintSound();
+      onSettingsChange({ customShapes: nextCustoms });
+      return;
+    }
+
+    const key = paintId as keyof ShapePalette;
+    if (!(key in session.draftShapes)) return;
+    const isOn = Boolean(session.draftShapes[key]);
+    if (isOn === session.enable) {
+      session.visited.add(paintId);
+      return;
+    }
+    const nextShapes = { ...session.draftShapes, [key]: session.enable };
+    if (!session.enable && shapePoolWouldEmpty(nextShapes, session.draftCustoms)) {
+      playUiSound("delete");
+      session.visited.add(paintId);
+      return;
+    }
+    session.visited.add(paintId);
+    session.draftShapes = nextShapes;
+    playPaintSound();
+    onSettingsChange({ shapes: nextShapes });
+  };
+
+  const beginShapePaint = (paintId: string): boolean => {
+    if (paintId.startsWith("custom:")) {
+      const slotId = paintId.slice("custom:".length);
+      const slot = customShapes.find((item) => item.id === slotId);
+      // Empty slots open the file picker via click — don't start a paint.
+      if (!slot?.dataUrl) return false;
+    }
+
+    let enable = true;
+    if (paintId.startsWith("custom:")) {
+      const slotId = paintId.slice("custom:".length);
+      const slot = customShapes.find((item) => item.id === slotId);
+      enable = !Boolean(slot?.enabled);
+    } else {
+      const key = paintId as keyof ShapePalette;
+      enable = !Boolean(shapes[key]);
+    }
+
+    shapePaintSuppressClickRef.current = true;
+    shapePaintRef.current = {
+      enable,
+      sounded: false,
+      visited: new Set(),
+      draftShapes: { ...shapes },
+      draftCustoms: customShapes.map((slot) => ({ ...slot })),
+    };
+    shapeLibraryRef.current?.classList.add("is-painting");
+    applyShapePaint(paintId);
+    return true;
+  };
+
+  const endShapePaint = (event?: ReactPointerEvent<HTMLDivElement>) => {
+    if (event && shapeLibraryRef.current?.hasPointerCapture(event.pointerId)) {
+      shapeLibraryRef.current.releasePointerCapture(event.pointerId);
+    }
+    shapeLibraryRef.current?.classList.remove("is-painting");
+    shapePaintRef.current = null;
+  };
+
+  const onShapeLibraryPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return;
+    if ((event.target as Element | null)?.closest?.(".ui-icon-btn--remove")) return;
+    const paintId = shapePaintIdFromPoint(event.clientX, event.clientY);
+    if (!paintId) return;
+    if (!beginShapePaint(paintId)) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const onShapeLibraryPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!shapePaintRef.current) return;
+    const paintId = shapePaintIdFromPoint(event.clientX, event.clientY);
+    if (paintId) applyShapePaint(paintId);
+  };
+
   const toggleShape = (key: keyof typeof shapes) => {
+    if (shapePaintSuppressClickRef.current) {
+      shapePaintSuppressClickRef.current = false;
+      return;
+    }
     const next = !shapes[key];
     if (!next && shapePoolWouldEmpty({ ...shapes, [key]: false })) {
       playUiSound("delete");
@@ -405,6 +548,10 @@ export function ControlsPanel({
   }, [pulsingCustomSlotId]);
 
   const handleCustomSlotClick = (slotId: string) => {
+    if (shapePaintSuppressClickRef.current) {
+      shapePaintSuppressClickRef.current = false;
+      return;
+    }
     if (pulsingCustomSlotId === slotId) setPulsingCustomSlotId(null);
     const slot = customShapes.find((item) => item.id === slotId);
     if (!slot) return;
@@ -819,12 +966,21 @@ export function ControlsPanel({
             void handleCustomShapeFile(file);
           }}
         />
+        <div
+          ref={shapeLibraryRef}
+          className="shape-library"
+          onPointerDown={onShapeLibraryPointerDown}
+          onPointerMove={onShapeLibraryPointerMove}
+          onPointerUp={endShapePaint}
+          onPointerCancel={endShapePaint}
+        >
         <div className="button-row button-row--4 button-row--shape-icons">
           <button
             type="button"
             aria-label="Boxes"
             aria-pressed={shapes.block}
             className={shapeBtnClass(shapes.block, "block")}
+            data-shape-paint="block"
             onClick={() => toggleShape("block")}
           >
             <svg className="shape-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -836,6 +992,7 @@ export function ControlsPanel({
             aria-label="Spheres"
             aria-pressed={shapes.sphere}
             className={shapeBtnClass(shapes.sphere, "sphere")}
+            data-shape-paint="sphere"
             onClick={() => toggleShape("sphere")}
           >
             <svg className="shape-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -847,6 +1004,7 @@ export function ControlsPanel({
             aria-label="Triangles"
             aria-pressed={Boolean(shapes.triangle)}
             className={shapeBtnClass(Boolean(shapes.triangle), "triangle")}
+            data-shape-paint="triangle"
             onClick={() => toggleShape("triangle")}
           >
             <svg className="shape-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -858,6 +1016,7 @@ export function ControlsPanel({
             aria-label="Rings"
             aria-pressed={shapes.ring}
             className={shapeBtnClass(shapes.ring, "ring")}
+            data-shape-paint="ring"
             onClick={() => toggleShape("ring")}
           >
             <svg className="shape-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -878,6 +1037,7 @@ export function ControlsPanel({
             aria-label="Xs"
             aria-pressed={Boolean(shapes.ex)}
             className={shapeBtnClass(Boolean(shapes.ex), "ex")}
+            data-shape-paint="ex"
             onClick={() => toggleShape("ex")}
           >
             <GalleryShapeIcon shape="ex" />
@@ -887,6 +1047,7 @@ export function ControlsPanel({
             aria-label="Clovers"
             aria-pressed={Boolean(shapes.clover)}
             className={shapeBtnClass(Boolean(shapes.clover), "clover")}
+            data-shape-paint="clover"
             onClick={() => toggleShape("clover")}
           >
             <GalleryShapeIcon shape="clover" />
@@ -896,6 +1057,7 @@ export function ControlsPanel({
             aria-label="Waves"
             aria-pressed={Boolean(shapes.waves)}
             className={shapeBtnClass(Boolean(shapes.waves), "waves")}
+            data-shape-paint="waves"
             onClick={() => toggleShape("waves")}
           >
             <GalleryShapeIcon shape="waves" />
@@ -905,6 +1067,7 @@ export function ControlsPanel({
             aria-label="Gates"
             aria-pressed={Boolean(shapes.gates)}
             className={shapeBtnClass(Boolean(shapes.gates), "gates")}
+            data-shape-paint="gates"
             onClick={() => toggleShape("gates")}
           >
             <GalleryShapeIcon shape="gates" />
@@ -916,6 +1079,7 @@ export function ControlsPanel({
             aria-label="Stars"
             aria-pressed={Boolean(shapes.star)}
             className={shapeBtnClass(Boolean(shapes.star), "star")}
+            data-shape-paint="star"
             onClick={() => toggleShape("star")}
           >
             <GalleryShapeIcon shape="star" />
@@ -925,6 +1089,7 @@ export function ControlsPanel({
             aria-label="Blooms"
             aria-pressed={Boolean(shapes.bloom)}
             className={shapeBtnClass(Boolean(shapes.bloom), "bloom")}
+            data-shape-paint="bloom"
             onClick={() => toggleShape("bloom")}
           >
             <GalleryShapeIcon shape="bloom" />
@@ -934,6 +1099,7 @@ export function ControlsPanel({
             aria-label="Flowers"
             aria-pressed={Boolean(shapes.flower)}
             className={shapeBtnClass(Boolean(shapes.flower), "flower")}
+            data-shape-paint="flower"
             onClick={() => toggleShape("flower")}
           >
             <GalleryShapeIcon shape="flower" />
@@ -943,6 +1109,7 @@ export function ControlsPanel({
             aria-label="Arches"
             aria-pressed={Boolean(shapes.arches)}
             className={shapeBtnClass(Boolean(shapes.arches), "arches")}
+            data-shape-paint="arches"
             onClick={() => toggleShape("arches")}
           >
             <GalleryShapeIcon shape="arches" />
@@ -954,6 +1121,7 @@ export function ControlsPanel({
             aria-label="Quads"
             aria-pressed={Boolean(shapes.quads)}
             className={shapeBtnClass(Boolean(shapes.quads), "quads")}
+            data-shape-paint="quads"
             onClick={() => toggleShape("quads")}
           >
             <GalleryShapeIcon shape="quads" />
@@ -963,6 +1131,7 @@ export function ControlsPanel({
             aria-label="Blossoms"
             aria-pressed={Boolean(shapes.blossom)}
             className={shapeBtnClass(Boolean(shapes.blossom), "blossom")}
+            data-shape-paint="blossom"
             onClick={() => toggleShape("blossom")}
           >
             <GalleryShapeIcon shape="blossom" />
@@ -972,6 +1141,7 @@ export function ControlsPanel({
             aria-label="Dots"
             aria-pressed={Boolean(shapes.dots)}
             className={shapeBtnClass(Boolean(shapes.dots), "dots")}
+            data-shape-paint="dots"
             onClick={() => toggleShape("dots")}
           >
             <GalleryShapeIcon shape="dots" />
@@ -981,6 +1151,7 @@ export function ControlsPanel({
             aria-label="Checks"
             aria-pressed={Boolean(shapes.checks)}
             className={shapeBtnClass(Boolean(shapes.checks), "checks")}
+            data-shape-paint="checks"
             onClick={() => toggleShape("checks")}
           >
             <GalleryShapeIcon shape="checks" />
@@ -992,6 +1163,7 @@ export function ControlsPanel({
             aria-label="Spots"
             aria-pressed={Boolean(shapes.spots)}
             className={shapeBtnClass(Boolean(shapes.spots), "spots")}
+            data-shape-paint="spots"
             onClick={() => toggleShape("spots")}
           >
             <GalleryShapeIcon shape="spots" />
@@ -1001,6 +1173,7 @@ export function ControlsPanel({
             aria-label="Arcs"
             aria-pressed={Boolean(shapes.arcs)}
             className={shapeBtnClass(Boolean(shapes.arcs), "arcs")}
+            data-shape-paint="arcs"
             onClick={() => toggleShape("arcs")}
           >
             <GalleryShapeIcon shape="arcs" />
@@ -1010,6 +1183,7 @@ export function ControlsPanel({
             aria-label="Moons"
             aria-pressed={Boolean(shapes.moons)}
             className={shapeBtnClass(Boolean(shapes.moons), "moons")}
+            data-shape-paint="moons"
             onClick={() => toggleShape("moons")}
           >
             <GalleryShapeIcon shape="moons" />
@@ -1019,6 +1193,7 @@ export function ControlsPanel({
             aria-label="Scallops"
             aria-pressed={Boolean(shapes.scallops)}
             className={shapeBtnClass(Boolean(shapes.scallops), "scallops")}
+            data-shape-paint="scallops"
             onClick={() => toggleShape("scallops")}
           >
             <GalleryShapeIcon shape="scallops" />
@@ -1030,6 +1205,7 @@ export function ControlsPanel({
             aria-label="Wedges"
             aria-pressed={Boolean(shapes.wedges)}
             className={shapeBtnClass(Boolean(shapes.wedges), "wedges")}
+            data-shape-paint="wedges"
             onClick={() => toggleShape("wedges")}
           >
             <GalleryShapeIcon shape="wedges" />
@@ -1039,6 +1215,7 @@ export function ControlsPanel({
             aria-label="Steps"
             aria-pressed={Boolean(shapes.steps)}
             className={shapeBtnClass(Boolean(shapes.steps), "steps")}
+            data-shape-paint="steps"
             onClick={() => toggleShape("steps")}
           >
             <GalleryShapeIcon shape="steps" />
@@ -1048,6 +1225,7 @@ export function ControlsPanel({
             aria-label="Chevrons"
             aria-pressed={Boolean(shapes.chevrons)}
             className={shapeBtnClass(Boolean(shapes.chevrons), "chevrons")}
+            data-shape-paint="chevrons"
             onClick={() => toggleShape("chevrons")}
           >
             <GalleryShapeIcon shape="chevrons" />
@@ -1057,6 +1235,7 @@ export function ControlsPanel({
             aria-label="Tiles"
             aria-pressed={Boolean(shapes.tiles)}
             className={shapeBtnClass(Boolean(shapes.tiles), "tiles")}
+            data-shape-paint="tiles"
             onClick={() => toggleShape("tiles")}
           >
             <GalleryShapeIcon shape="tiles" />
@@ -1095,6 +1274,7 @@ export function ControlsPanel({
                     }${slotClass ? ` ${slotClass}` : ""}${
                       slot.id === pulsingCustomSlotId ? " is-pulse" : ""
                     }`}
+                    data-shape-paint={`custom:${slot.id}`}
                     onClick={() => handleCustomSlotClick(slot.id)}
                   >
                     {preparedUrl ? (
@@ -1137,6 +1317,7 @@ export function ControlsPanel({
             })}
           </div>
         ) : null}
+        </div>
         <SliderRow
           label="Shape Mix"
           hint="0 = blocks only · 100 = mix all enabled"
