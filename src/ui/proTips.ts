@@ -6,12 +6,12 @@ export type ProTip = {
 };
 
 /** Bump when tip copy/order changes so seen tips reset for everyone. */
-const CATALOG_VERSION = 14;
+const CATALOG_VERSION = 15;
 
 export const PRO_TIPS: readonly ProTip[] = [
   {
     id: "randomize-qw",
-    body: "Q randomizes the layout. W randomizes the layout and every slider.",
+    body: "Q randomizes the layout.\nW randomizes the layout and every slider.",
     keys: ["Q", "W"],
   },
   {
