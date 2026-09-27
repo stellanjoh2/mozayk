@@ -379,13 +379,22 @@ export function ControlsPanel({
   } | null>(null);
 
   const shapePaintIdFromPoint = (clientX: number, clientY: number) => {
-    const stack = document.elementsFromPoint(clientX, clientY);
-    for (const node of stack) {
-      if (!(node instanceof Element)) continue;
-      if (node.closest(".ui-icon-btn--remove")) return null;
-      const host = node.closest<HTMLElement>("[data-shape-paint]");
-      if (!host || !shapeLibraryRef.current?.contains(host)) continue;
-      return host.dataset.shapePaint ?? null;
+    const root = shapeLibraryRef.current;
+    if (!root) return null;
+    // Prefer geometry over elementFromPoint — more reliable under pointer capture.
+    const top = document.elementFromPoint(clientX, clientY);
+    if (top?.closest?.(".ui-icon-btn--remove")) return null;
+    const targets = root.querySelectorAll<HTMLElement>("[data-shape-paint]");
+    for (const host of targets) {
+      const rect = host.getBoundingClientRect();
+      if (
+        clientX >= rect.left &&
+        clientX < rect.right &&
+        clientY >= rect.top &&
+        clientY < rect.bottom
+      ) {
+        return host.dataset.shapePaint ?? null;
+      }
     }
     return null;
   };
@@ -475,6 +484,10 @@ export function ControlsPanel({
   };
 
   const endShapePaint = (event?: ReactPointerEvent<HTMLDivElement>) => {
+    if (event && shapePaintRef.current) {
+      const paintId = shapePaintIdFromPoint(event.clientX, event.clientY);
+      if (paintId) applyShapePaint(paintId);
+    }
     if (event && shapeLibraryRef.current?.hasPointerCapture(event.pointerId)) {
       shapeLibraryRef.current.releasePointerCapture(event.pointerId);
     }
