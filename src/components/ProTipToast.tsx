@@ -16,7 +16,7 @@ import {
 } from "../ui/proTips";
 import { TypewriterReveal } from "./TypewriterReveal";
 
-const INITIAL_DELAY_MS = 1_500;
+const INITIAL_DELAY_MS = 5_000;
 const HOLD_MS = 10_000;
 const GAP_MS = 12_000;
 const SLIDE_MS = 500;

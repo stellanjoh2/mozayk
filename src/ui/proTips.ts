@@ -58,6 +58,26 @@ function ensureCatalogVersion(): void {
 
 ensureCatalogVersion();
 
+/** After the full catalog has been shown, a new page load restarts the sequence. */
+function resetSeenIfCatalogExhausted(): void {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return;
+    const seen = new Set(
+      parsed.filter((id): id is string => typeof id === "string"),
+    );
+    if (PRO_TIPS.every((tip) => seen.has(tip.id))) {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  } catch {
+    /* ignore quota / private mode */
+  }
+}
+
+resetSeenIfCatalogExhausted();
+
 export function getProTipsEnabled(): boolean {
   ensureCatalogVersion();
   return tipsEnabled;
