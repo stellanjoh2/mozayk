@@ -76,14 +76,14 @@ function run(): void {
   assert(pool.includes("moons"), "enabled moons join the mix");
   assert(pool.includes("steps"), "enabled steps join the mix");
   assert(pool.includes("chevrons"), "enabled chevrons join the mix");
-  assert(pool.includes("gates"), "enabled gates join the mix");
   assert(pool.includes("waves"), "enabled waves join the mix");
   assert(pool.includes("arches"), "enabled arches join the mix");
-  assert(pool.includes("tiles"), "enabled tiles join the mix");
-  assert(pool.includes("scallops"), "enabled scallops join the mix");
   assert(pool.includes("rays"), "enabled rays join the mix");
   assert(pool.includes("targets"), "enabled targets join the mix");
   assert(pool.includes("pluses"), "enabled pluses join the mix");
+  assert(!pool.includes("gates"), "gates are no longer in the mix");
+  assert(!pool.includes("scallops"), "scallops are no longer in the mix");
+  assert(!pool.includes("tiles"), "tiles are no longer in the mix");
   assert(pool.includes("block"), "blocks stay in the pool");
   assert(!pool.includes("cross"), "cross is no longer in the mix");
 

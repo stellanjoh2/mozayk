@@ -12,9 +12,9 @@ export const OPTIONAL_SHAPES: OptionalShape[] = [
   "triangle",
   // Library rows after the top four basics — keep in visual-cluster order.
   "ex",
+  "rays",
   "pluses",
   "clover",
-  "waves",
   "star",
   "bloom",
   "flower",
@@ -30,10 +30,7 @@ export const OPTIONAL_SHAPES: OptionalShape[] = [
   "wedges",
   "steps",
   "chevrons",
-  "rays",
-  "gates",
-  "scallops",
-  "tiles",
+  "waves",
 ];
 
 export function anyOptionalShapeEnabled(

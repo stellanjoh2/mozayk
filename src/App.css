@@ -1646,6 +1646,27 @@ html.normal-hover
   margin-top: calc(8px - var(--settings-row-gap));
 }
 
+/* Drag-paint multi-select across shape icons. */
+.shape-library {
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.shape-library.is-painting {
+  touch-action: none;
+  cursor: var(--cursor-pointer);
+}
+
+.shape-library.is-painting .button-row--shape-icons > button,
+.shape-library.is-painting
+  .button-row--shape-icons
+  .shape-slot-wrap
+  > .shape-slot--custom {
+  cursor: var(--cursor-pointer);
+  /* Avoid native button drag / image ghost interrupting the paint stroke. */
+  -webkit-user-drag: none;
+}
+
 .button-row--shape-icons > button,
 .button-row--shape-icons .shape-slot-wrap > .shape-slot--custom {
   aspect-ratio: 1;
