@@ -376,42 +376,31 @@ export function ControlsPanel({
     visited: Set<string>;
     draftShapes: ShapePalette;
     draftCustoms: CustomShapeSlot[];
-    lastX: number;
-    lastY: number;
   } | null>(null);
+  const shapePaintListenersRef = useRef<{
+    up: (event: PointerEvent) => void;
+    cancel: (event: PointerEvent) => void;
+  } | null>(null);
+
+  const shapePaintIdFromEventTarget = (target: EventTarget | null) => {
+    if (!(target instanceof Element)) return null;
+    if (target.closest(".ui-icon-btn--remove")) return null;
+    const host = target.closest<HTMLElement>("[data-shape-paint]");
+    if (!host || !shapeLibraryRef.current?.contains(host)) return null;
+    return host.dataset.shapePaint ?? null;
+  };
 
   const shapePaintIdFromPoint = (clientX: number, clientY: number) => {
     const root = shapeLibraryRef.current;
     if (!root) return null;
-    // Prefer geometry over elementFromPoint — more reliable under pointer capture.
-    const top = document.elementFromPoint(clientX, clientY);
-    if (top?.closest?.(".ui-icon-btn--remove")) return null;
-    const targets = root.querySelectorAll<HTMLElement>("[data-shape-paint]");
-    for (const host of targets) {
-      const rect = host.getBoundingClientRect();
-      if (
-        clientX >= rect.left &&
-        clientX < rect.right &&
-        clientY >= rect.top &&
-        clientY < rect.bottom
-      ) {
-        return host.dataset.shapePaint ?? null;
-      }
+    // elementsFromPoint matches the pointer's coordinate space (incl. CSS zoom).
+    for (const node of document.elementsFromPoint(clientX, clientY)) {
+      if (!(node instanceof Element)) continue;
+      if (node.closest(".ui-icon-btn--remove")) return null;
+      const host = node.closest<HTMLElement>("[data-shape-paint]");
+      if (host && root.contains(host)) return host.dataset.shapePaint ?? null;
     }
     return null;
-  };
-
-  const paintShapeStroke = (fromX: number, fromY: number, toX: number, toY: number) => {
-    const dx = toX - fromX;
-    const dy = toY - fromY;
-    const dist = Math.hypot(dx, dy);
-    // Sample along the stroke so fast drags don't skip icons between events.
-    const steps = Math.max(1, Math.ceil(dist / 6));
-    for (let i = 0; i <= steps; i++) {
-      const t = i / steps;
-      const paintId = shapePaintIdFromPoint(fromX + dx * t, fromY + dy * t);
-      if (paintId) applyShapePaint(paintId);
-    }
   };
 
   const applyShapePaint = (paintId: string) => {
@@ -467,11 +456,21 @@ export function ControlsPanel({
     onSettingsChange({ shapes: nextShapes });
   };
 
-  const beginShapePaint = (
-    paintId: string,
-    clientX: number,
-    clientY: number,
-  ): boolean => {
+  const detachShapePaintListeners = () => {
+    const listeners = shapePaintListenersRef.current;
+    if (!listeners) return;
+    window.removeEventListener("pointerup", listeners.up);
+    window.removeEventListener("pointercancel", listeners.cancel);
+    shapePaintListenersRef.current = null;
+  };
+
+  const endShapePaint = () => {
+    detachShapePaintListeners();
+    shapeLibraryRef.current?.classList.remove("is-painting");
+    shapePaintRef.current = null;
+  };
+
+  const beginShapePaint = (paintId: string): boolean => {
     if (paintId.startsWith("custom:")) {
       const slotId = paintId.slice("custom:".length);
       const slot = customShapes.find((item) => item.id === slotId);
@@ -496,42 +495,43 @@ export function ControlsPanel({
       visited: new Set(),
       draftShapes: { ...shapes },
       draftCustoms: customShapes.map((slot) => ({ ...slot })),
-      lastX: clientX,
-      lastY: clientY,
     };
     shapeLibraryRef.current?.classList.add("is-painting");
     applyShapePaint(paintId);
-    return true;
-  };
 
-  const endShapePaint = (event?: ReactPointerEvent<HTMLDivElement>) => {
-    const session = shapePaintRef.current;
-    if (event && session) {
-      paintShapeStroke(session.lastX, session.lastY, event.clientX, event.clientY);
-    }
-    if (event && shapeLibraryRef.current?.hasPointerCapture(event.pointerId)) {
-      shapeLibraryRef.current.releasePointerCapture(event.pointerId);
-    }
-    shapeLibraryRef.current?.classList.remove("is-painting");
-    shapePaintRef.current = null;
+    // No setPointerCapture — that blocks pointerover on sibling icons under CSS zoom.
+    const onUp = () => endShapePaint();
+    shapePaintListenersRef.current = { up: onUp, cancel: onUp };
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+    return true;
   };
 
   const onShapeLibraryPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) return;
-    if ((event.target as Element | null)?.closest?.(".ui-icon-btn--remove")) return;
-    const paintId = shapePaintIdFromPoint(event.clientX, event.clientY);
+    const paintId =
+      shapePaintIdFromEventTarget(event.target) ??
+      shapePaintIdFromPoint(event.clientX, event.clientY);
     if (!paintId) return;
-    if (!beginShapePaint(paintId, event.clientX, event.clientY)) return;
-    event.currentTarget.setPointerCapture(event.pointerId);
+    if (!beginShapePaint(paintId)) return;
+    // Keep the gesture from selecting text / scrolling the panel mid-drag.
+    event.preventDefault();
+  };
+
+  const onShapeLibraryPointerOver = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!shapePaintRef.current) return;
+    const paintId = shapePaintIdFromEventTarget(event.target);
+    if (paintId) applyShapePaint(paintId);
   };
 
   const onShapeLibraryPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
-    const session = shapePaintRef.current;
-    if (!session) return;
-    paintShapeStroke(session.lastX, session.lastY, event.clientX, event.clientY);
-    session.lastX = event.clientX;
-    session.lastY = event.clientY;
+    if (!shapePaintRef.current) return;
+    // Backup when the pointer skips between icons without an over event.
+    const paintId = shapePaintIdFromPoint(event.clientX, event.clientY);
+    if (paintId) applyShapePaint(paintId);
   };
+
+  useLayoutEffect(() => () => endShapePaint(), []);
 
   const toggleShape = (key: keyof typeof shapes) => {
     if (shapePaintSuppressClickRef.current) {
@@ -1006,9 +1006,8 @@ export function ControlsPanel({
           ref={shapeLibraryRef}
           className="shape-library"
           onPointerDown={onShapeLibraryPointerDown}
+          onPointerOver={onShapeLibraryPointerOver}
           onPointerMove={onShapeLibraryPointerMove}
-          onPointerUp={endShapePaint}
-          onPointerCancel={endShapePaint}
         >
         <div className="button-row button-row--4 button-row--shape-icons">
           <button
