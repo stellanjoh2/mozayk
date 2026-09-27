@@ -45,9 +45,56 @@
         document.documentElement.setAttribute("data-chrome", c);
       } catch (e) {}
     </script>
+    <!-- Inline so first paint is black before React/CSS modules load. -->
+    <style>
+      html,
+      body {
+        background: #000;
+      }
+      #entry-veil {
+        position: fixed;
+        inset: 0;
+        z-index: 10000;
+        background: #000;
+        pointer-events: none;
+        animation: entry-veil-fade 1s ease-out forwards;
+      }
+      @keyframes entry-veil-fade {
+        from {
+          opacity: 1;
+        }
+        to {
+          opacity: 0;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #entry-veil {
+          animation: none;
+          opacity: 0;
+        }
+      }
+    </style>
   </head>
   <body>
+    <div id="entry-veil" aria-hidden="true"></div>
     <div id="root"></div>
+    <script>
+      (function () {
+        var veil = document.getElementById("entry-veil");
+        if (!veil) return;
+        var remove = function () {
+          veil.remove();
+        };
+        if (
+          window.matchMedia &&
+          window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ) {
+          remove();
+          return;
+        }
+        veil.addEventListener("animationend", remove, { once: true });
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
