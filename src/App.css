@@ -1456,22 +1456,14 @@ a.panel-btn {
   padding: 24px;
   background: rgba(0, 0, 0, 0);
   pointer-events: none;
-  isolation: isolate;
   transition: background 0.2s var(--ui-ease);
 }
 
 .modal-backdrop.is-open,
 .reset-canvas-backdrop.is-open {
+  /* Tint + blur on this node — same pattern as .about-overlay.is-open. */
   background: rgba(0, 0, 0, 0.48);
   pointer-events: auto;
-}
-
-.modal-backdrop.is-open::before,
-.reset-canvas-backdrop.is-open::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
 }
@@ -1494,41 +1486,12 @@ a.panel-btn {
   zoom: calc(var(--ui-compact-zoom) * 1.2);
 }
 
-@keyframes modal-blink-reveal {
-  0% {
-    opacity: 0;
-    transform: translateY(16px) scale(0.975);
-    background-color: #fff;
-  }
-  16% {
-    opacity: 1;
-    transform: translateY(9px) scale(0.985);
-    background-color: color-mix(in srgb, #fff 45%, var(--panel));
-  }
-  34% {
-    opacity: 0.42;
-    transform: translateY(11px) scale(0.982);
-    background-color: color-mix(in srgb, #fff 72%, var(--panel));
-  }
-  52% {
-    opacity: 1;
-    transform: translateY(5px) scale(0.992);
-    background-color: color-mix(in srgb, #fff 25%, var(--panel));
-  }
-  100% {
-    opacity: 1;
-    transform: none;
-    background-color: var(--panel);
-  }
-}
-
 .modal-backdrop.is-open .modal-dialog,
 .modal-backdrop.is-open .reset-canvas-dialog,
 .reset-canvas-backdrop.is-open .reset-canvas-dialog,
 .reset-canvas-backdrop.is-open .modal-dialog {
   opacity: 1;
   transform: none;
-  animation: modal-blink-reveal 300ms steps(5, end) both;
 }
 
 .reset-canvas-dialog__title {
@@ -1769,7 +1732,6 @@ a.panel-btn {
   .modal-dialog,
   .reset-canvas-dialog {
     transform: none;
-    animation: none;
   }
 }
 
@@ -2441,10 +2403,16 @@ html.normal-hover .ui-select__option.is-active:not(.is-disabled)::before {
   width: 100%;
   border: none;
   background: none;
-  padding: 0;
+  /* Grow the hit target into the section padding without shifting the label. */
+  padding: 14px 0;
+  margin-top: -14px;
   font: inherit;
   text-align: left;
   cursor: var(--cursor-default);
+}
+
+.headline-toggle.is-off.headline-disclosure {
+  margin-bottom: -14px;
 }
 
 .headline-disclosure:focus {
