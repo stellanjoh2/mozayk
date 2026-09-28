@@ -8,12 +8,14 @@ import {
 import { createPortal } from "react-dom";
 import {
   getProTipsEnabled,
+  getProTipsVoiceAssist,
   markProTipSeen,
   nextUnseenProTip,
   PRO_TIPS_ENABLED_EVENT,
   setProTipsEnabled,
   type ProTip,
 } from "../ui/proTips";
+import { playUiSoundOnNextGesture } from "../ui/sounds";
 import { TypewriterReveal } from "./TypewriterReveal";
 
 const INITIAL_DELAY_MS = 5_000;
@@ -248,14 +250,21 @@ export function ProTipToast({ enabled = true }: ProTipToastProps) {
       setTextFading(false);
       setTip(current);
       setCardOpen(false);
+      let cancelVoice: (() => void) | undefined;
 
       try {
         await waitTwoFrames(signal);
         setCardOpen(true);
+        // Voice assist and typewriter clicks are either/or.
+        const voiceAssist = getProTipsVoiceAssist();
+        if (voiceAssist && current.sound) {
+          cancelVoice = playUiSoundOnNextGesture(current.sound);
+        }
         await sleep(SLIDE_MS, signal);
 
-        await awaitLine("title", true, signal);
-        await awaitLine("body", true, signal);
+        const typeSound = !voiceAssist;
+        await awaitLine("title", typeSound, signal);
+        await awaitLine("body", typeSound, signal);
         await awaitLine("optOut", false, signal);
 
         await sleep(HOLD_MS, signal);
@@ -274,6 +283,7 @@ export function ProTipToast({ enabled = true }: ProTipToastProps) {
           setTip(null);
         }
       } finally {
+        cancelVoice?.();
         loopSignal.removeEventListener("abort", onLoopAbort);
         if (tipAbortRef.current === tipAc) tipAbortRef.current = null;
       }

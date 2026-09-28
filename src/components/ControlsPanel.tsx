@@ -130,8 +130,11 @@ import {
 } from "../ui/hover";
 import {
   getProTipsEnabled,
+  getProTipsVoiceAssist,
   PRO_TIPS_ENABLED_EVENT,
+  PRO_TIPS_VOICE_EVENT,
   setProTipsEnabled,
+  setProTipsVoiceAssist,
 } from "../ui/proTips";
 import {
   getShortcutLegendEnabled,
@@ -344,10 +347,16 @@ export function ControlsPanel({
     getShortcutLegendEnabled,
   );
   const [proTipsOn, setProTipsOn] = useState(getProTipsEnabled);
+  const [proTipsVoiceOn, setProTipsVoiceOn] = useState(getProTipsVoiceAssist);
   useEffect(() => {
     const sync = () => setProTipsOn(getProTipsEnabled());
     window.addEventListener(PRO_TIPS_ENABLED_EVENT, sync);
     return () => window.removeEventListener(PRO_TIPS_ENABLED_EVENT, sync);
+  }, []);
+  useEffect(() => {
+    const sync = () => setProTipsVoiceOn(getProTipsVoiceAssist());
+    window.addEventListener(PRO_TIPS_VOICE_EVENT, sync);
+    return () => window.removeEventListener(PRO_TIPS_VOICE_EVENT, sync);
   }, []);
   const [chromeAppearance, setChromeAppearanceOn] = useState(getChromeAppearance);
   const [chromeColor, setChromeColorOn] = useState(getChromeColor);
@@ -2494,6 +2503,16 @@ export function ControlsPanel({
           onChange={(volume) => {
             setUiSoundsVolume(volume);
             setSoundVolume(volume);
+          }}
+        />
+        <ToggleRow
+          label="Voice Assist"
+          hint="Speak tips · no typewriter clicks"
+          checked={proTipsVoiceOn}
+          disabled={!proTipsOn}
+          onChange={(next) => {
+            setProTipsVoiceAssist(next);
+            setProTipsVoiceOn(next);
           }}
         />
         <ToggleRow

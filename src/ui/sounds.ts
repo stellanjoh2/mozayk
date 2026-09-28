@@ -7,8 +7,13 @@ const FILES = {
   sliderLeft: "sounds/uisound-slider.wav",
   hover: "sounds/uisound-hover.wav",
   drop: "sounds/uisound-drop.wav",
-  /** Soft pro-tip toast — same clip as hover, quieter. */
-  tip: "sounds/uisound-hover.wav",
+  tip1: "sounds/protip-01.wav",
+  tip2: "sounds/protip-02.wav",
+  tip3: "sounds/protip-03.wav",
+  tip4: "sounds/protip-04.wav",
+  tip5: "sounds/protip-05.wav",
+  tip6: "sounds/protip-06.wav",
+  tip7: "sounds/protip-07.wav",
   // hoverBlink: "sounds/uisound-hoverblink.wav",
 } as const;
 
@@ -29,7 +34,13 @@ const SOUND_GAIN: Partial<Record<UiSound, number>> = {
   sliderLeft: 0.7532,
   hover: 0.9189 * 10 ** (5 / 20),
   drop: 1.8205 * 10 ** (-5 / 20),
-  tip: 0.9189 * 10 ** (-6 / 20),
+  tip1: 1,
+  tip2: 1,
+  tip3: 1,
+  tip4: 1,
+  tip5: 1,
+  tip6: 1,
+  tip7: 1,
   // hoverBlink: 5.8449 * 10 ** (-20 / 20),
 };
 
@@ -272,6 +283,53 @@ export function playUiSound(name: UiSound, unthrottled = false): void {
     }
     startSound(name, buf);
   });
+}
+
+/** Await decode + context resume — better for longer spoken tips. */
+export async function playUiSoundAsync(name: UiSound): Promise<boolean> {
+  if (!prefs.enabled || prefs.volume <= 0) return false;
+  const ctx = unlockAudio();
+  if (!ctx) return false;
+  try {
+    if (ctx.state !== "running") await ctx.resume();
+  } catch {
+    return false;
+  }
+  const buf = await bufferFor(name);
+  if (!buf || !prefs.enabled || prefs.volume <= 0) return false;
+  try {
+    if (ctx.state !== "running") await ctx.resume();
+  } catch {
+    return false;
+  }
+  if (ctx.state !== "running") return false;
+  startSound(name, buf);
+  return true;
+}
+
+/** If autoplay is blocked, play once on the next pointer/key gesture. */
+export function playUiSoundOnNextGesture(name: UiSound): () => void {
+  let cleaned = false;
+  const teardown = () => {
+    if (cleaned) return;
+    cleaned = true;
+    document.removeEventListener("pointerdown", onGesture, true);
+    document.removeEventListener("keydown", onGesture, true);
+  };
+  const onGesture = () => {
+    void playUiSoundAsync(name).then((ok) => {
+      if (ok) teardown();
+    });
+  };
+  void playUiSoundAsync(name).then((ok) => {
+    if (ok) {
+      teardown();
+      return;
+    }
+    document.addEventListener("pointerdown", onGesture, true);
+    document.addEventListener("keydown", onGesture, true);
+  });
+  return teardown;
 }
 
 function shouldPlayHover(el: HTMLElement): boolean {

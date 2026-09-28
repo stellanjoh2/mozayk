@@ -3,50 +3,61 @@ export type ProTip = {
   body: string;
   /** Keyboard keys (or other tokens) to accent in the body. */
   keys?: readonly string[];
+  /** Spoken cue from `ui/sounds` (tip1…tip7). */
+  sound?: "tip1" | "tip2" | "tip3" | "tip4" | "tip5" | "tip6" | "tip7";
 };
 
 /** Bump when tip copy/order changes so seen tips reset for everyone. */
-const CATALOG_VERSION = 15;
+const CATALOG_VERSION = 24;
 
 export const PRO_TIPS: readonly ProTip[] = [
   {
     id: "randomize-qw",
-    body: "Q randomizes the layout.\nW randomizes the layout and every slider.",
+    body: "Q randomizes the layout.\nW randomizes layout, fill, size, and randomness.",
     keys: ["Q", "W"],
+    sound: "tip1",
   },
   {
     id: "randomize-colours-e",
     body: "E randomizes the current colours only.",
     keys: ["E"],
+    sound: "tip2",
   },
   {
     id: "pause-colour",
     body: "Hit the pause icon on a colour swatch to keep it while you randomize the rest.",
+    sound: "tip3",
   },
   {
     id: "grid-density",
     body: "↑ and ↓ change the grid density.",
     keys: ["↑", "↓"],
+    sound: "tip4",
   },
   {
     id: "toggle-original",
-    body: "O toggles the original photo so you can compare while you work.",
+    body: "O toggles the imported image so you can compare the two while you work.",
     keys: ["O"],
+    sound: "tip5",
   },
   {
     id: "shape-paint",
     body: "In the Create tab, drag across the shape icons to toggle a whole row at once.",
+    sound: "tip6",
   },
   {
     id: "drag-pieces",
-    body: "Drag any piece on the canvas to rearrange the mosaic — you can only move them to free slots.",
+    body: "Drag any piece on the canvas when you want to place it yourself. Keep in mind, you can only move them to free slots.",
+    sound: "tip7",
   },
 ];
 
 const STORAGE_KEY = "mozayk-pro-tips-seen";
 const VERSION_KEY = "mozayk-pro-tips-version";
 const ENABLED_KEY = "mozayk-pro-tips-enabled";
+const VOICE_KEY = "mozayk-pro-tips-voice";
 export const PRO_TIPS_ENABLED_EVENT = "mozayk-pro-tips-enabled";
+export const PRO_TIPS_VOICE_EVENT = "mozayk-pro-tips-voice";
 
 function loadEnabled(): boolean {
   try {
@@ -58,7 +69,18 @@ function loadEnabled(): boolean {
   }
 }
 
+function loadVoiceAssist(): boolean {
+  try {
+    const raw = localStorage.getItem(VOICE_KEY);
+    if (raw === null) return false;
+    return raw !== "0";
+  } catch {
+    return false;
+  }
+}
+
 let tipsEnabled = loadEnabled();
+let voiceAssist = loadVoiceAssist();
 
 function ensureCatalogVersion(): void {
   try {
@@ -111,6 +133,21 @@ export function setProTipsEnabled(next: boolean): void {
     /* ignore quota / private mode */
   }
   window.dispatchEvent(new Event(PRO_TIPS_ENABLED_EVENT));
+}
+
+/** Spoken tips instead of typewriter clicks. */
+export function getProTipsVoiceAssist(): boolean {
+  return voiceAssist;
+}
+
+export function setProTipsVoiceAssist(next: boolean): void {
+  voiceAssist = next;
+  try {
+    localStorage.setItem(VOICE_KEY, next ? "1" : "0");
+  } catch {
+    /* ignore quota / private mode */
+  }
+  window.dispatchEvent(new Event(PRO_TIPS_VOICE_EVENT));
 }
 
 function loadSeen(): Set<string> {
