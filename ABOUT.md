@@ -94,14 +94,6 @@ Linked from the app chrome:
 
 ---
 
-## Usage totals
-
-The live site keeps two anonymous running counts: **site visits** (page loads) and **visuals exported**. These are totals only — Mozayk does not identify people, does not use cookies or accounts for this, and never receives the files you open or export.
-
-The counts are shown at [mozayk.design/stats](https://mozayk.design/stats/). That page is not linked from the app chrome. Environment variables for the counters are listed in [stats.env.example](./stats.env.example).
-
----
-
 ## How it works
 
 Mozayk is a single-page React app. The mosaic is rendered on HTML Canvas in real time; exports re-render at the chosen resolution offline in the browser.

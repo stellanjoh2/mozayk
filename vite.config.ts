@@ -19,7 +19,6 @@ export default defineConfig({
         main: resolve(root, "index.html"),
         logo: resolve(root, "logo.html"),
         gallery: resolve(root, "gallery.html"),
-        stats: resolve(root, "stats/index.html"),
         notFound: resolve(root, "404.html"),
       },
     },
