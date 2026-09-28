@@ -20,13 +20,14 @@ function uiZoom(): number {
 type FrameContextMenuProps = {
   x: number;
   y: number;
+  selectionCount: number;
   canPaste: boolean;
-  canApplyStyleToAll: boolean;
+  canApplyStyle: boolean;
   canDuplicate: boolean;
   canDelete: boolean;
   onCopyStyle: () => void;
   onPasteStyle: () => void;
-  onApplyStyleToAll: () => void;
+  onApplyStyle: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
   onClose: () => void;
@@ -35,13 +36,14 @@ type FrameContextMenuProps = {
 export function FrameContextMenu({
   x,
   y,
+  selectionCount,
   canPaste,
-  canApplyStyleToAll,
+  canApplyStyle,
   canDuplicate,
   canDelete,
   onCopyStyle,
   onPasteStyle,
-  onApplyStyleToAll,
+  onApplyStyle,
   onDuplicate,
   onDelete,
   onClose,
@@ -53,6 +55,7 @@ export function FrameContextMenu({
   const closeMenuRef = useRef<(after?: () => void) => void>(() => {
     onCloseRef.current();
   });
+  const multi = selectionCount > 1;
 
   const { contextSafe } = useGSAP(
     () => {
@@ -193,16 +196,16 @@ export function FrameContextMenu({
         disabled={!canPaste}
         onClick={() => runThenClose(onPasteStyle)}
       >
-        Paste Style
+        {multi ? "Paste Style to Selected" : "Paste Style"}
       </button>
       <button
         type="button"
         role="menuitem"
         className="frame-context-menu__item"
-        disabled={!canApplyStyleToAll}
-        onClick={() => runThenClose(onApplyStyleToAll)}
+        disabled={!canApplyStyle}
+        onClick={() => runThenClose(onApplyStyle)}
       >
-        Apply Style to All Frames
+        {multi ? "Apply Style to Selected" : "Apply Style to All Frames"}
       </button>
       <div className="frame-context-menu__rule" role="separator" />
       <button
@@ -212,7 +215,7 @@ export function FrameContextMenu({
         disabled={!canDuplicate}
         onClick={() => runThenClose(onDuplicate)}
       >
-        Duplicate Frame
+        {multi ? "Duplicate Frames" : "Duplicate Frame"}
       </button>
       <button
         type="button"
@@ -221,7 +224,7 @@ export function FrameContextMenu({
         disabled={!canDelete}
         onClick={() => runThenClose(onDelete)}
       >
-        Delete Frame
+        {multi ? "Delete Frames" : "Delete Frame"}
       </button>
     </div>,
     document.body,

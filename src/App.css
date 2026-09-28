@@ -328,7 +328,7 @@ body {
   .button-row button,
   .timeline__controls > button,
   .frame-context-menu__item,
-  .app-toast,
+  .app-toast__badge,
   .import-error-dialog__message,
   .control-row .ui-select__trigger,
   .ui-select__option,
@@ -418,7 +418,7 @@ body {
   .button-row button,
   .timeline__controls > button,
   .frame-context-menu__item,
-  .app-toast,
+  .app-toast__badge,
   .import-error-dialog__message,
   .control-row .ui-select__trigger,
   .ui-select__option,
@@ -1280,11 +1280,28 @@ a.panel-btn {
 }
 
 .app-toast {
+  /* Portaled to body. Top-centered on the canvas; slide with top (not
+     transform) so motion matches action-notice. */
   position: fixed;
   z-index: 40;
-  left: 50%;
-  bottom: 24px;
-  transform: translateX(-50%);
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  top: calc(var(--app-toast-top) - var(--app-toast-travel, 80px));
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  pointer-events: none;
+  transition: top 0.45s ease;
+  zoom: var(--ui-compact-zoom);
+}
+
+.app-toast.is-visible {
+  top: var(--app-toast-top);
+}
+
+.app-toast__badge {
   padding: 10px 16px;
   border-radius: 6px;
   font-size: 15px;
@@ -1293,7 +1310,13 @@ a.panel-btn {
   border: none;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
   pointer-events: none;
-  zoom: var(--ui-compact-zoom);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-toast,
+  .app-toast.is-visible {
+    transition: none;
+  }
 }
 
 .action-notice {
@@ -1779,6 +1802,11 @@ a.panel-btn {
 .timeline__controls > button:disabled {
   opacity: 0.35;
   cursor: var(--cursor-not-allowed);
+}
+
+/* Soft-disabled (still clickable — e.g. play with one frame shows a notice). */
+.timeline__controls > button.is-muted {
+  opacity: 0.35;
 }
 
 .button-row {
@@ -3549,7 +3577,7 @@ html.is-frost-paused .frame-context-menu {
   cursor: var(--cursor-grabbing);
 }
 
-.timeline-thumb:hover:not(.is-active) {
+.timeline-thumb:hover:not(.is-active):not(.is-selected) {
   transition: none;
   animation: hover-border-blink calc(4s / 30) linear infinite;
 }
@@ -3561,6 +3589,11 @@ html.is-frost-paused .frame-context-menu {
     opacity 0.2s cubic-bezier(0.22, 1, 0.36, 1),
     border-color 0s,
     transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.timeline-thumb.is-selected:not(.is-active) {
+  border-color: var(--chrome);
+  opacity: 0.78;
 }
 
 .timeline-strip-item.is-removing .timeline-thumb,

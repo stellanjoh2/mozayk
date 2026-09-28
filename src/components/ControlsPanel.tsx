@@ -263,6 +263,7 @@ type ControlsPanelProps = {
   onLoadProject: (file: File) => void;
   loadingProject?: boolean;
   onErrorMessage?: (message: string) => void;
+  onToast?: (message: string) => void;
 };
 
 type PanelTab = "create" | "export" | "settings";
@@ -336,6 +337,7 @@ export function ControlsPanel({
   onLoadProject,
   loadingProject = false,
   onErrorMessage,
+  onToast,
 }: ControlsPanelProps) {
   const { settings } = frame;
   const panelRef = useRef<HTMLElement>(null);
@@ -682,6 +684,7 @@ export function ControlsPanel({
     onSettingsChange({
       customShapes: customShapes.filter((item) => item.id !== slotId),
     });
+    onToast?.("Shape removed");
   };
 
   const handleCustomShapeFile = async (file: File | undefined) => {
@@ -715,6 +718,7 @@ export function ControlsPanel({
             : item,
         ),
       });
+      onToast?.("Shape uploaded");
     } catch {
       onErrorMessage?.(
         "This file could not be loaded. Try SVG, PNG, JPEG, WebP, or BMP.",

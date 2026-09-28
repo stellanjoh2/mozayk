@@ -393,6 +393,84 @@ export function applyLookToAllFrames(
   return frames.map((frame) => applyLookToFrame(frame, look, orientation));
 }
 
+/** Sorted unique indices that fall inside `length`. */
+export function normalizeFrameIndices(
+  indices: number[],
+  length: number,
+): number[] {
+  return [
+    ...new Set(
+      indices.filter(
+        (index) => Number.isInteger(index) && index >= 0 && index < length,
+      ),
+    ),
+  ].sort((a, b) => a - b);
+}
+
+/** Insert a duplicate after each selected index (end→start so earlier slots stay put). */
+export function duplicateFramesAt(
+  frames: Frame[],
+  indices: number[],
+  maxFrames: number,
+): { frames: Frame[]; activeIndex: number } {
+  const sorted = normalizeFrameIndices(indices, frames.length);
+  if (sorted.length === 0 || frames.length >= maxFrames) {
+    return { frames, activeIndex: Math.max(0, frames.length - 1) };
+  }
+
+  const next = [...frames];
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    if (next.length >= maxFrames) break;
+    const index = sorted[i]!;
+    next.splice(index + 1, 0, duplicateFrame(next[index]!));
+  }
+
+  return {
+    frames: next,
+    activeIndex: Math.min(sorted[0]! + 1, next.length - 1),
+  };
+}
+
+/** Drop selected frames, always leaving at least one. */
+export function removeFramesAt(
+  frames: Frame[],
+  indices: number[],
+): { frames: Frame[]; activeIndex: number } {
+  if (frames.length <= 1) return { frames, activeIndex: 0 };
+
+  const toRemove = new Set(normalizeFrameIndices(indices, frames.length));
+  if (toRemove.size === 0) {
+    return { frames, activeIndex: Math.max(0, frames.length - 1) };
+  }
+  // Never delete the whole timeline — keep the earliest frame.
+  if (toRemove.size >= frames.length) {
+    toRemove.delete(0);
+  }
+
+  const firstRemoved = Math.min(...toRemove);
+  const next = frames.filter((_, index) => !toRemove.has(index));
+  return {
+    frames: next,
+    activeIndex: Math.min(firstRemoved, next.length - 1),
+  };
+}
+
+/** Apply `sourceIndex` look onto each target index (picture/mosaic stay per frame). */
+export function applyLookToFrames(
+  frames: Frame[],
+  sourceIndex: number,
+  targetIndices: number[],
+  orientation: Orientation,
+): Frame[] {
+  const look = frames[sourceIndex];
+  if (!look) return frames;
+  const targets = new Set(normalizeFrameIndices(targetIndices, frames.length));
+  if (targets.size === 0) return frames;
+  return frames.map((frame, index) =>
+    targets.has(index) ? applyLookToFrame(frame, look, orientation) : frame,
+  );
+}
+
 export function applyPastedSettings(
   frame: Frame,
   pasted: SettingsClipboard,

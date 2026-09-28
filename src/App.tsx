@@ -12,6 +12,7 @@ import {
   type GifExportPreset,
 } from "./config";
 import { ActionNotice } from "./components/ActionNotice";
+import { AppToast } from "./components/AppToast";
 import { CanvasView, Timeline } from "./components/CanvasView";
 import { ProTipToast } from "./components/ProTipToast";
 import { ControlsPanel, MAX_FRAMES } from "./components/ControlsPanel";
@@ -41,6 +42,7 @@ import {
   applyImageImport,
   applyLookToAllFrames,
   applyLookToFrame,
+  applyLookToFrames,
   cloneFrameLook,
   applyPastedSettings,
   clampSettingsForOrientation,
@@ -51,8 +53,10 @@ import {
   activeIndexAfterReorder,
   createDefaultShapePalette,
   duplicateFrame,
+  duplicateFramesAt,
   regenerateFrameLayout,
   relayoutFrameToOrientation,
+  removeFramesAt,
   reorderFrames,
   randomizeFrameCurrentColors,
   randomizeFrameNewColors,
@@ -728,7 +732,10 @@ export default function App() {
   );
 
   const handleAddFrame = useCallback(() => {
-    if (framesRef.current.length >= MAX_FRAMES) return;
+    if (framesRef.current.length >= MAX_FRAMES) {
+      setToast(`Maximum ${MAX_FRAMES} frames`);
+      return;
+    }
     pushUndoCheckpoint();
     setFrames((prev) => {
       if (prev.length >= MAX_FRAMES) return prev;
@@ -740,31 +747,27 @@ export default function App() {
     dismissActionNotice();
   }, [pushUndoCheckpoint]);
 
-  const handleDuplicateCurrent = useCallback((index: number) => {
-    if (framesRef.current.length >= MAX_FRAMES) return;
+  const handleDuplicateCurrent = useCallback((indices: number[]) => {
+    if (framesRef.current.length >= MAX_FRAMES) {
+      setToast(`Maximum ${MAX_FRAMES} frames`);
+      return;
+    }
     pushUndoCheckpoint();
     setFrames((prev) => {
-      if (prev.length >= MAX_FRAMES) return prev;
-      const sourceIndex = Math.min(Math.max(0, index), prev.length - 1);
-      const source = prev[sourceIndex] ?? prev[0];
-      const copy = duplicateFrame(source);
-      const insertAt = sourceIndex + 1;
-      const next = [...prev.slice(0, insertAt), copy, ...prev.slice(insertAt)];
-      setActiveIndex(insertAt);
-      return next;
+      const result = duplicateFramesAt(prev, indices, MAX_FRAMES);
+      setActiveIndex(result.activeIndex);
+      return result.frames;
     });
     dismissActionNotice();
   }, [pushUndoCheckpoint]);
 
-  const handleRemoveFrame = useCallback((index: number) => {
+  const handleRemoveFrame = useCallback((indices: number[]) => {
     if (framesRef.current.length <= 1) return;
     pushUndoCheckpoint();
     setFrames((prev) => {
-      if (prev.length <= 1) return prev;
-      const removeIndex = Math.min(Math.max(0, index), prev.length - 1);
-      const next = prev.filter((_, frameIndex) => frameIndex !== removeIndex);
-      setActiveIndex(Math.min(removeIndex, next.length - 1));
-      return next;
+      const result = removeFramesAt(prev, indices);
+      setActiveIndex(result.activeIndex);
+      return result.frames;
     });
   }, [pushUndoCheckpoint]);
 
@@ -785,12 +788,6 @@ export default function App() {
     },
     [pushUndoCheckpoint, updateActiveFrame],
   );
-
-  useEffect(() => {
-    if (!toast) return;
-    const timer = window.setTimeout(() => setToast(null), 2200);
-    return () => window.clearTimeout(timer);
-  }, [toast]);
 
   const handleCopySettings = useCallback(async () => {
     await copySettings(
@@ -832,6 +829,27 @@ export default function App() {
     setToast("Look applied to all frames");
   }, [pushUndoCheckpoint]);
 
+  const handleApplyLookToFrames = useCallback(
+    (sourceIndex: number, targetIndices: number[]) => {
+      if (targetIndices.length === 0) return;
+      pushUndoCheckpoint();
+      setFrames((prev) =>
+        applyLookToFrames(
+          prev,
+          sourceIndex,
+          targetIndices,
+          orientationRef.current,
+        ),
+      );
+      setToast(
+        targetIndices.length > 1
+          ? "Look applied to selected frames"
+          : "Look applied",
+      );
+    },
+    [pushUndoCheckpoint],
+  );
+
   const handleCopyStyle = useCallback((index: number) => {
     const frame = framesRef.current[index];
     if (!frame) return;
@@ -841,22 +859,30 @@ export default function App() {
   }, []);
 
   const handlePasteStyle = useCallback(
-    (index: number) => {
+    (indices: number[]) => {
       const look = styleLookRef.current;
       if (!look) {
         setToast("Nothing to paste");
         return;
       }
+      const targets = [...new Set(indices)].filter((index) => index >= 0);
+      if (targets.length === 0) return;
       pushUndoCheckpoint();
       setFrames((prev) => {
-        const target = prev[index];
-        if (!target) return prev;
-        const next = [...prev];
-        next[index] = applyLookToFrame(target, look, orientationRef.current);
-        return next;
+        const targetSet = new Set(
+          targets.filter((index) => index < prev.length),
+        );
+        if (targetSet.size === 0) return prev;
+        return prev.map((frame, index) =>
+          targetSet.has(index)
+            ? applyLookToFrame(frame, look, orientationRef.current)
+            : frame,
+        );
       });
-      setActiveIndex(index);
-      setToast("Style pasted");
+      setActiveIndex(targets[0]!);
+      setToast(
+        targets.length > 1 ? "Style pasted to selected frames" : "Style pasted",
+      );
     },
     [pushUndoCheckpoint],
   );
@@ -1552,7 +1578,7 @@ export default function App() {
     >
       {isMobileGate ? <MobileGate onRandomizeAll={randomizeAll} /> : null}
       {toast && !isFullscreen && !isMobileGate ? (
-        <div className="app-toast">{toast}</div>
+        <AppToast message={toast} onDone={() => setToast(null)} />
       ) : null}
       <ActionNotice enabled={!isFullscreen && !isMobileGate} />
       <ProTipToast enabled={!isFullscreen && !isMobileGate} />
@@ -1614,6 +1640,7 @@ export default function App() {
         onHighQualityModeChange={setHighQualityMode}
         onSettingsChange={handleSettingsChange}
         onErrorMessage={setImportErrorMessage}
+        onToast={setToast}
         onRandomizeLayout={randomizeLayout}
         onRandomizeAll={randomizeAll}
         onApplyLookToAllFrames={() => handleApplyLookToAllFrames()}
@@ -1691,45 +1718,50 @@ export default function App() {
         onExportPresetChange={setExportPreset}
         onMp4PresetChange={setMp4Preset}
         onExportPngFrame={() =>
-          void runExport(() =>
-            exportCurrentFrame(
+          void runExport(async () => {
+            await exportCurrentFrame(
               activeFrame,
               orientation,
               exportPreset,
               activeIndex,
-            ),
-          )
+            );
+            setToast("Exported PNG");
+          })
         }
         onExportPngTransparent={() =>
-          void runExport(() =>
-            exportCurrentFrameTransparent(
+          void runExport(async () => {
+            await exportCurrentFrameTransparent(
               activeFrame,
               orientation,
               exportPreset,
               activeIndex,
-            ),
-          )
+            );
+            setToast("Exported transparent PNG");
+          })
         }
         onExportPngSequence={() =>
-          void runHeavyExport(() =>
-            exportAllFrames(frames, orientation, exportPreset),
-          )
+          void runHeavyExport(async () => {
+            await exportAllFrames(frames, orientation, exportPreset);
+            setToast("Exported PNG sequence");
+          })
         }
         onExportJpgFrame={() =>
-          void runExport(() =>
-            exportCurrentFrame(
+          void runExport(async () => {
+            await exportCurrentFrame(
               activeFrame,
               orientation,
               exportPreset,
               activeIndex,
               "jpg",
-            ),
-          )
+            );
+            setToast("Exported JPG");
+          })
         }
         onExportJpgSequence={() =>
-          void runHeavyExport(() =>
-            exportAllFrames(frames, orientation, exportPreset, "jpg"),
-          )
+          void runHeavyExport(async () => {
+            await exportAllFrames(frames, orientation, exportPreset, "jpg");
+            setToast("Exported JPG sequence");
+          })
         }
         onExportMp4={() =>
           void runHeavyExport(async () => {
@@ -1764,6 +1796,7 @@ export default function App() {
               exportPreset,
               activeIndex,
             );
+            setToast("Exported SVG");
           })
         }
         onImportImage={(file) => void handleImportImage(file)}
@@ -1825,6 +1858,7 @@ export default function App() {
           onCopyStyle={handleCopyStyle}
           onPasteStyle={handlePasteStyle}
           onApplyStyleToAll={handleApplyLookToAllFrames}
+          onApplyStyleToFrames={handleApplyLookToFrames}
           canPasteStyle={canPasteStyle}
           canAddFrame={frames.length < MAX_FRAMES}
           onTogglePlay={togglePlay}

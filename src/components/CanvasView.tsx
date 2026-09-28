@@ -38,6 +38,7 @@ import {
 } from "../layout/blockPlacement";
 import {
   GIPHY_DURATION_MAX_S,
+  MAX_FRAMES,
   PLAYBACK_FPS_OPTIONS,
   getPreviewSize,
   getPreviewSizeForDisplay,
@@ -53,6 +54,7 @@ import { NewCanvasSequence } from "./NewCanvasSequence";
 import { ImageFillSequence } from "./ImageFillSequence";
 import { PhaseOrb } from "./PhaseOrb";
 import { UiSelect } from "./UiSelect";
+import { normalizeFrameIndices } from "../state/frameUtils";
 
 const STAGE_PADDING = 24;
 const PIECE_DRAG_THRESHOLD = 4;
@@ -1078,9 +1080,10 @@ type ThumbnailProps = {
   frame: Frame;
   orientation: Orientation;
   active: boolean;
+  selected?: boolean;
   hidden?: boolean;
   dropFlashToken?: number;
-  onSelect?: () => void;
+  onSelect?: (event: ReactMouseEvent<HTMLButtonElement>) => void;
   onPointerDown?: (event: ReactPointerEvent<HTMLButtonElement>) => void;
   onContextMenu?: (event: ReactMouseEvent<HTMLButtonElement>) => void;
 };
@@ -1089,6 +1092,7 @@ function FrameThumbnail({
   frame,
   orientation,
   active,
+  selected = false,
   hidden = false,
   dropFlashToken,
   onSelect,
@@ -1239,17 +1243,18 @@ function FrameThumbnail({
       className={[
         "timeline-thumb",
         active ? "is-active" : "",
+        selected ? "is-selected" : "",
         hidden ? "is-hidden" : "",
       ]
         .filter(Boolean)
         .join(" ")}
       style={{ width: thumbW, height: thumbH }}
-      onClick={() => {
+      onClick={(event) => {
         if (skippedClickRef.current) {
           skippedClickRef.current = false;
           return;
         }
-        onSelect?.();
+        onSelect?.(event);
       }}
       onPointerDown={(event) => {
         if (event.button !== 0) return;
@@ -1260,7 +1265,8 @@ function FrameThumbnail({
         event.preventDefault();
         onContextMenu?.(event);
       }}
-      aria-label={`Frame preview${active ? ", selected" : ""}`}
+      aria-label={`Frame preview${active ? ", active" : ""}${selected ? ", selected" : ""}`}
+      aria-pressed={selected || active}
     >
       <canvas ref={canvasRef} width={renderW} height={renderH} />
       {dropFlashToken != null ? (
@@ -1449,11 +1455,12 @@ type TimelineProps = {
   onSelect: (index: number) => void;
   onReorder: (fromIndex: number, toIndex: number) => void;
   onAdd: () => void;
-  onDuplicate: (index: number) => void;
-  onRemove: (index: number) => void;
+  onDuplicate: (indices: number[]) => void;
+  onRemove: (indices: number[]) => void;
   onCopyStyle: (index: number) => void;
-  onPasteStyle: (index: number) => void;
+  onPasteStyle: (indices: number[]) => void;
   onApplyStyleToAll: (index: number) => void;
+  onApplyStyleToFrames: (sourceIndex: number, targetIndices: number[]) => void;
   canPasteStyle: boolean;
   canAddFrame: boolean;
   onTogglePlay: () => void;
@@ -1475,6 +1482,7 @@ export function Timeline({
   onCopyStyle,
   onPasteStyle,
   onApplyStyleToAll,
+  onApplyStyleToFrames,
   canPasteStyle,
   canAddFrame,
   onTogglePlay,
@@ -1496,13 +1504,17 @@ export function Timeline({
   const pendingAddRef = useRef(false);
   const addingRef = useRef(false);
   const removeTlRef = useRef<gsap.core.Timeline | null>(null);
+  const selectionAnchorRef = useRef(activeIndex);
+  const [selectedIndices, setSelectedIndices] = useState<number[]>([
+    activeIndex,
+  ]);
   const [trackPointer, setTrackPointer] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [insertIndex, setInsertIndex] = useState<number | null>(null);
   const [pointer, setPointer] = useState<{ x: number; y: number } | null>(null);
   const [ghostOffset, setGhostOffset] = useState({ x: 0, y: 0 });
-  const [removingIndex, setRemovingIndex] = useState<number | null>(null);
-  const removing = removingIndex !== null;
+  const [removingIndices, setRemovingIndices] = useState<number[] | null>(null);
+  const removing = removingIndices !== null;
   const [dropFlash, setDropFlash] = useState<{
     index: number;
     token: number;
@@ -1510,6 +1522,7 @@ export function Timeline({
   const dropFlashTokenRef = useRef(0);
   const [menu, setMenu] = useState<{
     index: number;
+    indices: number[];
     x: number;
     y: number;
   } | null>(null);
@@ -1533,6 +1546,51 @@ export function Timeline({
     if (dragIndex === null) return;
     setMenu(null);
   }, [dragIndex]);
+
+  // Keep selection valid when the strip shrinks/grows, and follow external
+  // activeIndex moves (arrows / playback) that leave the current set.
+  useEffect(() => {
+    setSelectedIndices((prev) => {
+      const clamped = normalizeFrameIndices(prev, frames.length);
+      if (clamped.length === 0) {
+        const fallback = Math.min(activeIndex, Math.max(0, frames.length - 1));
+        selectionAnchorRef.current = fallback;
+        return [fallback];
+      }
+      if (!clamped.includes(activeIndex)) {
+        selectionAnchorRef.current = activeIndex;
+        return [activeIndex];
+      }
+      return clamped;
+    });
+  }, [activeIndex, frames.length]);
+
+  useEffect(() => {
+    if (!playing) return;
+    selectionAnchorRef.current = activeIndex;
+    setSelectedIndices([activeIndex]);
+  }, [playing, activeIndex]);
+
+  const selectFrame = (
+    index: number,
+    event?: { shiftKey?: boolean },
+  ) => {
+    if (event?.shiftKey) {
+      const anchor = selectionAnchorRef.current;
+      const lo = Math.min(anchor, index);
+      const hi = Math.max(anchor, index);
+      setSelectedIndices(
+        Array.from({ length: hi - lo + 1 }, (_, offset) => lo + offset),
+      );
+    } else {
+      selectionAnchorRef.current = index;
+      setSelectedIndices([index]);
+    }
+    onSelect(index);
+  };
+
+  const actionIndices = () =>
+    selectedIndices.length > 0 ? selectedIndices : [activeIndex];
 
   useEffect(() => {
     if (!dropFlash) return;
@@ -1646,6 +1704,8 @@ export function Timeline({
           }
         }
         if (flashIndex !== null) {
+          selectionAnchorRef.current = flashIndex;
+          setSelectedIndices([flashIndex]);
           dropFlashTokenRef.current += 1;
           setDropFlash({
             index: flashIndex,
@@ -1814,57 +1874,72 @@ export function Timeline({
   }, [frames]);
 
   useLayoutEffect(() => {
-    if (removingIndex === null) return;
+    if (removingIndices === null || removingIndices.length === 0) return;
 
     const strip = stripRef.current;
-    const item = strip?.querySelector(
-      `[data-frame-index="${removingIndex}"]`,
-    ) as HTMLElement | null;
-    const thumb = item?.querySelector(".timeline-thumb") as HTMLElement | null;
-    if (!strip || !item || !thumb) {
-      onRemove(removingIndex);
-      setRemovingIndex(null);
+    if (!strip) {
+      onRemove(removingIndices);
+      setRemovingIndices(null);
+      return;
+    }
+
+    const entries = removingIndices.flatMap((index) => {
+      const item = strip.querySelector(
+        `[data-frame-index="${index}"]`,
+      ) as HTMLElement | null;
+      const thumb = item?.querySelector(".timeline-thumb") as HTMLElement | null;
+      return item && thumb ? [{ index, item, thumb }] : [];
+    });
+
+    if (entries.length === 0) {
+      onRemove(removingIndices);
+      setRemovingIndices(null);
       return;
     }
 
     const gap = parseFloat(
-      getComputedStyle(item.parentElement ?? item).columnGap,
+      getComputedStyle(entries[0]!.item.parentElement ?? entries[0]!.item)
+        .columnGap,
     );
     const slotGap = Number.isFinite(gap) ? gap : 8;
-    const startWidth = item.getBoundingClientRect().width;
 
     removeTlRef.current?.kill();
-    const index = removingIndex;
+    const indices = removingIndices;
     const tl = gsap.timeline({
       onComplete: () => {
-        setRemovingIndex(null);
-        onRemove(index);
+        setRemovingIndices(null);
+        onRemove(indices);
       },
     });
-    tl.fromTo(
-      thumb,
-      { scale: 1 },
-      { scale: 0, duration: 0.25, ease: "power2.in" },
-      0,
-    );
-    tl.fromTo(
-      item,
-      { width: startWidth, minWidth: startWidth, marginRight: 0 },
-      {
-        width: 0,
-        minWidth: 0,
-        marginRight: -slotGap,
-        duration: FRAME_SLOT_COLLAPSE_S,
-        ease: "power3.inOut",
-      },
-      0,
-    );
+
+    for (const { item, thumb } of entries) {
+      const startWidth = item.getBoundingClientRect().width;
+      tl.fromTo(
+        thumb,
+        { scale: 1 },
+        { scale: 0, duration: 0.25, ease: "power2.in" },
+        0,
+      );
+      tl.fromTo(
+        item,
+        { width: startWidth, minWidth: startWidth, marginRight: 0 },
+        {
+          width: 0,
+          minWidth: 0,
+          marginRight: -slotGap,
+          duration: FRAME_SLOT_COLLAPSE_S,
+          ease: "power3.inOut",
+        },
+        0,
+      );
+    }
+
     removeTlRef.current = tl;
 
     return () => {
       tl.kill();
     };
-  }, [removingIndex, onRemove]);
+  }, [removingIndices, onRemove]);
 
   const captureStripThen = (action: () => void) => {
     const strip = stripRef.current;
@@ -1888,13 +1963,24 @@ export function Timeline({
     captureStripThen(onAdd);
   };
 
-  const handleDuplicateClick = (index: number) => {
-    if (removing || !canAddFrame || dragIndex !== null) return;
-    captureStripThen(() => onDuplicate(index));
+  const handleDuplicateClick = (indices: number[]) => {
+    const targets = normalizeFrameIndices(indices, frames.length);
+    if (
+      removing ||
+      targets.length === 0 ||
+      frames.length + targets.length > MAX_FRAMES ||
+      dragIndex !== null
+    ) {
+      return;
+    }
+    captureStripThen(() => onDuplicate(targets));
   };
 
-  const handleRemoveClick = (index: number) => {
-    if (removing || frames.length <= 1 || dragIndex !== null) return;
+  const handleRemoveClick = (indices: number[]) => {
+    const targets = normalizeFrameIndices(indices, frames.length);
+    if (removing || frames.length <= 1 || targets.length === 0 || dragIndex !== null) {
+      return;
+    }
 
     playUiSound("delete");
 
@@ -1903,11 +1989,21 @@ export function Timeline({
     ).matches;
     // Last multi-frame → single: let the strip retract be the animation.
     if (reduceMotion || !stripRef.current || frames.length === 2) {
-      onRemove(index);
+      onRemove(targets);
       return;
     }
 
-    setRemovingIndex(index);
+    // Match removeFramesAt: never animate-delete the whole strip.
+    const toRemove =
+      targets.length >= frames.length
+        ? targets.filter((index) => index !== 0)
+        : targets;
+    if (toRemove.length === 0) {
+      onRemove(targets);
+      return;
+    }
+
+    setRemovingIndices(toRemove);
   };
 
   const handleThumbPointerDown = (
@@ -1915,6 +2011,8 @@ export function Timeline({
     event: ReactPointerEvent<HTMLButtonElement>,
   ) => {
     if (removing) return;
+    // Shift-click is range select — don't start a reorder drag.
+    if (event.shiftKey) return;
     const rect = event.currentTarget.getBoundingClientRect();
     pendingDragRef.current = {
       index,
@@ -1989,12 +2087,14 @@ export function Timeline({
     <footer className="timeline">
       <div className="timeline__toolbar">
         <p className="timeline__frame-index" aria-live="polite">
-          Frame {activeIndex + 1}
+          {selectedIndices.length > 1
+            ? `${selectedIndices.length} selected`
+            : `Frame ${activeIndex + 1}`}
         </p>
         <div className="timeline__controls">
         <button
           type="button"
-          className={`timeline__btn${playing ? " is-active" : ""}`}
+          className={`timeline__btn${playing ? " is-active" : ""}${frames.length <= 1 ? " is-muted" : ""}`}
           data-shortcut="Space"
           onClick={() => {
             playUiSound("push");
@@ -2002,6 +2102,7 @@ export function Timeline({
           }}
           aria-label={playing ? "Stop" : "Play"}
           aria-pressed={playing}
+          aria-disabled={frames.length <= 1 || undefined}
           title={playing ? "Stop" : "Play"}
         >
           {playing ? <StopIcon /> : <PlayIcon />}
@@ -2025,10 +2126,14 @@ export function Timeline({
         <button
           type="button"
           className="timeline__btn"
-          onClick={() => handleRemoveClick(activeIndex)}
+          onClick={() => handleRemoveClick(actionIndices())}
           disabled={frames.length <= 1 || removing}
-          aria-label="Remove frame"
-          title="Remove frame"
+          aria-label={
+            selectedIndices.length > 1 ? "Remove selected frames" : "Remove frame"
+          }
+          title={
+            selectedIndices.length > 1 ? "Remove selected frames" : "Remove frame"
+          }
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <rect x="5" y="10" width="14" height="4" fill="currentColor" />
@@ -2037,10 +2142,21 @@ export function Timeline({
         <button
           type="button"
           className="timeline__btn"
-          onClick={() => handleDuplicateClick(activeIndex)}
-          disabled={!canAddFrame || removing}
-          aria-label="Duplicate current"
-          title="Duplicate current"
+          onClick={() => handleDuplicateClick(actionIndices())}
+          disabled={
+            removing ||
+            frames.length + Math.max(1, selectedIndices.length) > MAX_FRAMES
+          }
+          aria-label={
+            selectedIndices.length > 1
+              ? "Duplicate selected frames"
+              : "Duplicate current"
+          }
+          title={
+            selectedIndices.length > 1
+              ? "Duplicate selected frames"
+              : "Duplicate current"
+          }
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <rect
@@ -2120,12 +2236,12 @@ export function Timeline({
               return (
                 <div
                   key={frame.id}
-                  className={`timeline-strip-item${index === removingIndex ? " is-removing" : ""}`}
+                  className={`timeline-strip-item${removingIndices?.includes(index) ? " is-removing" : ""}`}
                   data-timeline-slot
                   data-frame-index={index}
                   style={{
                     height: thumbH,
-                    ...(index === removingIndex ? {} : { width: thumbW }),
+                    ...(removingIndices?.includes(index) ? {} : { width: thumbW }),
                   }}
                 >
                   <div
@@ -2136,17 +2252,27 @@ export function Timeline({
                       frame={frame}
                       orientation={orientation}
                       active={index === activeIndex}
+                      selected={selectedIndices.includes(index)}
                       dropFlashToken={
                         dropFlash?.index === index ? dropFlash.token : undefined
                       }
-                      onSelect={() => onSelect(index)}
+                      onSelect={(event) => selectFrame(index, event)}
                       onPointerDown={(event) => handleThumbPointerDown(index, event)}
                       onContextMenu={(event) => {
                         if (removing || dragIndex !== null) return;
-                        onSelect(index);
+                        const inSelection = selectedIndices.includes(index);
+                        const indices = inSelection
+                          ? selectedIndices
+                          : [index];
+                        if (!inSelection) {
+                          selectFrame(index);
+                        } else {
+                          onSelect(index);
+                        }
                         playUiSound("push");
                         setMenu({
                           index,
+                          indices,
                           x: event.clientX,
                           y: event.clientY,
                         });
@@ -2201,12 +2327,17 @@ export function Timeline({
         : null}
       {menu ? (
         <FrameContextMenu
-          key={`${menu.index}-${menu.x}-${menu.y}`}
+          key={`${menu.index}-${menu.indices.join("-")}-${menu.x}-${menu.y}`}
           x={menu.x}
           y={menu.y}
+          selectionCount={menu.indices.length}
           canPaste={canPasteStyle}
-          canApplyStyleToAll={frames.length > 1}
-          canDuplicate={canAddFrame}
+          canApplyStyle={
+            menu.indices.length > 1 || frames.length > 1
+          }
+          canDuplicate={
+            frames.length + menu.indices.length <= MAX_FRAMES
+          }
           canDelete={frames.length > 1}
           onCopyStyle={() => {
             playUiSound("ok");
@@ -2214,17 +2345,21 @@ export function Timeline({
           }}
           onPasteStyle={() => {
             playUiSound("ok");
-            onPasteStyle(menu.index);
+            onPasteStyle(menu.indices);
           }}
-          onApplyStyleToAll={() => {
+          onApplyStyle={() => {
             playUiSound("ok");
-            onApplyStyleToAll(menu.index);
+            if (menu.indices.length > 1) {
+              onApplyStyleToFrames(menu.index, menu.indices);
+            } else {
+              onApplyStyleToAll(menu.index);
+            }
           }}
           onDuplicate={() => {
-            handleDuplicateClick(menu.index);
+            handleDuplicateClick(menu.indices);
           }}
           onDelete={() => {
-            handleRemoveClick(menu.index);
+            handleRemoveClick(menu.indices);
           }}
           onClose={() => setMenu(null)}
         />
