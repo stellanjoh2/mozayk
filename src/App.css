@@ -36,8 +36,8 @@
       color-mix(in srgb, var(--brand) var(--glow-mix-wide), transparent);
   --piece-guide: var(--chrome);
   --piece-guide-dropzone: color-mix(in srgb, var(--piece-guide) 75%, transparent);
-  /* ~5% brighter than the void outside the drop-zone wall. */
-  --piece-guide-dropzone-fill: color-mix(in srgb, white 5%, transparent);
+  /* ~15% tint of the chrome accent vs the void outside the drop-zone wall. */
+  --piece-guide-dropzone-fill: color-mix(in srgb, var(--piece-guide) 15%, transparent);
   --piece-guide-grid: color-mix(in srgb, var(--piece-guide) 25%, transparent);
   --ui-chevron: conic-gradient(
     from 225deg at 50% 50%,
