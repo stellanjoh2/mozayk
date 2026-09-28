@@ -408,6 +408,8 @@ export function ControlsPanel({
   /** Drag across icons paints the same on/off as the first icon hit. */
   const shapeLibraryRef = useRef<HTMLDivElement>(null);
   const shapePaintSuppressClickRef = useRef(false);
+  /** Last non-shift paint target — shift-click ranges from here along a row/column. */
+  const shapePaintAnchorRef = useRef<string | null>(null);
   const shapePaintRef = useRef<{
     enable: boolean;
     sounded: boolean;
@@ -442,6 +444,52 @@ export function ControlsPanel({
       if (host && root.contains(host)) return host.dataset.shapePaint ?? null;
     }
     return null;
+  };
+
+  /** Grid cells in visual order (4-wide rows, including custom slots). */
+  const listShapePaintCells = () => {
+    const root = shapeLibraryRef.current;
+    if (!root) return [] as { id: string; row: number; col: number }[];
+    const cells: { id: string; row: number; col: number }[] = [];
+    root
+      .querySelectorAll(":scope .button-row--shape-icons")
+      .forEach((rowEl, row) => {
+        let col = 0;
+        for (const child of rowEl.children) {
+          const host =
+            child instanceof HTMLElement && child.dataset.shapePaint
+              ? child
+              : child.querySelector<HTMLElement>("[data-shape-paint]");
+          const id = host?.dataset.shapePaint;
+          if (!id) continue;
+          cells.push({ id, row, col });
+          col += 1;
+        }
+      });
+    return cells;
+  };
+
+  /** Inclusive row or column range between two paint ids; diagonal → just `toId`. */
+  const shapePaintIdsInAxisRange = (fromId: string, toId: string) => {
+    const cells = listShapePaintCells();
+    const from = cells.find((cell) => cell.id === fromId);
+    const to = cells.find((cell) => cell.id === toId);
+    if (!from || !to) return [toId];
+    if (from.row === to.row) {
+      const lo = Math.min(from.col, to.col);
+      const hi = Math.max(from.col, to.col);
+      return cells
+        .filter((cell) => cell.row === from.row && cell.col >= lo && cell.col <= hi)
+        .map((cell) => cell.id);
+    }
+    if (from.col === to.col) {
+      const lo = Math.min(from.row, to.row);
+      const hi = Math.max(from.row, to.row);
+      return cells
+        .filter((cell) => cell.col === from.col && cell.row >= lo && cell.row <= hi)
+        .map((cell) => cell.id);
+    }
+    return [toId];
   };
 
   const applyShapePaint = (paintId: string) => {
@@ -588,6 +636,18 @@ export function ControlsPanel({
       shapePaintIdFromEventTarget(event.target) ??
       shapePaintIdFromPoint(event.clientX, event.clientY);
     if (!paintId) return;
+
+    if (event.shiftKey) {
+      const anchor = shapePaintAnchorRef.current ?? paintId;
+      const range = shapePaintIdsInAxisRange(anchor, paintId);
+      if (!beginShapePaint(paintId, event.clientX, event.clientY)) return;
+      for (const id of range) applyShapePaint(id);
+      endShapePaint();
+      event.preventDefault();
+      return;
+    }
+
+    shapePaintAnchorRef.current = paintId;
     if (!beginShapePaint(paintId, event.clientX, event.clientY)) return;
     // Keep the gesture from selecting text / scrolling the panel mid-drag.
     event.preventDefault();
