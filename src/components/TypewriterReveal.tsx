@@ -254,15 +254,21 @@ export function TypewriterReveal({
 
   return (
     <Tag className={combinedClassName} {...restProps}>
-      <span className="typewriter-reveal__ghost" aria-hidden>
-        {renderTypedText(text, links, keys)}
-      </span>
-      <span className="typewriter-reveal__live">
-        {renderTypedText(typed, links, keys)}
-        {caret && !isComplete ? (
-          <span className="typewriter-reveal__caret" aria-hidden />
-        ) : null}
-      </span>
+      {isComplete && !reverse ? (
+        renderTypedText(text, links, keys)
+      ) : (
+        <>
+          <span className="typewriter-reveal__typed">
+            {renderTypedText(typed, links, keys)}
+          </span>
+          {caret && !isComplete ? (
+            <span className="typewriter-reveal__caret" aria-hidden />
+          ) : null}
+          <span className="typewriter-reveal__pending" aria-hidden>
+            {text.slice(typed.length)}
+          </span>
+        </>
+      )}
     </Tag>
   );
 }

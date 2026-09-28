@@ -330,7 +330,6 @@ body {
   .frame-context-menu__item,
   .app-toast,
   .import-error-dialog__message,
-  .reset-canvas-dialog__message,
   .control-row .ui-select__trigger,
   .ui-select__option,
   .rfrct-color-picker__scale-trigger,
@@ -346,7 +345,6 @@ body {
   .action-notice__title,
   .action-notice__body,
   .import-error-dialog__title,
-  .reset-canvas-dialog__title,
   .palette-panel__title,
   .timeline__frame-index,
   .timeline__blur-note,
@@ -422,7 +420,6 @@ body {
   .frame-context-menu__item,
   .app-toast,
   .import-error-dialog__message,
-  .reset-canvas-dialog__message,
   .control-row .ui-select__trigger,
   .ui-select__option,
   .rfrct-color-picker__scale-trigger,
@@ -438,7 +435,6 @@ body {
   .action-notice__title,
   .action-notice__body,
   .import-error-dialog__title,
-  .reset-canvas-dialog__title,
   .palette-panel__title,
   .timeline__frame-index,
   .timeline__blur-note,
@@ -1484,8 +1480,8 @@ a.panel-btn {
 .reset-canvas-dialog {
   position: relative;
   isolation: isolate;
-  width: min(100%, 360px);
-  padding: 20px;
+  width: min(100%, 480px);
+  padding: 40px;
   border-radius: var(--control-radius);
   background: var(--panel);
   border: none;
@@ -1507,19 +1503,21 @@ a.panel-btn {
 }
 
 .reset-canvas-dialog__title {
-  margin: 0 0 10px;
-  font-size: 17px;
+  margin: 0 0 16px;
+  font-size: 20px;
   font-weight: 400;
   letter-spacing: 0.06em;
   color: var(--text);
+  text-align: center;
   text-transform: uppercase;
 }
 
 .reset-canvas-dialog__message {
-  margin: 0 0 16px;
-  font-size: 15px;
+  margin: 0 0 24px;
+  font-size: 18px;
   line-height: 1.5;
   color: var(--muted);
+  text-align: center;
 }
 
 .reset-canvas-dialog__actions {
@@ -1536,7 +1534,7 @@ a.panel-btn {
   display: inline-block;
   width: 0.55em;
   height: 0.9em;
-  margin-left: 2px;
+  margin-right: -0.55em;
   background: currentColor;
   vertical-align: -0.12em;
   animation: typewriter-reveal-caret-blink 0.64s steps(1) infinite;
@@ -1545,18 +1543,12 @@ a.panel-btn {
 .typewriter-reveal {
   position: relative;
   display: block;
+  white-space: pre-wrap;
 }
 
-.typewriter-reveal__ghost {
+.typewriter-reveal__pending {
   visibility: hidden;
   pointer-events: none;
-  white-space: pre-wrap;
-}
-
-.typewriter-reveal__live {
-  position: absolute;
-  inset: 0;
-  white-space: pre-wrap;
 }
 
 .typewriter-reveal__key {

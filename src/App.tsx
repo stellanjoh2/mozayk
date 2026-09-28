@@ -1560,7 +1560,7 @@ export default function App() {
         title="Reconnect available"
         message="The last session closed before it was saved to a file, but a reconnect is still possible, allowing you to pick up where you left off. If you do not reconnect, you will lose your unsaved project."
         confirmLabel="Reconnect"
-        cancelLabel="Abandon draft"
+        cancelLabel="New file"
         voice="general3"
         onConfirm={() => void handleRestoreDraft()}
         onCancel={handleAbandonDraft}

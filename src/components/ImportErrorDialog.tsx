@@ -1,5 +1,4 @@
 import { playUiSound } from "../ui/sounds";
-import { TypewriterReveal } from "./TypewriterReveal";
 
 type ImportErrorDialogProps = {
   title?: string;
@@ -28,19 +27,12 @@ export function ImportErrorDialog({
         aria-describedby="import-error-message"
         onClick={(event) => event.stopPropagation()}
       >
-        <TypewriterReveal
-          as="h2"
-          id="import-error-title"
-          className="import-error-dialog__title"
-          text={title}
-        />
-        <TypewriterReveal
-          as="p"
-          id="import-error-message"
-          className="import-error-dialog__message"
-          text={message}
-          caret
-        />
+        <h2 id="import-error-title" className="import-error-dialog__title">
+          {title}
+        </h2>
+        <p id="import-error-message" className="import-error-dialog__message">
+          {message}
+        </p>
         <button
           type="button"
           className="panel-btn import-error-dialog__button"

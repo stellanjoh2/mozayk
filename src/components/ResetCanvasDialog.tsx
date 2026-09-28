@@ -5,7 +5,6 @@ import {
   playUiSoundOnNextGesture,
   stopVoiceSound,
 } from "../ui/sounds";
-import { TypewriterReveal } from "./TypewriterReveal";
 
 const RESET_VOICE = "general1" as const;
 const RESET_MESSAGE =
@@ -106,20 +105,12 @@ export function ResetCanvasDialog({ open, onConfirm, onCancel }: ResetCanvasDial
           }
         }}
       >
-        <TypewriterReveal
-          as="h2"
-          id={titleId}
-          className="reset-canvas-dialog__title"
-          text="Reset canvas"
-          active={entered}
-        />
-        <TypewriterReveal
-          as="p"
-          id={descId}
-          className="reset-canvas-dialog__message"
-          text={RESET_MESSAGE}
-          active={entered}
-        />
+        <h2 id={titleId} className="reset-canvas-dialog__title">
+          Reset canvas
+        </h2>
+        <p id={descId} className="reset-canvas-dialog__message">
+          {RESET_MESSAGE}
+        </p>
         <div className="reset-canvas-dialog__actions">
           <button
             ref={cancelRef}

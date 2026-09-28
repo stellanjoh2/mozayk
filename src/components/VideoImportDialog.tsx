@@ -8,7 +8,6 @@ import {
 } from "../import/videoImport";
 import { playUiSound } from "../ui/sounds";
 import { ORIENTATION_LABELS } from "../types";
-import { TypewriterReveal } from "./TypewriterReveal";
 
 type VideoImportDialogProps = {
   open: boolean;
@@ -90,48 +89,25 @@ export function VideoImportDialog({
           }
         }}
       >
-        <TypewriterReveal
-          as="h2"
-          id={titleId}
-          className="reset-canvas-dialog__title"
-          text="Import video"
-          active={entered}
-          caret
-        />
+        <h2 id={titleId} className="reset-canvas-dialog__title">
+          Import video
+        </h2>
         <p id={descId} className="reset-canvas-dialog__message">
-          <TypewriterReveal
-            as="span"
-            className="video-import-dialog__file"
-            text={fileName}
-            active={entered}
-            caret={false}
-          />
-          <TypewriterReveal
-            as="span"
-            className="video-import-dialog__meta"
-            text={`${formatClipDuration(probe.duration)} · ${formatClipFps(
+          <span className="video-import-dialog__file">{fileName}</span>
+          <span className="video-import-dialog__meta">
+            {`${formatClipDuration(probe.duration)} · ${formatClipFps(
               probe.fps,
             )} · ${ORIENTATION_LABELS[probe.orientation]}`}
-            active={entered}
-            caret={false}
-          />
-          <TypewriterReveal
-            as="span"
-            className="video-import-dialog__meta"
-            text={`${probe.importFrameCount} ${frameLabel}`}
-            active={entered}
-            caret={false}
-          />
+          </span>
+          <span className="video-import-dialog__meta">
+            {`${probe.importFrameCount} ${frameLabel}`}
+          </span>
           {clipTruncated ? (
-            <TypewriterReveal
-              as="span"
-              className="video-import-dialog__note"
-              text={`Mozayk imports the first ${MAX_FRAMES} frames (${formatClipDuration(
+            <span className="video-import-dialog__note">
+              {`Mozayk imports the first ${MAX_FRAMES} frames (${formatClipDuration(
                 importDurationS,
               )}).`}
-              active={entered}
-              caret={false}
-            />
+            </span>
           ) : null}
         </p>
 

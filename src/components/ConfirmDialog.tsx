@@ -7,7 +7,6 @@ import {
   type UiSound,
   type VoiceSound,
 } from "../ui/sounds";
-import { TypewriterReveal } from "./TypewriterReveal";
 
 type ConfirmDialogProps = {
   open: boolean;
@@ -121,22 +120,12 @@ export function ConfirmDialog({
           }
         }}
       >
-        <TypewriterReveal
-          as="h2"
-          id={titleId}
-          className="reset-canvas-dialog__title"
-          text={title}
-          active={entered}
-          caret
-        />
-        <TypewriterReveal
-          as="p"
-          id={descId}
-          className="reset-canvas-dialog__message"
-          text={message}
-          active={entered}
-          caret
-        />
+        <h2 id={titleId} className="reset-canvas-dialog__title">
+          {title}
+        </h2>
+        <p id={descId} className="reset-canvas-dialog__message">
+          {message}
+        </p>
         <div className="reset-canvas-dialog__actions">
           <button
             ref={cancelRef}
