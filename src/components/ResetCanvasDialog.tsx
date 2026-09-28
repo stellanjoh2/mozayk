@@ -93,7 +93,11 @@ export function ResetCanvasDialog({ open, onConfirm, onCancel }: ResetCanvasDial
       }}
       onTransitionEnd={(event) => {
         if (event.target !== event.currentTarget) return;
-        if (!open && event.propertyName === "opacity") setMounted(false);
+        // The backdrop transitions background, not opacity — matching on
+        // opacity never fires here and leaves the overlay mounted for good.
+        if (!open && event.propertyName === "background-color") {
+          setMounted(false);
+        }
       }}
     >
       <div
@@ -134,7 +138,7 @@ export function ResetCanvasDialog({ open, onConfirm, onCancel }: ResetCanvasDial
           <button
             type="button"
             className="panel-btn"
-            data-ui-sound="delete"
+            data-ui-sound="newCanvas"
             onClick={() => {
               stopDialogVoice();
               onConfirm();

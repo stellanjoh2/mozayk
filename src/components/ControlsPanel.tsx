@@ -251,6 +251,8 @@ type ControlsPanelProps = {
   onTextureOverlayClear: () => void;
   uploadingTextureOverlay?: boolean;
   onResetCanvas: () => void;
+  /** False on an untouched canvas — both Reset buttons stay muted. */
+  canResetCanvas: boolean;
   onSaveProject: () => void;
   onLoadProject: (file: File) => void;
   loadingProject?: boolean;
@@ -323,6 +325,7 @@ export function ControlsPanel({
   onTextureOverlayClear,
   uploadingTextureOverlay = false,
   onResetCanvas,
+  canResetCanvas,
   onSaveProject,
   onLoadProject,
   loadingProject = false,
@@ -1040,6 +1043,15 @@ export function ControlsPanel({
           onClick={onApplyLookToAllFrames}
         >
           Apply Look to All Frames
+        </button>
+        <button
+          type="button"
+          className="panel-btn panel-btn--ghost has-hint"
+          data-hint="Back to a fresh default canvas"
+          disabled={!canResetCanvas}
+          onClick={onResetCanvas}
+        >
+          Reset Canvas
         </button>
         <div className="control-row__label control-row__label--solo control-row__label--with-action">
           <HintLabel hint="Toggle shapes to include in the mix">
@@ -2201,6 +2213,7 @@ export function ControlsPanel({
         <button
           type="button"
           className="panel-btn panel-btn--ghost"
+          disabled={!canResetCanvas}
           onClick={onResetCanvas}
         >
           Reset Canvas

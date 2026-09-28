@@ -108,7 +108,9 @@ export function ConfirmDialog({
       }}
       onTransitionEnd={(event) => {
         if (event.target !== event.currentTarget) return;
-        if (!open && event.propertyName === "opacity") setMounted(false);
+        if (!open && event.propertyName === "background-color") {
+          setMounted(false);
+        }
       }}
     >
       <div

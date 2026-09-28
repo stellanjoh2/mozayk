@@ -534,6 +534,18 @@ body {
   pointer-events: none;
 }
 
+/* New-canvas construction — above the piece-edit overlay, below stage chrome.
+   Own compositing layer: it repaints every frame for 3s, and without promotion
+   that invalidates the page around it and shimmers the zoomed panel text. */
+.mosaic-new-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: block;
+  pointer-events: none;
+  will-change: transform;
+}
+
 .mosaic-canvas.is-piece-select {
   cursor: var(--cursor-pointer);
   touch-action: none;
@@ -3681,7 +3693,8 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
     box-shadow: none;
   }
 
-  .mosaic-overlay {
+  .mosaic-overlay,
+  .mosaic-new-canvas {
     width: 100% !important;
     height: 100% !important;
   }

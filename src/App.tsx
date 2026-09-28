@@ -210,6 +210,8 @@ export default function App() {
     null,
   );
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  /** Bumped for the "new canvas" construction — plays on entry and on reset. */
+  const [newCanvasToken, setNewCanvasToken] = useState(1);
   const [pendingDraft, setPendingDraft] = useState<MzkProject | null>(null);
   const [draftChecked, setDraftChecked] = useState(false);
   const [viewOriginal, setViewOriginal] = useState(false);
@@ -250,6 +252,10 @@ export default function App() {
   const lastWrittenJsonRef = useRef<string | null>(null);
   const importingImageRef = useRef(importingImage);
   const loadingProjectRef = useRef(loadingProject);
+  // Frames are replaced wholesale on every edit, so identity against the last
+  // fresh canvas is an exact "has this been touched?" test.
+  const pristineFramesRef = useRef(frames);
+  const pristineOrientationRef = useRef(orientation);
 
   activeIndexRef.current = activeIndex;
   orientationRef.current = orientation;
@@ -294,6 +300,10 @@ export default function App() {
     },
     [],
   );
+
+  const canvasEdited =
+    frames !== pristineFramesRef.current ||
+    orientation !== pristineOrientationRef.current;
 
   const activeFrame = frames[activeIndex] ?? frames[0];
   const canvasOrientation = isMobileGate ? "portrait" : orientation;
@@ -1125,6 +1135,8 @@ export default function App() {
     const { orientation: defaultOrientation, frames: defaultFrames } =
       createDefaultCanvas();
 
+    pristineFramesRef.current = defaultFrames;
+    pristineOrientationRef.current = defaultOrientation;
     setOrientation(defaultOrientation);
     orientationRef.current = defaultOrientation;
     setFrames(defaultFrames);
@@ -1142,6 +1154,7 @@ export default function App() {
       void exitAppFullscreen();
     }
 
+    setNewCanvasToken((token) => token + 1);
     setToast("Canvas reset");
   }, [pushUndoCheckpoint]);
 
@@ -1721,6 +1734,7 @@ export default function App() {
         onTextureOverlayClear={handleTextureOverlayClear}
         uploadingTextureOverlay={uploadingTextureOverlay}
         onResetCanvas={() => setResetDialogOpen(true)}
+        canResetCanvas={canvasEdited}
         onSaveProject={handleSaveProject}
         onLoadProject={(file) => void handleLoadProject(file)}
         loadingProject={loadingProject}
@@ -1740,6 +1754,7 @@ export default function App() {
           playing={playing}
           highQualityMode={highQualityMode}
           shortcutLegend={shortcutLegend}
+          newCanvasToken={newCanvasToken}
           onToggleInspect={isMobileGate ? undefined : toggleInspect}
           onMoveBlock={handleMoveBlock}
           onWorkingCanvasSize={handleWorkingCanvasSize}

@@ -48,6 +48,7 @@ import { playUiSound } from "../ui/sounds";
 import { getNormalHoverEffects } from "../ui/hover";
 import { CollapsibleControls } from "./ControlRow";
 import { FrameContextMenu } from "./FrameContextMenu";
+import { NewCanvasSequence } from "./NewCanvasSequence";
 import { PhaseOrb } from "./PhaseOrb";
 import { UiSelect } from "./UiSelect";
 
@@ -113,6 +114,8 @@ type CanvasViewProps = {
   /** Keep Gaussian blur during playback (can OOM the GPU tab). */
   highQualityMode?: boolean;
   shortcutLegend?: { text: string; id: number } | null;
+  /** Bump to play the "new canvas" construction over the mosaic. */
+  newCanvasToken?: number;
   onToggleInspect?: () => void;
   onMoveBlock?: (blockIndex: number, toCol: number, toRow: number) => void;
   /** Live mosaic backing store — GIF export downscales from this size. */
@@ -130,6 +133,7 @@ export function CanvasView({
   playing = false,
   highQualityMode = false,
   shortcutLegend = null,
+  newCanvasToken = 0,
   onToggleInspect,
   onMoveBlock,
   onWorkingCanvasSize,
@@ -157,6 +161,7 @@ export function CanvasView({
   const [pieceDropBlink, setPieceDropBlink] = useState<{
     blockIndex: number;
   } | null>(null);
+  const [newCanvasRun, setNewCanvasRun] = useState(0);
   const [dropBlinkT, setDropBlinkT] = useState<number | null>(null);
   const pulseRafRef = useRef<number | null>(null);
   const pulseStartRef = useRef(0);
@@ -220,6 +225,10 @@ export function CanvasView({
     setGuideOpacity(0);
     guideLoopsRef.current = EMPTY_GUIDE_LOOPS;
   }, [frame.id]);
+
+  useEffect(() => {
+    if (newCanvasToken > 0) setNewCanvasRun(newCanvasToken);
+  }, [newCanvasToken]);
 
   useEffect(() => {
     if (!pieceDropBlink) {
@@ -952,6 +961,21 @@ export function CanvasView({
               height: displayHeight,
             }}
           />
+          {newCanvasRun > 0 && grid && grid.columns > 0 && !viewOriginal ? (
+            <NewCanvasSequence
+              key={newCanvasRun}
+              grid={grid}
+              blocks={frame.blocks}
+              veilColor={
+                frame.settings.transparentBackground
+                  ? "#1a1a1a"
+                  : frame.settings.background
+              }
+              displayWidth={displayWidth}
+              displayHeight={displayHeight}
+              onDone={() => setNewCanvasRun(0)}
+            />
+          ) : null}
         </div>
       </div>
       {viewOriginal && frame.imageSource ? (
