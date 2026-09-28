@@ -742,7 +742,15 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
 
 .controls-panel__zoom {
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  /* Fill the panel after CSS zoom so short tabs can pin the credit footer. */
+  min-height: calc(100% / var(--ui-compact-zoom));
   padding: 0 20px 48px;
+}
+
+.controls-panel__body {
+  flex: 1 0 auto;
 }
 
 .controls-panel__head {
@@ -812,7 +820,7 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
   pointer-events: none;
 }
 
-.controls-panel__tabs + .panel-section {
+.controls-panel__body > .panel-section:first-child {
   margin-top: 0;
   border-top: none;
 }

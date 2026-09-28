@@ -10,7 +10,7 @@ export type ProTip = {
 };
 
 /** Bump when tip copy/order changes so seen tips reset for everyone. */
-const CATALOG_VERSION = 24;
+const CATALOG_VERSION = 27;
 
 export const PRO_TIPS: readonly ProTip[] = [
   {
@@ -51,6 +51,12 @@ export const PRO_TIPS: readonly ProTip[] = [
     id: "drag-pieces",
     body: "Drag any piece on the canvas when you want to place it yourself. Keep in mind, you can only move them to free slots.",
     sound: "tip7",
+  },
+  {
+    id: "fullscreen-f",
+    body: "F toggles fullscreen so you can experience your work without the chrome. Press Escape to go back to the canvas.",
+    keys: ["F", "Escape"],
+    sound: "tip8",
   },
 ];
 

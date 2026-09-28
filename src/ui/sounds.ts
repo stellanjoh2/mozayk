@@ -14,6 +14,7 @@ const FILES = {
   tip5: "sounds/protip-05.wav",
   tip6: "sounds/protip-06.wav",
   tip7: "sounds/protip-07.wav",
+  tip8: "sounds/protip-08.wav",
   hint1: "sounds/hint-01.wav",
   general1: "sounds/voice-general01.wav",
   general2: "sounds/voice-general02.wav",
@@ -45,6 +46,7 @@ const SOUND_GAIN: Partial<Record<UiSound, number>> = {
   tip5: 1,
   tip6: 1,
   tip7: 1,
+  tip8: 1,
   hint1: 1,
   general1: 1,
   general2: 1,
@@ -112,6 +114,7 @@ export type VoiceSound =
   | "tip5"
   | "tip6"
   | "tip7"
+  | "tip8"
   | "hint1"
   | "general1"
   | "general2"
@@ -126,6 +129,7 @@ function isVoiceSound(name: UiSound): name is VoiceSound {
     name === "tip5" ||
     name === "tip6" ||
     name === "tip7" ||
+    name === "tip8" ||
     name === "hint1" ||
     name === "general1" ||
     name === "general2" ||

@@ -932,6 +932,7 @@ export function ControlsPanel({
         <span ref={tabLineRef} className="controls-panel__tab-line" aria-hidden />
       </div>
 
+      <div className="controls-panel__body">
       {panelTab === "create" ? (
       <>
       <section className="panel-section">
@@ -2677,6 +2678,7 @@ export function ControlsPanel({
       </section>
       </>
       )}
+      </div>
 
       <footer className="panel-credit">
         <span className="panel-credit__s" aria-hidden="true" />
