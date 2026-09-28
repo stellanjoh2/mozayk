@@ -907,6 +907,43 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
   overflow: hidden;
 }
 
+/* Preceding gap moves into the reveal so closed state stays flush. */
+.panel-section > .button-row:has(+ .collapsible-controls),
+.collapsible-controls__inner > .panel-btn:has(+ .collapsible-controls) {
+  margin-bottom: 0;
+}
+
+.panel-section > .button-row + .collapsible-controls > .collapsible-controls__inner {
+  padding-top: var(--settings-row-gap);
+}
+
+.collapsible-controls__inner > .panel-btn + .collapsible-controls > .collapsible-controls__inner {
+  padding-top: 20px;
+}
+
+/* Mid-stack button reveals keep their row gap (overrides __inner > :last-child).
+   Skip section-ending disclosures (export, etc.) so they stay flush. */
+.panel-section
+  > .collapsible-controls:not(:last-child)
+  > .collapsible-controls__inner
+  > .panel-btn:last-child {
+  margin-bottom: 20px;
+}
+
+/* Trailing gap before the next row when a toggle reveals extra controls. */
+.control-row--toggle + .collapsible-controls > .collapsible-controls__inner {
+  padding-bottom: var(--settings-row-gap);
+}
+
+/* Custom shape row: keep tight spacing vs built-in icons. */
+.shape-library
+  > .button-row--shape-icons
+  + .collapsible-controls
+  > .collapsible-controls__inner
+  > .button-row--shape-icons {
+  margin-top: calc(8px - var(--settings-row-gap));
+}
+
 @media (prefers-reduced-motion: reduce) {
   .collapsible-controls,
   .collapsible-controls.is-open {

@@ -117,7 +117,13 @@ import type { PalettePreset } from "../presets/palettePresets";
 import {
   RemoveIconButton,
 } from "./ControlRowWithPause";
-import { HeadlineDisclosure, HeadlineToggle, SliderRow, ToggleRow } from "./ControlRow";
+import {
+  CollapsibleControls,
+  HeadlineDisclosure,
+  HeadlineToggle,
+  SliderRow,
+  ToggleRow,
+} from "./ControlRow";
 import { HintLabel } from "./HintLabel";
 import { UiSelect } from "./UiSelect";
 import {
@@ -1005,14 +1011,14 @@ export function ControlsPanel({
             {importingLabel ?? "Import Video"}
           </button>
         </div>
-        {frame.imageSource ? (
+        <CollapsibleControls open={Boolean(frame.imageSource)}>
           <ToggleRow
             label="Show Source Image"
             hint="Reveal the photo in gaps between shapes"
             checked={Boolean(frame.settings.showSourceImage)}
             onChange={(showSourceImage) => onSettingsChange({ showSourceImage })}
           />
-        ) : null}
+        </CollapsibleControls>
       </section>
 
       <section className="panel-section">
@@ -1341,7 +1347,7 @@ export function ControlsPanel({
             <GalleryShapeIcon shape="waves" />
           </button>
         </div>
-        {customShapes.length > 0 ? (
+        <CollapsibleControls open={customShapes.length > 0}>
           <div className="button-row button-row--4 button-row--shape-icons">
             {customShapes.map((slot) => {
               const isOn = Boolean(slot.enabled && slot.dataUrl);
@@ -1416,7 +1422,7 @@ export function ControlsPanel({
               );
             })}
           </div>
-        ) : null}
+        </CollapsibleControls>
         </div>
         <SliderRow
           label="Shape Mix"
@@ -1509,7 +1515,7 @@ export function ControlsPanel({
         >
           View Themes
         </button>
-        {canRestorePhotoColors(frame) ? (
+        <CollapsibleControls open={canRestorePhotoColors(frame)}>
           <button
             type="button"
             className="panel-btn"
@@ -1518,8 +1524,8 @@ export function ControlsPanel({
           >
             Restore Colours from Photo
           </button>
-        ) : null}
-        {settings.colors.length < MAX_COLORS ? (
+        </CollapsibleControls>
+        <CollapsibleControls open={settings.colors.length < MAX_COLORS}>
           <button
             type="button"
             className="panel-btn"
@@ -1528,7 +1534,7 @@ export function ControlsPanel({
           >
             Add Colour
           </button>
-        ) : null}
+        </CollapsibleControls>
         <div className="color-list">
           {settings.colors.map((color, index) => (
             <div
@@ -2008,78 +2014,76 @@ export function ControlsPanel({
               ? "Replace Texture"
               : "Upload Texture"}
         </button>
-        {frame.textureOverlay ? (
-          <>
-            <button
-              type="button"
-              className="panel-btn panel-btn--ghost"
-              onClick={onTextureOverlayClear}
-            >
-              Clear Texture
-            </button>
-            <label className="control-row">
-              <span className="control-row__label">
-                <HintLabel hint="How the texture mixes with the mosaic · PNG only">
-                  Blend
-                </HintLabel>
-              </span>
-              <UiSelect
-                value={settings.textureOverlayBlend ?? "multiply"}
-                options={TEXTURE_OVERLAY_BLEND_MODES.map((mode) => ({
-                  value: mode,
-                  label: TEXTURE_OVERLAY_BLEND_LABELS[mode],
-                }))}
-                onChange={(textureOverlayBlend) =>
-                  onSettingsChange(
-                    {
-                      textureOverlayBlend:
-                        textureOverlayBlend as TextureOverlayBlendMode,
-                    },
-                    false,
-                  )
-                }
-              />
-            </label>
-            <SliderRow
-              label="Opacity"
-              hint="Strength of the texture overlay · PNG only"
-              value={
-                settings.textureOverlayOpacity ?? TEXTURE_OVERLAY_OPACITY_DEFAULT
-              }
-              min={0}
-              max={100}
-              onChange={(textureOverlayOpacity) =>
-                onSettingsChange({ textureOverlayOpacity }, false)
+        <CollapsibleControls open={Boolean(frame.textureOverlay)}>
+          <button
+            type="button"
+            className="panel-btn panel-btn--ghost"
+            onClick={onTextureOverlayClear}
+          >
+            Clear Texture
+          </button>
+          <label className="control-row">
+            <span className="control-row__label">
+              <HintLabel hint="How the texture mixes with the mosaic · PNG only">
+                Blend
+              </HintLabel>
+            </span>
+            <UiSelect
+              value={settings.textureOverlayBlend ?? "multiply"}
+              options={TEXTURE_OVERLAY_BLEND_MODES.map((mode) => ({
+                value: mode,
+                label: TEXTURE_OVERLAY_BLEND_LABELS[mode],
+              }))}
+              onChange={(textureOverlayBlend) =>
+                onSettingsChange(
+                  {
+                    textureOverlayBlend:
+                      textureOverlayBlend as TextureOverlayBlendMode,
+                  },
+                  false,
+                )
               }
             />
-            <SliderRow
-              label="Hue"
-              hint="Rotate colours of this texture only · PNG only"
-              value={settings.textureOverlayHue ?? TEXTURE_OVERLAY_HUE_DEFAULT}
-              min={-180}
-              max={180}
-              formatValue={(v) => `${v}°`}
-              onChange={(textureOverlayHue) =>
-                onSettingsChange({ textureOverlayHue }, false)
+          </label>
+          <SliderRow
+            label="Opacity"
+            hint="Strength of the texture overlay · PNG only"
+            value={
+              settings.textureOverlayOpacity ?? TEXTURE_OVERLAY_OPACITY_DEFAULT
+            }
+            min={0}
+            max={100}
+            onChange={(textureOverlayOpacity) =>
+              onSettingsChange({ textureOverlayOpacity }, false)
+            }
+          />
+          <SliderRow
+            label="Hue"
+            hint="Rotate colours of this texture only · PNG only"
+            value={settings.textureOverlayHue ?? TEXTURE_OVERLAY_HUE_DEFAULT}
+            min={-180}
+            max={180}
+            formatValue={(v) => `${v}°`}
+            onChange={(textureOverlayHue) =>
+              onSettingsChange({ textureOverlayHue }, false)
+            }
+          />
+          <div className="control-row">
+            <span className="control-row__label">
+              <HintLabel hint="Multiply tint on the texture before blending · white leaves it unchanged">
+                Tint
+              </HintLabel>
+            </span>
+            <ColorSwatch
+              color={
+                settings.textureOverlayTint ?? TEXTURE_OVERLAY_TINT_DEFAULT
+              }
+              onChange={(textureOverlayTint) =>
+                onSettingsChange({ textureOverlayTint }, false)
               }
             />
-            <div className="control-row">
-              <span className="control-row__label">
-                <HintLabel hint="Multiply tint on the texture before blending · white leaves it unchanged">
-                  Tint
-                </HintLabel>
-              </span>
-              <ColorSwatch
-                color={
-                  settings.textureOverlayTint ?? TEXTURE_OVERLAY_TINT_DEFAULT
-                }
-                onChange={(textureOverlayTint) =>
-                  onSettingsChange({ textureOverlayTint }, false)
-                }
-              />
-            </div>
-          </>
-        ) : null}
+          </div>
+        </CollapsibleControls>
         </HeadlineToggle>
       </section>
 
@@ -2154,42 +2158,40 @@ export function ControlsPanel({
             onSettingsChange({ wireframePeel }, false)
           }
         />
-        {settings.wireframePeel ? (
-          <>
-            <SliderRow
-              label="Amount"
-              hint="0 = solid · 100 = all outlines · smallest first"
-              value={
-                settings.wireframePeelAmount ?? WIREFRAME_PEEL_AMOUNT_DEFAULT
-              }
-              min={0}
-              max={100}
-              onChange={(wireframePeelAmount) =>
-                onSettingsChange({ wireframePeelAmount }, false)
-              }
-            />
-            <SliderRow
-              label="Stroke"
-              hint="Outline thickness"
-              value={GRID_OVERLAY_STROKES.indexOf(
-                resolveGridOverlayStroke(
-                  settings.wireframePeelStroke,
-                  WIREFRAME_PEEL_STROKE_DEFAULT,
-                ),
-              )}
-              min={0}
-              max={GRID_OVERLAY_STROKES.length - 1}
-              step={1}
-              formatValue={(i) => `${GRID_OVERLAY_STROKES[i]}px`}
-              onChange={(i) =>
-                onSettingsChange(
-                  { wireframePeelStroke: GRID_OVERLAY_STROKES[i] },
-                  false,
-                )
-              }
-            />
-          </>
-        ) : null}
+        <CollapsibleControls open={Boolean(settings.wireframePeel)}>
+          <SliderRow
+            label="Amount"
+            hint="0 = solid · 100 = all outlines · smallest first"
+            value={
+              settings.wireframePeelAmount ?? WIREFRAME_PEEL_AMOUNT_DEFAULT
+            }
+            min={0}
+            max={100}
+            onChange={(wireframePeelAmount) =>
+              onSettingsChange({ wireframePeelAmount }, false)
+            }
+          />
+          <SliderRow
+            label="Stroke"
+            hint="Outline thickness"
+            value={GRID_OVERLAY_STROKES.indexOf(
+              resolveGridOverlayStroke(
+                settings.wireframePeelStroke,
+                WIREFRAME_PEEL_STROKE_DEFAULT,
+              ),
+            )}
+            min={0}
+            max={GRID_OVERLAY_STROKES.length - 1}
+            step={1}
+            formatValue={(i) => `${GRID_OVERLAY_STROKES[i]}px`}
+            onChange={(i) =>
+              onSettingsChange(
+                { wireframePeelStroke: GRID_OVERLAY_STROKES[i] },
+                false,
+              )
+            }
+          />
+        </CollapsibleControls>
         <ToggleRow
           label="Invert all"
           hint="Full-frame difference with white · PNG only"
