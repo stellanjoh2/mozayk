@@ -113,11 +113,13 @@ import { stepDensity } from "./grid/density";
 import { recordVisualExported } from "./stats/beacon";
 import { getShortcutLegendEnabled } from "./ui/shortcutLegend";
 import { playUiSound, triggerShortcutButton } from "./ui/sounds";
-import type { Frame, FrameSettings, Orientation } from "./types";
+import type { Density, Frame, FrameSettings, Orientation } from "./types";
 
 import "./App.css";
 
 const LAYOUT_REGEN_MS = 280;
+/** Gap between the canvas-clear beeps and the build cue that follows them. */
+const NEW_CANVAS_SOUND_DELAY_MS = 1000;
 /** Idle gap after which continuous edits (sliders) become a new undo step. */
 const UNDO_COALESCE_MS = 400;
 /** Idle gap before writing the in-memory project to IndexedDB. */
@@ -212,6 +214,10 @@ export default function App() {
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   /** Bumped for the "new canvas" construction — plays on entry and on reset. */
   const [newCanvasToken, setNewCanvasToken] = useState(1);
+  /** Outgoing mosaic pixels, dissolved by the construction. */
+  const [newCanvasWipe, setNewCanvasWipe] = useState<HTMLCanvasElement | null>(
+    null,
+  );
   const [pendingDraft, setPendingDraft] = useState<MzkProject | null>(null);
   const [draftChecked, setDraftChecked] = useState(false);
   const [viewOriginal, setViewOriginal] = useState(false);
@@ -229,6 +235,7 @@ export default function App() {
   const [toast, setToast] = useState<string | null>(null);
   const layoutRegenTimer = useRef<number | null>(null);
   const shapeRerollTimer = useRef<number | null>(null);
+  const newCanvasSoundTimer = useRef<number | null>(null);
   const flushLayoutRegenRef = useRef<(() => void) | null>(null);
   const flushShapeRerollRef = useRef<(() => void) | null>(null);
   const appRef = useRef<HTMLDivElement>(null);
@@ -256,6 +263,9 @@ export default function App() {
   // fresh canvas is an exact "has this been touched?" test.
   const pristineFramesRef = useRef(frames);
   const pristineOrientationRef = useRef(orientation);
+  const captureMosaicRef = useRef<
+    ((quantizeTo?: Density) => HTMLCanvasElement | null) | null
+  >(null);
 
   activeIndexRef.current = activeIndex;
   orientationRef.current = orientation;
@@ -1122,6 +1132,14 @@ export default function App() {
   }, [pushUndoCheckpoint, updateActiveFrame]);
 
   const handleResetCanvas = useCallback(() => {
+    const { orientation: defaultOrientation, frames: defaultFrames } =
+      createDefaultCanvas();
+
+    // Snapshot the mosaic before state flips, snapped onto the density the
+    // incoming canvas uses so the wiped pieces sit on the same lattice.
+    setNewCanvasWipe(
+      captureMosaicRef.current?.(defaultFrames[0].settings.density) ?? null,
+    );
     pushUndoCheckpoint();
     if (layoutRegenTimer.current) {
       window.clearTimeout(layoutRegenTimer.current);
@@ -1131,9 +1149,6 @@ export default function App() {
       window.clearTimeout(shapeRerollTimer.current);
       shapeRerollTimer.current = null;
     }
-
-    const { orientation: defaultOrientation, frames: defaultFrames } =
-      createDefaultCanvas();
 
     pristineFramesRef.current = defaultFrames;
     pristineOrientationRef.current = defaultOrientation;
@@ -1153,6 +1168,15 @@ export default function App() {
     if (getFullscreenElement() === appRef.current) {
       void exitAppFullscreen();
     }
+
+    // The button click plays the clear beeps; the build cue lands with the laser.
+    if (newCanvasSoundTimer.current) {
+      window.clearTimeout(newCanvasSoundTimer.current);
+    }
+    newCanvasSoundTimer.current = window.setTimeout(() => {
+      newCanvasSoundTimer.current = null;
+      playUiSound("newCanvas");
+    }, NEW_CANVAS_SOUND_DELAY_MS);
 
     setNewCanvasToken((token) => token + 1);
     setToast("Canvas reset");
@@ -1755,6 +1779,9 @@ export default function App() {
           highQualityMode={highQualityMode}
           shortcutLegend={shortcutLegend}
           newCanvasToken={newCanvasToken}
+          newCanvasWipe={newCanvasWipe}
+          captureMosaicRef={captureMosaicRef}
+          onNewCanvasDone={() => setNewCanvasWipe(null)}
           onToggleInspect={isMobileGate ? undefined : toggleInspect}
           onMoveBlock={handleMoveBlock}
           onWorkingCanvasSize={handleWorkingCanvasSize}

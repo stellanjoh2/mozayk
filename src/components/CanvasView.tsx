@@ -6,6 +6,7 @@ import {
   useState,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
+  type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
 import gsap from "gsap";
@@ -13,7 +14,8 @@ import { useGSAP } from "@gsap/react";
 import { Flip } from "gsap/Flip";
 
 gsap.registerPlugin(useGSAP, Flip);
-import { getThumbnailRenderSize, getThumbnailSize, getGridDimensions, clientToCanvasPixel, pixelToGridCell } from "../grid/gridMath";
+import { getThumbnailRenderSize, getThumbnailSize, getGridCounts, getGridDimensions, clientToCanvasPixel, pixelToGridCell } from "../grid/gridMath";
+import { quantizeBlocksToDensity } from "../render/newCanvasSequence";
 import {
   drawFittedImage,
   ensureCachedSourceImage,
@@ -42,7 +44,7 @@ import {
   getPreviewSizeForDisplay,
   playbackDurationSeconds,
 } from "../config";
-import type { Frame, Orientation } from "../types";
+import type { Density, Frame, Orientation } from "../types";
 import { PlayIcon, StopIcon } from "../ui/icons";
 import { playUiSound } from "../ui/sounds";
 import { getNormalHoverEffects } from "../ui/hover";
@@ -116,6 +118,16 @@ type CanvasViewProps = {
   shortcutLegend?: { text: string; id: number } | null;
   /** Bump to play the "new canvas" construction over the mosaic. */
   newCanvasToken?: number;
+  /** Outgoing mosaic pixels, dissolved as the construction sweeps in. */
+  newCanvasWipe?: HTMLCanvasElement | null;
+  /**
+   * Filled with a grab-the-mosaic function — call it before replacing state.
+   * Pass a density to snap the outgoing layout onto that grid first.
+   */
+  captureMosaicRef?: RefObject<
+    ((quantizeTo?: Density) => HTMLCanvasElement | null) | null
+  >;
+  onNewCanvasDone?: () => void;
   onToggleInspect?: () => void;
   onMoveBlock?: (blockIndex: number, toCol: number, toRow: number) => void;
   /** Live mosaic backing store — GIF export downscales from this size. */
@@ -134,6 +146,9 @@ export function CanvasView({
   highQualityMode = false,
   shortcutLegend = null,
   newCanvasToken = 0,
+  newCanvasWipe = null,
+  captureMosaicRef,
+  onNewCanvasDone,
   onToggleInspect,
   onMoveBlock,
   onWorkingCanvasSize,
@@ -229,6 +244,62 @@ export function CanvasView({
   useEffect(() => {
     if (newCanvasToken > 0) setNewCanvasRun(newCanvasToken);
   }, [newCanvasToken]);
+
+  useEffect(() => {
+    if (!captureMosaicRef) return;
+    captureMosaicRef.current = (quantizeTo) => {
+      const source = canvasRef.current;
+      if (!source || source.width === 0 || source.height === 0) return null;
+      const copy = document.createElement("canvas");
+      copy.width = source.width;
+      copy.height = source.height;
+
+      const density = frame.settings.density;
+      if (quantizeTo != null && quantizeTo !== density && !viewOriginal) {
+        try {
+          const { columns, rows } = getGridCounts(orientation, quantizeTo);
+          renderMosaic(copy, {
+            orientation,
+            settings: { ...frame.settings, density: quantizeTo },
+            blocks: quantizeBlocksToDensity(
+              frame.blocks,
+              density,
+              quantizeTo,
+              columns,
+              rows,
+            ),
+            width: copy.width,
+            height: copy.height,
+            sourceImage: frame.settings.showSourceImage ? sourceImage : null,
+            sourceImageFit: frame.imageSource?.fit ?? "cover",
+            backgroundImage,
+            textureOverlayImage,
+            customShapeImages,
+          });
+          return copy;
+        } catch {
+          // Preview size may not divide into that grid — fall back to pixels.
+        }
+      }
+
+      copy.getContext("2d")?.drawImage(source, 0, 0);
+      return copy;
+    };
+    return () => {
+      captureMosaicRef.current = null;
+    };
+  }, [
+    captureMosaicRef,
+    frame.blocks,
+    frame.settings,
+    frame.imageSource,
+    orientation,
+    viewOriginal,
+    sourceImage,
+    backgroundImage,
+    textureOverlayImage,
+    customShapeImages,
+  ]);
 
   useEffect(() => {
     if (!pieceDropBlink) {
@@ -971,9 +1042,13 @@ export function CanvasView({
                   ? "#1a1a1a"
                   : frame.settings.background
               }
+              wipeImage={newCanvasWipe}
               displayWidth={displayWidth}
               displayHeight={displayHeight}
-              onDone={() => setNewCanvasRun(0)}
+              onDone={() => {
+                setNewCanvasRun(0);
+                onNewCanvasDone?.();
+              }}
             />
           ) : null}
         </div>

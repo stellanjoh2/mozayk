@@ -13,6 +13,8 @@ type NewCanvasSequenceProps = {
   blocks: MosaicBlock[];
   /** Canvas background colour — the veil hides the mosaic behind it. */
   veilColor: string;
+  /** Outgoing mosaic, dissolved behind the sweep. Null on first entry. */
+  wipeImage?: HTMLCanvasElement | null;
   displayWidth: number;
   displayHeight: number;
   onDone: () => void;
@@ -26,6 +28,7 @@ export function NewCanvasSequence({
   grid,
   blocks,
   veilColor,
+  wipeImage = null,
   displayWidth,
   displayHeight,
   onDone,
@@ -43,8 +46,9 @@ export function NewCanvasSequence({
     cues: BlockCue[];
     veilColor: string;
     displayWidth: number;
-  }>({ grid, cues, veilColor, displayWidth });
-  liveRef.current = { grid, cues, veilColor, displayWidth };
+    wipeImage: HTMLCanvasElement | null;
+  }>({ grid, cues, veilColor, displayWidth, wipeImage });
+  liveRef.current = { grid, cues, veilColor, displayWidth, wipeImage };
   const onDoneRef = useRef(onDone);
   onDoneRef.current = onDone;
 
@@ -71,6 +75,9 @@ export function NewCanvasSequence({
         elapsedMs,
         veilColor: live.veilColor,
         accentColor,
+        wipeImage: live.wipeImage,
+        wipeImageWidth: live.wipeImage?.width ?? 0,
+        wipeImageHeight: live.wipeImage?.height ?? 0,
         displayScale:
           live.displayWidth > 0 ? live.grid.width / live.displayWidth : 1,
       });

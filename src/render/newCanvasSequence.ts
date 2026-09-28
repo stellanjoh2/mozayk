@@ -1,5 +1,6 @@
+import { gridScale } from "../grid/density";
 import { blockPixelRect, gridEdge, type PixelRect } from "../grid/gridMath";
-import type { GridDimensions, MosaicBlock } from "../types";
+import type { Density, GridDimensions, MosaicBlock } from "../types";
 
 /**
  * "New canvas" construction — a grid sweep followed by blocks lighting up.
@@ -7,33 +8,45 @@ import type { GridDimensions, MosaicBlock } from "../types";
  * the canvas background colour; each block is punched out of that veil, so the
  * real shapes and colours are revealed instead of being redrawn here.
  */
-export const NEW_CANVAS_SEQUENCE_MS = 3000;
+/**
+ * Act one: the outgoing mosaic is swept away left to right. Act two starts on
+ * a bare canvas — laser, grid, then blocks — and runs the full three seconds.
+ */
+const WIPE_END_MS = 640;
+const BUILD_START_MS = 640;
+export const NEW_CANVAS_SEQUENCE_MS = BUILD_START_MS + 3000;
 
-const SWEEP_START_MS = 90;
-const SWEEP_END_MS = 1380;
+const SWEEP_START_MS = BUILD_START_MS + 90;
+const SWEEP_END_MS = BUILD_START_MS + 1380;
 /** Leading edge glow reach, in grid cells. */
 const SWEEP_TRAIL_CELLS = 5.25;
 const GRID_LINE_BASE_ALPHA = 0.16;
 const GRID_LINE_PEAK_ALPHA = 0.9;
-const GRID_FADE_START_MS = 2220;
-const GRID_FADE_END_MS = 2820;
+const GRID_FADE_START_MS = BUILD_START_MS + 2220;
+const GRID_FADE_END_MS = BUILD_START_MS + 2820;
 
-const BLOCK_WAVE_START_MS = 1050;
+const BLOCK_WAVE_START_MS = BUILD_START_MS + 1050;
 /** Spread of block start times across the canvas width. */
 const BLOCK_WAVE_SPAN_MS = 840;
 const BLOCK_WAVE_JITTER_MS = 135;
 const BLOCK_REVEAL_MS = 360;
-const OUTLINE_LEAD_MS = 225;
-const OUTLINE_TAIL_MS = 420;
-const OUTLINE_ALPHA = 0.85;
 /** How long a block holds the accent before crossfading to its own colour. */
 const ACCENT_SETTLE_MS = 520;
 
-const VEIL_FADE_START_MS = 2610;
+/** Distance behind the wipe over which an old cell fades out, in cells. */
+const DISSOLVE_TRAIL_CELLS = 4;
+/** Per-cell spread on that fade — neighbours dim at visibly different rates. */
+const DISSOLVE_TRAIL_MIN = 0.5;
+const DISSOLVE_TRAIL_MAX = 1.7;
+/** How far a cell may lag the front, in cells. */
+const DISSOLVE_JITTER_CELLS = 10;
+/** Skews the lag low, so most cells go with the front and a few hang back. */
+const DISSOLVE_JITTER_BIAS = 1.7;
+
+const VEIL_FADE_START_MS = BUILD_START_MS + 2610;
 const VEIL_FADE_END_MS = NEW_CANVAS_SEQUENCE_MS;
 
 const GRID_STROKE_CSS_PX = 1;
-const OUTLINE_STROKE_CSS_PX = 2;
 
 export function clamp01(value: number): number {
   return value < 0 ? 0 : value > 1 ? 1 : value;
@@ -49,6 +62,11 @@ function easeOutCubic(t: number): number {
   return 1 - u * u * u;
 }
 
+function easeInOutCubic(t: number): number {
+  const u = clamp01(t);
+  return u < 0.5 ? 4 * u ** 3 : 1 - (2 - 2 * u) ** 3 / 2;
+}
+
 function span(value: number, from: number, to: number): number {
   if (to <= from) return value >= to ? 1 : 0;
   return clamp01((value - from) / (to - from));
@@ -60,10 +78,28 @@ function cellNoise(col: number, row: number): number {
   return n - Math.floor(n);
 }
 
+/** Second, independent jitter — lag and fade rate must not correlate. */
+function cellNoiseAlt(col: number, row: number): number {
+  const n = Math.sin(col * 269.5 + row * 183.3) * 24634.6345;
+  return n - Math.floor(n);
+}
+
 /** Leading edge of the grid sweep, in canvas pixels. -1 before it starts. */
 export function sweepEdgeX(elapsedMs: number, width: number): number {
   if (elapsedMs < SWEEP_START_MS) return -1;
   return easeInOutQuint(span(elapsedMs, SWEEP_START_MS, SWEEP_END_MS)) * width;
+}
+
+/**
+ * Front of the wipe that clears the outgoing mosaic. Runs the same direction
+ * as the laser but on its own clock, and overshoots so nothing is left behind.
+ */
+export function wipeEdgeX(
+  elapsedMs: number,
+  width: number,
+  reach: number,
+): number {
+  return easeInOutCubic(span(elapsedMs, 0, WIPE_END_MS)) * (width + reach);
 }
 
 /** Grid lines settle to a faint lattice, then fade out under the mosaic. */
@@ -202,6 +238,113 @@ function drawSweepBeam(
   ctx.restore();
 }
 
+/**
+ * Snaps a layout onto another density's lattice, so the outgoing mosaic lines
+ * up with the grid the sweep is about to draw. Pieces may overlap after the
+ * rounding — this only ever feeds a throwaway snapshot, never canvas state.
+ */
+export function quantizeBlocksToDensity(
+  blocks: readonly MosaicBlock[],
+  fromDensity: Density,
+  toDensity: Density,
+  columns: number,
+  rows: number,
+): MosaicBlock[] {
+  const from = gridScale(fromDensity);
+  const to = gridScale(toDensity);
+  if (from <= 0 || to <= 0 || from === to) return [...blocks];
+
+  const ratio = to / from;
+  return blocks.map((block) => {
+    const col = Math.min(columns - 1, Math.round(block.col * ratio));
+    const row = Math.min(rows - 1, Math.round(block.row * ratio));
+    return {
+      ...block,
+      col,
+      row,
+      width: Math.max(
+        1,
+        Math.min(columns - col, Math.round(block.width * ratio)),
+      ),
+      height: Math.max(1, Math.min(rows - row, Math.round(block.height * ratio))),
+    };
+  });
+}
+
+/** How far past the right edge the sweep must be for the old canvas to be gone. */
+function dissolveReach(grid: GridDimensions): number {
+  return (
+    grid.cellSize *
+    (DISSOLVE_TRAIL_CELLS * DISSOLVE_TRAIL_MAX + DISSOLVE_JITTER_CELLS)
+  );
+}
+
+/**
+ * Paints the outgoing mosaic and erases it cell by cell as the sweep passes,
+ * so the previous canvas shatters instead of blinking out on frame one.
+ */
+function drawDissolvingCanvas(
+  ctx: CanvasRenderingContext2D,
+  grid: GridDimensions,
+  image: CanvasImageSource,
+  imageWidth: number,
+  imageHeight: number,
+  edgeX: number,
+): void {
+  const fit = Math.min(grid.width / imageWidth, grid.height / imageHeight);
+  const drawWidth = imageWidth * fit;
+  const drawHeight = imageHeight * fit;
+  ctx.drawImage(
+    image,
+    (grid.width - drawWidth) / 2,
+    (grid.height - drawHeight) / 2,
+    drawWidth,
+    drawHeight,
+  );
+
+  if (edgeX < 0) return;
+
+  const trail = Math.max(1, grid.cellSize * DISSOLVE_TRAIL_CELLS);
+  const jitterMax = grid.cellSize * DISSOLVE_JITTER_CELLS;
+  const clearedTo = edgeX - trail * DISSOLVE_TRAIL_MAX - jitterMax;
+
+  ctx.save();
+  ctx.globalCompositeOperation = "destination-out";
+  ctx.fillStyle = "#000";
+
+  if (clearedTo > 0) {
+    ctx.fillRect(0, 0, clearedTo, grid.height);
+  }
+
+  // Only the band still fading needs per-cell work; everything behind it is gone.
+  const first = Math.max(
+    0,
+    Math.floor((clearedTo / grid.width) * grid.columns),
+  );
+  const last = Math.min(
+    grid.columns - 1,
+    Math.floor((edgeX / grid.width) * grid.columns),
+  );
+  for (let c = first; c <= last; c++) {
+    const x = gridEdge(c, grid.columns, grid.width);
+    const x2 = gridEdge(c + 1, grid.columns, grid.width);
+    for (let r = 0; r < grid.rows; r++) {
+      const lag = cellNoise(c, r) ** DISSOLVE_JITTER_BIAS * jitterMax;
+      const fade =
+        trail *
+        (DISSOLVE_TRAIL_MIN +
+          cellNoiseAlt(c, r) * (DISSOLVE_TRAIL_MAX - DISSOLVE_TRAIL_MIN));
+      const alpha = clamp01((edgeX - x2 - lag) / fade);
+      if (alpha <= 0.002) continue;
+      const y = gridEdge(r, grid.rows, grid.height);
+      const y2 = gridEdge(r + 1, grid.rows, grid.height);
+      ctx.globalAlpha = alpha;
+      ctx.fillRect(x, y, x2 - x, y2 - y);
+    }
+  }
+  ctx.restore();
+}
+
 export type NewCanvasFrameOptions = {
   grid: GridDimensions;
   cues: readonly BlockCue[];
@@ -210,6 +353,10 @@ export type NewCanvasFrameOptions = {
   veilColor: string;
   /** Computed chrome accent, e.g. "rgb(255, 83, 0)". */
   accentColor: string;
+  /** Snapshot of the outgoing mosaic, dissolved behind the sweep. */
+  wipeImage?: CanvasImageSource | null;
+  wipeImageWidth?: number;
+  wipeImageHeight?: number;
   /** Canvas backing pixels per CSS pixel — keeps strokes at screen weight. */
   displayScale: number;
 };
@@ -224,7 +371,6 @@ export function drawNewCanvasFrame(
 
   const accent = parseRgb(options.accentColor);
   const gridStroke = GRID_STROKE_CSS_PX * displayScale;
-  const outlineStroke = OUTLINE_STROKE_CSS_PX * displayScale;
   const edgeX = sweepEdgeX(elapsedMs, grid.width);
   const fade = gridFadeAlpha(elapsedMs);
   const veil = veilAlpha(elapsedMs);
@@ -232,11 +378,31 @@ export function drawNewCanvasFrame(
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, grid.width, grid.height);
 
+  const { wipeImage, wipeImageWidth = 0, wipeImageHeight = 0 } = options;
+  if (
+    wipeImage &&
+    wipeImageWidth > 0 &&
+    wipeImageHeight > 0 &&
+    elapsedMs < WIPE_END_MS
+  ) {
+    drawDissolvingCanvas(
+      ctx,
+      grid,
+      wipeImage,
+      wipeImageWidth,
+      wipeImageHeight,
+      wipeEdgeX(elapsedMs, grid.width, dissolveReach(grid)),
+    );
+  }
+
+  // Behind the old canvas rather than over it — the veil fills what dissolved.
   if (veil > 0) {
+    ctx.save();
+    ctx.globalCompositeOperation = "destination-over";
     ctx.globalAlpha = veil;
     ctx.fillStyle = veilColor;
     ctx.fillRect(0, 0, grid.width, grid.height);
-    ctx.globalAlpha = 1;
+    ctx.restore();
   }
 
   if (edgeX >= 0 && fade > 0) {
@@ -287,21 +453,4 @@ export function drawNewCanvasFrame(
     drawSweepBeam(ctx, grid, accent, edgeX, fade, gridStroke);
   }
 
-  // Wireframe box draws ahead of the block and burns off once it has landed.
-  ctx.save();
-  ctx.globalCompositeOperation = "lighter";
-  ctx.lineWidth = outlineStroke;
-  for (const cue of cues) {
-    const endMs = cue.startMs + BLOCK_REVEAL_MS;
-    if (elapsedMs < cue.startMs - OUTLINE_LEAD_MS) continue;
-    if (elapsedMs > endMs + OUTLINE_TAIL_MS) continue;
-
-    const lead = span(elapsedMs, cue.startMs - OUTLINE_LEAD_MS, cue.startMs);
-    const tail = 1 - span(elapsedMs, endMs, endMs + OUTLINE_TAIL_MS);
-    const outline = OUTLINE_ALPHA * lead * tail;
-    if (outline <= 0.002) continue;
-    ctx.strokeStyle = rgba(accent, outline);
-    ctx.strokeRect(cue.rect.x, cue.rect.y, cue.rect.width, cue.rect.height);
-  }
-  ctx.restore();
 }

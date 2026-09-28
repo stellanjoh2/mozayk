@@ -138,7 +138,7 @@ export function ResetCanvasDialog({ open, onConfirm, onCancel }: ResetCanvasDial
           <button
             type="button"
             className="panel-btn"
-            data-ui-sound="newCanvas"
+            data-ui-sound="canvasClear"
             onClick={() => {
               stopDialogVoice();
               onConfirm();

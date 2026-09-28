@@ -5,6 +5,7 @@ import {
   parseRgb,
   sweepEdgeX,
   veilAlpha,
+  wipeEdgeX,
 } from "./newCanvasSequence";
 import type { GridDimensions, MosaicBlock } from "../types";
 
@@ -37,6 +38,22 @@ function run(): void {
     sweepEdgeX(NEW_CANVAS_SEQUENCE_MS, grid.width) === grid.width,
     "sweep reaches the right edge",
   );
+
+  const reach = grid.cellSize * 5.5;
+  assert(wipeEdgeX(0, grid.width, reach) === 0, "nothing is wiped at t=0");
+  let previousWipe = -1;
+  let clearedBeforeLaser = false;
+  for (let t = 0; t <= NEW_CANVAS_SEQUENCE_MS; t += 20) {
+    const x = wipeEdgeX(t, grid.width, reach);
+    assert(x >= previousWipe, `wipe front never moves back (t=${t})`);
+    previousWipe = x;
+    // The old canvas must be gone before the laser starts drawing.
+    if (x >= grid.width + reach && !clearedBeforeLaser) {
+      clearedBeforeLaser = sweepEdgeX(t, grid.width) < 0;
+      assert(clearedBeforeLaser, `canvas clears before the laser (t=${t})`);
+    }
+  }
+  assert(clearedBeforeLaser, "the wipe finishes within the sequence");
 
   assert(veilAlpha(0) === 1, "veil starts opaque");
   assert(veilAlpha(1000) === 1, "veil holds while blocks land");
