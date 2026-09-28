@@ -14,7 +14,7 @@ import { useGSAP } from "@gsap/react";
 import { Flip } from "gsap/Flip";
 
 gsap.registerPlugin(useGSAP, Flip);
-import { getThumbnailRenderSize, getThumbnailSize, getGridCounts, getGridDimensions, clientToCanvasPixel, pixelToGridCell } from "../grid/gridMath";
+import { getThumbnailRenderSize, getThumbnailSize, getGridDimensions, clientToCanvasPixel, pixelToGridCell } from "../grid/gridMath";
 import {
   drawFittedImage,
   ensureCachedSourceImage,

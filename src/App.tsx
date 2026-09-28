@@ -112,7 +112,7 @@ import {
 import { stepDensity } from "./grid/density";
 import { getShortcutLegendEnabled } from "./ui/shortcutLegend";
 import { playUiSound, triggerShortcutButton } from "./ui/sounds";
-import type { Density, Frame, FrameSettings, Orientation } from "./types";
+import type { Frame, FrameSettings, Orientation } from "./types";
 
 import "./App.css";
 
