@@ -6,6 +6,7 @@ import {
   sweepEdgeX,
   veilAlpha,
   wipeEdgeX,
+  beamFadeAlpha,
 } from "./newCanvasSequence";
 import type { GridDimensions, MosaicBlock } from "../types";
 
@@ -62,6 +63,13 @@ function run(): void {
   assert(
     gridFadeAlpha(NEW_CANVAS_SEQUENCE_MS) === 0,
     "grid is gone at the end",
+  );
+  assert(beamFadeAlpha(0) === 1, "laser wash is full during the sweep");
+  assert(beamFadeAlpha(2020) === 1, "laser wash holds until it docks");
+  assert(beamFadeAlpha(NEW_CANVAS_SEQUENCE_MS) === 0, "laser wash is gone by the end");
+  assert(
+    beamFadeAlpha(2500) < beamFadeAlpha(2100),
+    "laser wash fades while blocks fill",
   );
 
   const cues = buildBlockCues(

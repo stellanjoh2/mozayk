@@ -30,8 +30,56 @@ const BLOCK_WAVE_START_MS = BUILD_START_MS + 1050;
 const BLOCK_WAVE_SPAN_MS = 840;
 const BLOCK_WAVE_JITTER_MS = 135;
 const BLOCK_REVEAL_MS = 360;
+/** Laser wash starts dying the moment it docks on the right edge. */
+const BEAM_FADE_START_MS = SWEEP_END_MS;
+const BEAM_FADE_END_MS =
+  BLOCK_WAVE_START_MS + BLOCK_WAVE_SPAN_MS + BLOCK_REVEAL_MS;
 /** How long a block holds the accent before crossfading to its own colour. */
 const ACCENT_SETTLE_MS = 520;
+/** Chrome bloom around a landing block — dies fast so only the wave front glows. */
+const GLOW_TAIL_MS = 200;
+const GLOW_PEAK_ALPHA = 0.9;
+const GLOW_BLUR_CSS_PX = 16;
+/** Bloom is drawn at 1/4 res, blurred once, then scaled up. */
+const GLOW_DOWNSCALE = 4;
+
+let glowScratch: HTMLCanvasElement | null = null;
+let glowBlurred: HTMLCanvasElement | null = null;
+
+function acquireScratch(
+  like: HTMLCanvasElement,
+  width: number,
+  height: number,
+  slot: "src" | "blur",
+): HTMLCanvasElement {
+  const current = slot === "src" ? glowScratch : glowBlurred;
+  if (current && current.width === width && current.height === height) {
+    return current;
+  }
+  const canvas = current ?? makeLikeCanvas(like);
+  if (canvas.width !== width) canvas.width = width;
+  if (canvas.height !== height) canvas.height = height;
+  if (slot === "src") glowScratch = canvas;
+  else glowBlurred = canvas;
+  return canvas;
+}
+
+function makeLikeCanvas(like: HTMLCanvasElement): HTMLCanvasElement {
+  const Ctor = like.constructor as new () => HTMLCanvasElement;
+  try {
+    return new Ctor();
+  } catch {
+    return document.createElement("canvas");
+  }
+}
+
+function blockGlowAmount(elapsedMs: number, startMs: number): number {
+  const endMs = startMs + BLOCK_REVEAL_MS;
+  if (elapsedMs < startMs || elapsedMs > endMs + GLOW_TAIL_MS) return 0;
+  const attack = easeOutCubic(span(elapsedMs, startMs, endMs));
+  const decay = 1 - span(elapsedMs, endMs, endMs + GLOW_TAIL_MS);
+  return GLOW_PEAK_ALPHA * attack * decay * decay;
+}
 
 /** Distance behind the wipe over which an old cell fades out, in cells. */
 const DISSOLVE_TRAIL_CELLS = 4;
@@ -107,6 +155,12 @@ export function gridFadeAlpha(elapsedMs: number): number {
   return 1 - span(elapsedMs, GRID_FADE_START_MS, GRID_FADE_END_MS);
 }
 
+/** Laser wall wash — full until it docks, then gone while blocks fill. */
+export function beamFadeAlpha(elapsedMs: number): number {
+  if (elapsedMs < BEAM_FADE_START_MS) return 1;
+  return 1 - span(elapsedMs, BEAM_FADE_START_MS, BEAM_FADE_END_MS);
+}
+
 export function veilAlpha(elapsedMs: number): number {
   return 1 - span(elapsedMs, VEIL_FADE_START_MS, VEIL_FADE_END_MS);
 }
@@ -164,11 +218,12 @@ function drawGridLines(
   grid: GridDimensions,
   accent: Rgb,
   edgeX: number,
-  fade: number,
+  latticeFade: number,
+  beamFade: number,
   lineWidth: number,
 ): void {
   const trail = Math.max(1, grid.cellSize * SWEEP_TRAIL_CELLS);
-  const headAlpha = GRID_LINE_PEAK_ALPHA * fade;
+  const headAlpha = GRID_LINE_PEAK_ALPHA * beamFade * latticeFade;
 
   ctx.save();
   ctx.lineWidth = lineWidth;
@@ -177,11 +232,11 @@ function drawGridLines(
   for (let c = 1; c < grid.columns; c++) {
     const x = gridEdge(c, grid.columns, grid.width);
     if (x > edgeX) break;
-    const heat = Math.exp(-(edgeX - x) / trail);
+    const heat = Math.exp(-(edgeX - x) / trail) * beamFade;
     const alpha =
       (GRID_LINE_BASE_ALPHA +
         (GRID_LINE_PEAK_ALPHA - GRID_LINE_BASE_ALPHA) * heat) *
-      fade;
+      latticeFade;
     if (alpha <= 0.002) continue;
     ctx.strokeStyle = rgba(accent, alpha);
     ctx.beginPath();
@@ -197,7 +252,7 @@ function drawGridLines(
     ctx.moveTo(0, y);
     ctx.lineTo(edgeX, y);
   }
-  ctx.strokeStyle = rgba(accent, GRID_LINE_BASE_ALPHA * fade);
+  ctx.strokeStyle = rgba(accent, GRID_LINE_BASE_ALPHA * latticeFade);
   ctx.stroke();
 
   if (edgeX > 0 && headAlpha > 0.002) {
@@ -372,7 +427,8 @@ export function drawNewCanvasFrame(
   const accent = parseRgb(options.accentColor);
   const gridStroke = GRID_STROKE_CSS_PX * displayScale;
   const edgeX = sweepEdgeX(elapsedMs, grid.width);
-  const fade = gridFadeAlpha(elapsedMs);
+  const latticeFade = gridFadeAlpha(elapsedMs);
+  const beamFade = beamFadeAlpha(elapsedMs);
   const veil = veilAlpha(elapsedMs);
 
   ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -405,8 +461,16 @@ export function drawNewCanvasFrame(
     ctx.restore();
   }
 
-  if (edgeX >= 0 && fade > 0) {
-    drawGridLines(ctx, grid, accent, edgeX, fade, gridStroke);
+  if (edgeX >= 0 && latticeFade > 0) {
+    drawGridLines(
+      ctx,
+      grid,
+      accent,
+      edgeX,
+      latticeFade,
+      beamFade,
+      gridStroke,
+    );
   }
 
   // Punch the veil (and the grid drawn onto it) so the mosaic shows through.
@@ -449,8 +513,77 @@ export function drawNewCanvasFrame(
     ctx.fillRect(rect.x, rect.y, rect.width, rect.height);
   }
 
-  if (edgeX >= 0 && edgeX <= grid.width && fade > 0) {
-    drawSweepBeam(ctx, grid, accent, edgeX, fade, gridStroke);
+  if (edgeX >= 0 && beamFade > 0) {
+    drawSweepBeam(ctx, grid, accent, edgeX, beamFade, gridStroke);
   }
 
+  drawLandingGlow(canvas, ctx, cues, elapsedMs, accent, displayScale);
+}
+
+/**
+ * One downscaled blur for the whole wave front — per-block shadowBlur
+ * gaussian-blurred the overlay dozens of times per frame.
+ */
+function drawLandingGlow(
+  source: HTMLCanvasElement,
+  ctx: CanvasRenderingContext2D,
+  cues: readonly BlockCue[],
+  elapsedMs: number,
+  accent: Rgb,
+  displayScale: number,
+): void {
+  const scale = 1 / GLOW_DOWNSCALE;
+  const w = Math.max(1, Math.round(source.width * scale));
+  const h = Math.max(1, Math.round(source.height * scale));
+  const scratch = acquireScratch(source, w, h, "src");
+  const gtx = scratch.getContext("2d");
+  if (!gtx) return;
+
+  gtx.setTransform(1, 0, 0, 1, 0, 0);
+  gtx.clearRect(0, 0, w, h);
+
+  let lit = 0;
+  for (const cue of cues) {
+    const glow = blockGlowAmount(elapsedMs, cue.startMs);
+    if (glow <= 0.002) continue;
+    lit += 1;
+    const reveal = span(
+      elapsedMs,
+      cue.startMs,
+      cue.startMs + BLOCK_REVEAL_MS,
+    );
+    const rect =
+      reveal < 1
+        ? centeredRect(cue.rect, 0.2 + 0.8 * easeOutCubic(reveal))
+        : cue.rect;
+    gtx.fillStyle = rgba(accent, glow);
+    gtx.fillRect(
+      rect.x * scale,
+      rect.y * scale,
+      rect.width * scale,
+      rect.height * scale,
+    );
+  }
+  if (lit === 0) return;
+
+  const blurPx = Math.max(1, (GLOW_BLUR_CSS_PX * displayScale) / GLOW_DOWNSCALE);
+  const blurred = acquireScratch(source, w, h, "blur");
+  const btx = blurred.getContext("2d");
+  if (!btx) return;
+  btx.setTransform(1, 0, 0, 1, 0, 0);
+  btx.clearRect(0, 0, w, h);
+  try {
+    btx.filter = `blur(${blurPx}px)`;
+    btx.drawImage(scratch, 0, 0);
+    btx.filter = "none";
+  } catch {
+    return;
+  }
+
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  ctx.imageSmoothingEnabled = true;
+  ctx.globalAlpha = 0.85;
+  ctx.drawImage(blurred, 0, 0, source.width, source.height);
+  ctx.restore();
 }

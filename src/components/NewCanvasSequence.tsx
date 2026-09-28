@@ -65,9 +65,12 @@ export function NewCanvasSequence({
     let raf = requestAnimationFrame(function tick(now: number) {
       const live = liveRef.current;
       const elapsedMs = now - start;
-
-      if (canvas.width !== live.grid.width) canvas.width = live.grid.width;
-      if (canvas.height !== live.grid.height) canvas.height = live.grid.height;
+      const nextW = live.grid.width;
+      const nextH = live.grid.height;
+      // Assigning canvas.width clears the bitmap — only do it when size
+      // actually changes, otherwise parent re-renders flash a blank frame.
+      if (canvas.width !== nextW) canvas.width = nextW;
+      if (canvas.height !== nextH) canvas.height = nextH;
 
       drawNewCanvasFrame(canvas, {
         grid: live.grid,
@@ -97,8 +100,6 @@ export function NewCanvasSequence({
       ref={canvasRef}
       className="mosaic-new-canvas"
       aria-hidden="true"
-      width={grid.width}
-      height={grid.height}
       style={{ width: displayWidth, height: displayHeight }}
     />
   );
