@@ -176,6 +176,8 @@ export function LogoCreator() {
   const enabledShapesRef = useRef(enabledShapes);
   const cornerRadiusRef = useRef(0);
   const shapeGapRef = useRef(0);
+  /** Exact mark painted on first open — Restore puts this layout back. */
+  const openingMarkupRef = useRef(markup);
   speedRef.current = speed;
   playingRef.current = playing;
   uiHiddenRef.current = uiHidden;
@@ -291,10 +293,20 @@ export function LogoCreator() {
     setOpenColor(null);
     setColors(generateRandomPalette(3));
   };
-  const restoreColours = () => {
+  const restoreLogo = () => {
     if (playingRef.current || loopRef.current) stopPlayback();
     setOpenColor(null);
     setColors([...ORIGINAL_CHROMATIC]);
+    subdividedRef.current = false;
+    setSubdivided(false);
+    const shapes = [...DEFAULT_LOGO_SHAPES];
+    enabledShapesRef.current = shapes;
+    setEnabledShapes(shapes);
+    cornerRadiusRef.current = 0;
+    setCornerRadius(0);
+    shapeGapRef.current = 0;
+    setShapeGap(0);
+    setMarkup(openingMarkupRef.current);
   };
   const setColorAt = (index: number, hex: string) => {
     setColors((prev) => prev.map((c, i) => (i === index ? hex : c)));
@@ -492,7 +504,7 @@ export function LogoCreator() {
       } else if (event.code === "KeyE") {
         event.preventDefault();
         if (!event.repeat) triggerShortcutButton("KeyE");
-        restoreColours();
+        restoreLogo();
       } else if (event.code === "KeyL" && !event.repeat) {
         event.preventDefault();
         triggerShortcutButton("KeyL");
@@ -685,7 +697,7 @@ export function LogoCreator() {
             <button type="button" aria-keyshortcuts="c" data-shortcut="KeyC" onClick={randomizeColours}>
               Randomize Colours (C)
             </button>
-            <button type="button" aria-keyshortcuts="e" data-shortcut="KeyE" data-ui-sound="ok" onClick={restoreColours}>
+            <button type="button" aria-keyshortcuts="e" data-shortcut="KeyE" data-ui-sound="ok" onClick={restoreLogo}>
               Restore (E)
             </button>
           </div>
