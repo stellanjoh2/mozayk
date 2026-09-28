@@ -25,7 +25,7 @@ const GRID_LINE_PEAK_ALPHA = 0.9;
 const GRID_FADE_START_MS = BUILD_START_MS + 2220;
 const GRID_FADE_END_MS = BUILD_START_MS + 2820;
 
-const BLOCK_WAVE_START_MS = BUILD_START_MS + 1050;
+const BLOCK_WAVE_START_MS = BUILD_START_MS + 800;
 /** Spread of block start times across the canvas width. */
 const BLOCK_WAVE_SPAN_MS = 840;
 const BLOCK_WAVE_JITTER_MS = 135;
@@ -100,11 +100,6 @@ export function clamp01(value: number): number {
   return value < 0 ? 0 : value > 1 ? 1 : value;
 }
 
-function easeInOutQuint(t: number): number {
-  const u = clamp01(t);
-  return u < 0.5 ? 16 * u ** 5 : 1 - (2 - 2 * u) ** 5 / 2;
-}
-
 function easeOutCubic(t: number): number {
   const u = 1 - clamp01(t);
   return 1 - u * u * u;
@@ -113,6 +108,12 @@ function easeOutCubic(t: number): number {
 function easeInOutCubic(t: number): number {
   const u = clamp01(t);
   return u < 0.5 ? 4 * u ** 3 : 1 - (2 - 2 * u) ** 3 / 2;
+}
+
+/** Fast launch, soft dock — laser wall only. */
+function easeOutQuint(t: number): number {
+  const u = 1 - clamp01(t);
+  return 1 - u ** 5;
 }
 
 function span(value: number, from: number, to: number): number {
@@ -135,7 +136,7 @@ function cellNoiseAlt(col: number, row: number): number {
 /** Leading edge of the grid sweep, in canvas pixels. -1 before it starts. */
 export function sweepEdgeX(elapsedMs: number, width: number): number {
   if (elapsedMs < SWEEP_START_MS) return -1;
-  return easeInOutQuint(span(elapsedMs, SWEEP_START_MS, SWEEP_END_MS)) * width;
+  return easeOutQuint(span(elapsedMs, SWEEP_START_MS, SWEEP_END_MS)) * width;
 }
 
 /**

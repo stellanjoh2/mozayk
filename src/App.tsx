@@ -118,7 +118,7 @@ import "./App.css";
 
 const LAYOUT_REGEN_MS = 280;
 /** Gap between the canvas-clear beeps and the build cue that follows them. */
-const NEW_CANVAS_SOUND_DELAY_MS = 1000;
+const NEW_CANVAS_SOUND_DELAY_MS = 1450;
 /** Idle gap after which continuous edits (sliders) become a new undo step. */
 const UNDO_COALESCE_MS = 400;
 /** Idle gap before writing the in-memory project to IndexedDB. */
