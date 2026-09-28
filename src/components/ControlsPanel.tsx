@@ -1044,15 +1044,6 @@ export function ControlsPanel({
         >
           Apply Look to All Frames
         </button>
-        <button
-          type="button"
-          className="panel-btn panel-btn--ghost has-hint"
-          data-hint="Back to a fresh default canvas"
-          disabled={!canResetCanvas}
-          onClick={onResetCanvas}
-        >
-          Reset Canvas
-        </button>
         <div className="control-row__label control-row__label--solo control-row__label--with-action">
           <HintLabel hint="Toggle shapes to include in the mix">
             Add Shapes
