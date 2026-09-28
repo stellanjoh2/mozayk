@@ -1,6 +1,9 @@
 import {
+  IMAGE_FILL_SEQUENCE_MS,
   NEW_CANVAS_SEQUENCE_MS,
+  SWEEP_START_MS,
   buildBlockCues,
+  buildRadialFillBlockCues,
   gridFadeAlpha,
   parseRgb,
   sweepEdgeX,
@@ -64,12 +67,19 @@ function run(): void {
     gridFadeAlpha(NEW_CANVAS_SEQUENCE_MS) === 0,
     "grid is gone at the end",
   );
-  assert(beamFadeAlpha(0) === 1, "laser wash is full during the sweep");
-  assert(beamFadeAlpha(2020) === 1, "laser wash holds until it docks");
+  assert(beamFadeAlpha(0) === 1, "laser wash is full before it enters");
+  assert(
+    beamFadeAlpha(SWEEP_START_MS) === 1,
+    "laser wash is full at the moment it enters",
+  );
+  assert(
+    beamFadeAlpha(1400) < beamFadeAlpha(SWEEP_START_MS),
+    "laser wash fades as soon as it is on screen",
+  );
   assert(beamFadeAlpha(NEW_CANVAS_SEQUENCE_MS) === 0, "laser wash is gone by the end");
   assert(
     beamFadeAlpha(2500) < beamFadeAlpha(2100),
-    "laser wash fades while blocks fill",
+    "laser wash keeps fading while blocks fill",
   );
 
   const cues = buildBlockCues(
@@ -85,6 +95,33 @@ function run(): void {
   );
   assert(cues[2].rect.x === 1800 && cues[2].rect.width === 120, "cue rects are grid cells");
   assert(buildBlockCues([block(0, 0)], { ...grid, width: 0 }).length === 0, "zero-width grid has no cues");
+
+  const corner = block(0, 0);
+  const center = block(8, 4);
+  const farCorner = block(15, 8);
+  const fillCues = buildRadialFillBlockCues([corner, center, farCorner], grid);
+  assert(fillCues.length === 3, "fill has one cue per block");
+  assert(
+    fillCues[1].startMs < fillCues[0].startMs,
+    "fill wave starts near the centre before a corner",
+  );
+  assert(
+    fillCues[1].startMs < fillCues[2].startMs,
+    "fill wave reaches the far corner after the centre",
+  );
+  assert(
+    fillCues[0].startMs < IMAGE_FILL_SEQUENCE_MS &&
+      fillCues[2].startMs < IMAGE_FILL_SEQUENCE_MS,
+    "corner fill blocks start inside the fill sequence",
+  );
+  assert(
+    IMAGE_FILL_SEQUENCE_MS < NEW_CANVAS_SEQUENCE_MS,
+    "fill sequence is shorter than full new-canvas",
+  );
+  assert(
+    buildRadialFillBlockCues([center], { ...grid, width: 0 }).length === 0,
+    "zero-width grid has no radial cues",
+  );
 
   const [r, g, b] = parseRgb("rgb(198, 240, 0)");
   assert(r === 198 && g === 240 && b === 0, "parses computed rgb()");

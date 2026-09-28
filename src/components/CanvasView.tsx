@@ -50,6 +50,7 @@ import { getNormalHoverEffects } from "../ui/hover";
 import { CollapsibleControls } from "./ControlRow";
 import { FrameContextMenu } from "./FrameContextMenu";
 import { NewCanvasSequence } from "./NewCanvasSequence";
+import { ImageFillSequence } from "./ImageFillSequence";
 import { PhaseOrb } from "./PhaseOrb";
 import { UiSelect } from "./UiSelect";
 
@@ -119,9 +120,14 @@ type CanvasViewProps = {
   newCanvasToken?: number;
   /** Outgoing mosaic pixels, dissolved as the construction sweeps in. */
   newCanvasWipe?: HTMLCanvasElement | null;
+  /** Bump to play the image-import fill wave over the mosaic. */
+  imageFillToken?: number;
+  /** Mosaic pixels from before the import — punched away by the fill wave. */
+  imageFillCover?: HTMLCanvasElement | null;
   /** Filled with a grab-the-mosaic function — call it before replacing state. */
   captureMosaicRef?: RefObject<(() => HTMLCanvasElement | null) | null>;
   onNewCanvasDone?: () => void;
+  onImageFillDone?: () => void;
   onToggleInspect?: () => void;
   onMoveBlock?: (blockIndex: number, toCol: number, toRow: number) => void;
   /** Live mosaic backing store — GIF export downscales from this size. */
@@ -141,8 +147,11 @@ export function CanvasView({
   shortcutLegend = null,
   newCanvasToken = 0,
   newCanvasWipe = null,
+  imageFillToken = 0,
+  imageFillCover = null,
   captureMosaicRef,
   onNewCanvasDone,
+  onImageFillDone,
   onToggleInspect,
   onMoveBlock,
   onWorkingCanvasSize,
@@ -1002,6 +1011,23 @@ export function CanvasView({
               onDone={() => {
                 setNewCanvasRun(0);
                 onNewCanvasDone?.();
+              }}
+            />
+          ) : null}
+          {imageFillToken > 0 &&
+          imageFillCover &&
+          grid &&
+          grid.columns > 0 &&
+          !viewOriginal ? (
+            <ImageFillSequence
+              key={imageFillToken}
+              grid={grid}
+              blocks={frame.blocks}
+              coverImage={imageFillCover}
+              displayWidth={displayWidth}
+              displayHeight={displayHeight}
+              onDone={() => {
+                onImageFillDone?.();
               }}
             />
           ) : null}

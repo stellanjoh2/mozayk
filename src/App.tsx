@@ -218,6 +218,11 @@ export default function App() {
   const [newCanvasWipe, setNewCanvasWipe] = useState<HTMLCanvasElement | null>(
     null,
   );
+  /** Bumped for the image-import fill wave. */
+  const [imageFillToken, setImageFillToken] = useState(0);
+  /** Mosaic pixels from before the import — punched away by the fill wave. */
+  const [imageFillCover, setImageFillCover] =
+    useState<HTMLCanvasElement | null>(null);
   const [pendingDraft, setPendingDraft] = useState<MzkProject | null>(null);
   const [draftChecked, setDraftChecked] = useState(false);
   const [viewOriginal, setViewOriginal] = useState(false);
@@ -911,6 +916,11 @@ export default function App() {
           importSettings,
         );
         const active = activeIndexRef.current;
+        // Same-orientation only — cover and new grid would disagree on a flip.
+        const cover =
+          nextOrientation === fromOrientation
+            ? (captureMosaicRef.current?.() ?? null)
+            : null;
         pushUndoCheckpoint();
         if (nextOrientation !== fromOrientation) {
           setOrientation(nextOrientation);
@@ -934,6 +944,10 @@ export default function App() {
           updateActiveFrame((current) =>
             applyImageImport(current, result, nextOrientation),
           );
+        }
+        if (cover) {
+          setImageFillCover(cover);
+          setImageFillToken((token) => token + 1);
         }
         setToast("Image imported");
       } catch {
@@ -1785,8 +1799,11 @@ export default function App() {
           shortcutLegend={shortcutLegend}
           newCanvasToken={newCanvasToken}
           newCanvasWipe={newCanvasWipe}
+          imageFillToken={imageFillToken}
+          imageFillCover={imageFillCover}
           captureMosaicRef={captureMosaicRef}
           onNewCanvasDone={() => setNewCanvasWipe(null)}
+          onImageFillDone={() => setImageFillCover(null)}
           onToggleInspect={isMobileGate ? undefined : toggleInspect}
           onMoveBlock={handleMoveBlock}
           onWorkingCanvasSize={handleWorkingCanvasSize}

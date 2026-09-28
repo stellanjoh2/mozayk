@@ -19,7 +19,7 @@ export const NEW_CANVAS_SEQUENCE_MS = BUILD_START_MS + 3000;
 export const SWEEP_START_MS = BUILD_START_MS + 90;
 const SWEEP_END_MS = BUILD_START_MS + 1380;
 /** Leading edge glow reach, in grid cells. */
-const SWEEP_TRAIL_CELLS = 5.25;
+const SWEEP_TRAIL_CELLS = 31.5;
 const GRID_LINE_BASE_ALPHA = 0.16;
 const GRID_LINE_PEAK_ALPHA = 0.9;
 const GRID_FADE_START_MS = BUILD_START_MS + 2220;
@@ -30,14 +30,27 @@ const BLOCK_WAVE_START_MS = BUILD_START_MS + 800;
 const BLOCK_WAVE_SPAN_MS = 840;
 const BLOCK_WAVE_JITTER_MS = 135;
 const BLOCK_REVEAL_MS = 360;
-/** Laser wash starts dying the moment it docks on the right edge. */
-const BEAM_FADE_START_MS = SWEEP_END_MS;
+/** Laser wash starts dying the moment it enters, then gone while blocks fill. */
+const BEAM_FADE_START_MS = SWEEP_START_MS;
 const BEAM_FADE_END_MS =
   BLOCK_WAVE_START_MS + BLOCK_WAVE_SPAN_MS + BLOCK_REVEAL_MS;
 /** How long a block holds the accent before crossfading to its own colour. */
 const ACCENT_SETTLE_MS = 520;
 /** Chrome bloom around a landing block — dies fast so only the wave front glows. */
 const GLOW_TAIL_MS = 200;
+
+/**
+ * Image-import fill: same block wave, timed from t=0, covering with a snapshot
+ * of the outgoing mosaic instead of a solid veil / laser construction.
+ */
+export const IMAGE_FILL_WAVE_START_MS = 0;
+export const IMAGE_FILL_SEQUENCE_MS = 1500;
+/** Radial travel time — leftover after jitter + per-block iris. */
+const IMAGE_FILL_WAVE_SPAN_MS =
+  IMAGE_FILL_SEQUENCE_MS -
+  IMAGE_FILL_WAVE_START_MS -
+  BLOCK_WAVE_JITTER_MS -
+  BLOCK_REVEAL_MS;
 const GLOW_PEAK_ALPHA = 0.9;
 const GLOW_BLUR_CSS_PX = 16;
 /** Bloom is drawn at 1/4 res, blurred once, then scaled up. */
@@ -156,7 +169,7 @@ export function gridFadeAlpha(elapsedMs: number): number {
   return 1 - span(elapsedMs, GRID_FADE_START_MS, GRID_FADE_END_MS);
 }
 
-/** Laser wall wash — full until it docks, then gone while blocks fill. */
+/** Laser wall wash — brightest on entry, fading through the sweep and after. */
 export function beamFadeAlpha(elapsedMs: number): number {
   if (elapsedMs < BEAM_FADE_START_MS) return 1;
   return 1 - span(elapsedMs, BEAM_FADE_START_MS, BEAM_FADE_END_MS);
@@ -175,6 +188,7 @@ export type BlockCue = {
 export function buildBlockCues(
   blocks: readonly MosaicBlock[],
   grid: GridDimensions,
+  waveStartMs: number = BLOCK_WAVE_START_MS,
 ): BlockCue[] {
   if (grid.width <= 0) return [];
   return blocks.map((block) => {
@@ -183,8 +197,36 @@ export function buildBlockCues(
     return {
       rect,
       startMs:
-        BLOCK_WAVE_START_MS +
+        waveStartMs +
         centerFrac * BLOCK_WAVE_SPAN_MS +
+        cellNoise(block.col, block.row) * BLOCK_WAVE_JITTER_MS,
+    };
+  });
+}
+
+/**
+ * Image-fill cues — blocks punch in by distance from the canvas centre,
+ * so the reveal expands as a radial wave.
+ */
+export function buildRadialFillBlockCues(
+  blocks: readonly MosaicBlock[],
+  grid: GridDimensions,
+): BlockCue[] {
+  if (grid.width <= 0 || grid.height <= 0) return [];
+  const cx = grid.width / 2;
+  const cy = grid.height / 2;
+  const maxDist = Math.hypot(cx, cy);
+  return blocks.map((block) => {
+    const rect = blockPixelRect(grid, block);
+    const bx = rect.x + rect.width / 2;
+    const by = rect.y + rect.height / 2;
+    const radiusFrac =
+      maxDist > 0 ? clamp01(Math.hypot(bx - cx, by - cy) / maxDist) : 0;
+    return {
+      rect,
+      startMs:
+        IMAGE_FILL_WAVE_START_MS +
+        radiusFrac * IMAGE_FILL_WAVE_SPAN_MS +
         cellNoise(block.col, block.row) * BLOCK_WAVE_JITTER_MS,
     };
   });
@@ -281,7 +323,7 @@ function drawSweepBeam(
 
   const wash = ctx.createLinearGradient(edgeX - trail, 0, edgeX, 0);
   wash.addColorStop(0, rgba(accent, 0));
-  wash.addColorStop(1, rgba(accent, 0.18 * fade));
+  wash.addColorStop(1, rgba(accent, 0.28 * fade));
   ctx.fillStyle = wash;
   ctx.fillRect(edgeX - trail, 0, trail, grid.height);
 
@@ -441,29 +483,8 @@ export function drawNewCanvasFrame(
     );
   }
 
-  // Punch the veil (and the grid drawn onto it) so the mosaic shows through.
-  ctx.globalCompositeOperation = "destination-out";
-  ctx.fillStyle = "#000";
-  ctx.beginPath();
-  for (const cue of cues) {
-    if (elapsedMs < cue.startMs + BLOCK_REVEAL_MS) continue;
-    const { x, y, width, height } = cue.rect;
-    ctx.rect(x, y, width, height);
-  }
-  ctx.fill();
-
-  for (const cue of cues) {
-    const reveal = span(elapsedMs, cue.startMs, cue.startMs + BLOCK_REVEAL_MS);
-    if (reveal <= 0 || reveal >= 1) continue;
-    const eased = easeOutCubic(reveal);
-    const iris = centeredRect(cue.rect, 0.2 + 0.8 * eased);
-    ctx.globalAlpha = Math.min(1, eased * 1.4);
-    ctx.fillRect(iris.x, iris.y, iris.width, iris.height);
-  }
-  ctx.globalAlpha = 1;
-  ctx.globalCompositeOperation = "source-over";
-
-  // Each block lands in the theme accent, then crossfades to its own colour.
+  punchCover(ctx, cues, elapsedMs);
+  // Accent flash while the veil is still open — after destination-out resets.
   for (const cue of cues) {
     const endMs = cue.startMs + BLOCK_REVEAL_MS;
     if (elapsedMs < cue.startMs || elapsedMs > endMs + ACCENT_SETTLE_MS) {
@@ -480,12 +501,103 @@ export function drawNewCanvasFrame(
     ctx.fillStyle = rgba(accent, alpha);
     ctx.fillRect(rect.x, rect.y, rect.width, rect.height);
   }
-
   if (edgeX >= 0 && beamFade > 0) {
     drawSweepBeam(ctx, grid, accent, edgeX, beamFade, gridStroke);
   }
-
   drawLandingGlow(canvas, ctx, cues, elapsedMs, accent, displayScale);
+}
+
+export type ImageFillFrameOptions = {
+  grid: GridDimensions;
+  cues: readonly BlockCue[];
+  elapsedMs: number;
+  /** Snapshot of the mosaic before the import landed. */
+  coverImage: CanvasImageSource;
+  coverImageWidth: number;
+  coverImageHeight: number;
+};
+
+/**
+ * Image-import fill — cover with the outgoing mosaic, then punch it away so
+ * the imported colours show through. No accent flash or glow.
+ */
+export function drawImageFillFrame(
+  canvas: HTMLCanvasElement,
+  options: ImageFillFrameOptions,
+): void {
+  const { grid, cues, elapsedMs } = options;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, grid.width, grid.height);
+
+  const { coverImage, coverImageWidth, coverImageHeight } = options;
+  if (coverImageWidth > 0 && coverImageHeight > 0) {
+    const fit = Math.min(
+      grid.width / coverImageWidth,
+      grid.height / coverImageHeight,
+    );
+    const drawWidth = coverImageWidth * fit;
+    const drawHeight = coverImageHeight * fit;
+    ctx.drawImage(
+      coverImage,
+      (grid.width - drawWidth) / 2,
+      (grid.height - drawHeight) / 2,
+      drawWidth,
+      drawHeight,
+    );
+  }
+
+  punchCoverFill(ctx, cues, elapsedMs);
+}
+
+/** Punch completed / iris-ing blocks out of the cover (new-canvas veil). */
+function punchCover(
+  ctx: CanvasRenderingContext2D,
+  cues: readonly BlockCue[],
+  elapsedMs: number,
+): void {
+  punchCoverWithEase(ctx, cues, elapsedMs, easeOutCubic, 0.2);
+}
+
+/** Image-fill punch — ease-out only, iris from zero (no soft lead-in). */
+function punchCoverFill(
+  ctx: CanvasRenderingContext2D,
+  cues: readonly BlockCue[],
+  elapsedMs: number,
+): void {
+  punchCoverWithEase(ctx, cues, elapsedMs, easeOutQuint, 0);
+}
+
+function punchCoverWithEase(
+  ctx: CanvasRenderingContext2D,
+  cues: readonly BlockCue[],
+  elapsedMs: number,
+  ease: (t: number) => number,
+  startScale: number,
+): void {
+  ctx.globalCompositeOperation = "destination-out";
+  ctx.fillStyle = "#000";
+  ctx.beginPath();
+  for (const cue of cues) {
+    if (elapsedMs < cue.startMs + BLOCK_REVEAL_MS) continue;
+    const { x, y, width, height } = cue.rect;
+    ctx.rect(x, y, width, height);
+  }
+  ctx.fill();
+
+  const scaleSpan = 1 - startScale;
+  for (const cue of cues) {
+    const reveal = span(elapsedMs, cue.startMs, cue.startMs + BLOCK_REVEAL_MS);
+    if (reveal <= 0 || reveal >= 1) continue;
+    const eased = ease(reveal);
+    const iris = centeredRect(cue.rect, startScale + scaleSpan * eased);
+    ctx.globalAlpha = Math.min(1, eased * 1.4);
+    ctx.fillRect(iris.x, iris.y, iris.width, iris.height);
+  }
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = "source-over";
 }
 
 /**
