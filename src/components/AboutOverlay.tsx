@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { pauseFrost } from "../ui/frostPause";
 import { playUiSound } from "../ui/sounds";
 import { TypewriterReveal } from "./TypewriterReveal";
 
@@ -50,6 +51,12 @@ export function AboutOverlay({ open, onClose }: AboutOverlayProps) {
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [mounted, onClose]);
+
+  // Full-viewport about frost + glass shelf/tips together force a chrome blink.
+  useEffect(() => {
+    if (!mounted) return;
+    return pauseFrost();
+  }, [mounted]);
 
   if (!mounted) return null;
 

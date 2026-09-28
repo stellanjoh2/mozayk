@@ -20,6 +20,7 @@ This has broken many times. Do not "simplify" stacking, portals, blur layers, or
 - Keep it portaled to `document.body`.
 - Put **tint and blur on the same node** (`.about-overlay.is-open`).
 - Do not use `::before` for blur while the parent has a fill — that frosts the wash, not the mosaic.
+- Confirm / reset / video-import dimmers are **tint only** — full-viewport `backdrop-filter` on those snaps every glass panel into a recomposite blink. Use `pauseFrost()` while About is mounted so the shelf/tips don't fight the overlay frost.
 
 ## Colour theme shelf
 

@@ -750,6 +750,9 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
   overscroll-behavior: none;
   scrollbar-gutter: stable;
   height: 100%;
+  /* Own layer so canvas / wipe invalidation doesn't shimmer zoomed panel text.
+     Safe here — this node is opaque, not a frost surface. */
+  transform: translateZ(0);
 }
 
 .controls-panel__zoom {
@@ -1473,11 +1476,10 @@ a.panel-btn {
 
 .modal-backdrop.is-open,
 .reset-canvas-backdrop.is-open {
-  /* Tint + blur on this node — same pattern as .about-overlay.is-open. */
-  background: rgba(0, 0, 0, 0.48);
+  /* Dim only — full-viewport backdrop-filter here snaps the whole chrome
+     (shelf / tips / menus) into a recomposite blink on open and close. */
+  background: rgba(0, 0, 0, 0.56);
   pointer-events: auto;
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
 }
 
 .modal-dialog,
@@ -2812,6 +2814,17 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
   pointer-events: none;
 }
 
+/* Heavy mosaic motion (wipe / about frost) — solidify glass so Chrome isn't
+   re-blurring every panel against a changing backdrop each frame. */
+html.is-frost-paused .palette-panel,
+html.is-frost-paused .pro-tip,
+html.is-frost-paused .action-notice__badge,
+html.is-frost-paused .frame-context-menu {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background: var(--panel);
+}
+
 .palette-panel__inner {
   display: flex;
   flex-direction: column;
@@ -3291,9 +3304,8 @@ html.normal-hover .ui-switch:hover .ui-switch__track::after {
   display: grid;
   place-items: center;
   pointer-events: all;
-  background: rgba(0, 0, 0, 0.32);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  /* Dim only — same full-viewport frost blink as .modal-backdrop. */
+  background: rgba(0, 0, 0, 0.48);
 }
 
 .crt-glide {

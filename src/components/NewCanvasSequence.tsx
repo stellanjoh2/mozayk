@@ -5,6 +5,7 @@ import {
   drawNewCanvasFrame,
   type BlockCue,
 } from "../render/newCanvasSequence";
+import { pauseFrost } from "../ui/frostPause";
 import { resolveCssColor } from "../ui/theme";
 import type { GridDimensions, MosaicBlock } from "../types";
 
@@ -51,6 +52,10 @@ export function NewCanvasSequence({
   liveRef.current = { grid, cues, veilColor, displayWidth, wipeImage };
   const onDoneRef = useRef(onDone);
   onDoneRef.current = onDone;
+
+  // Wipe redraws the mosaic every frame — keep glass panels opaque so their
+  // backdrop-filter isn't re-sampling (and blinking the chrome) for ~3s.
+  useEffect(() => pauseFrost(), []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
