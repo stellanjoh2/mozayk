@@ -106,12 +106,6 @@ export function ConfirmDialog({
         stopDialogVoice();
         onCancel();
       }}
-      onTransitionEnd={(event) => {
-        if (event.target !== event.currentTarget) return;
-        if (!open && event.propertyName === "background-color") {
-          setMounted(false);
-        }
-      }}
     >
       <div
         className="modal-dialog reset-canvas-dialog"
@@ -120,6 +114,12 @@ export function ConfirmDialog({
         aria-labelledby={titleId}
         aria-describedby={descId}
         onClick={(event) => event.stopPropagation()}
+        onTransitionEnd={(event) => {
+          if (event.target !== event.currentTarget) return;
+          if (!open && event.propertyName === "opacity") {
+            setMounted(false);
+          }
+        }}
       >
         <TypewriterReveal
           as="h2"

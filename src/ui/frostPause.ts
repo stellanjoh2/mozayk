@@ -1,8 +1,8 @@
 /**
  * Temporarily solidify glass UI (`backdrop-filter` panels) while a heavy
  * full-viewport effect runs. Chrome recomposites every frost layer when the
- * mosaic under them changes, or when another backdrop-filter mounts — which
- * reads as the whole chrome blinking.
+ * mosaic under them changes, when another backdrop-filter mounts, or when a
+ * full-viewport dimmer appears — which reads as the whole chrome blinking.
  */
 const CLASS = "is-frost-paused";
 

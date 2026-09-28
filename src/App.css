@@ -1429,7 +1429,8 @@ a.panel-btn {
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: rgba(0, 0, 0, 0.55);
+  /* Click-catcher only — no fullscreen wash (blinks frost chrome). */
+  background: transparent;
 }
 
 .import-error-dialog {
@@ -1469,16 +1470,13 @@ a.panel-btn {
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: rgba(0, 0, 0, 0);
+  /* Click-catcher only — no fullscreen wash (blinks frost chrome). */
+  background: transparent;
   pointer-events: none;
-  transition: background 0.2s var(--ui-ease);
 }
 
 .modal-backdrop.is-open,
 .reset-canvas-backdrop.is-open {
-  /* Dim only — full-viewport backdrop-filter here snaps the whole chrome
-     (shelf / tips / menus) into a recomposite blink on open and close. */
-  background: rgba(0, 0, 0, 0.56);
   pointer-events: auto;
 }
 
@@ -3304,7 +3302,7 @@ html.is-frost-paused .frame-context-menu {
   display: grid;
   place-items: center;
   pointer-events: all;
-  /* Dim only — same full-viewport frost blink as .modal-backdrop. */
+  /* Dim only — busy overlay; calls pauseFrost() so frost chrome doesn't blink. */
   background: rgba(0, 0, 0, 0.48);
 }
 

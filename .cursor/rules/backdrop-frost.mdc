@@ -20,7 +20,8 @@ This has broken many times. Do not "simplify" stacking, portals, blur layers, or
 - Keep it portaled to `document.body`.
 - Put **tint and blur on the same node** (`.about-overlay.is-open`).
 - Do not use `::before` for blur while the parent has a fill — that frosts the wash, not the mosaic.
-- Confirm / reset / video-import dimmers are **tint only** — full-viewport `backdrop-filter` on those snaps every glass panel into a recomposite blink. Use `pauseFrost()` while About is mounted so the shelf/tips don't fight the overlay frost.
+- Question modals (confirm / reset / video-import / import-error) use a **transparent** click-catcher — no fullscreen wash. A tint dim blinks frost chrome even without `backdrop-filter` on the overlay.
+- Busy overlay / new-canvas wipe / About still need full-viewport effects; call `pauseFrost()` for those mounts so shelf/tips/menus solidify instead of re-blurring.
 
 ## Colour theme shelf
 

@@ -75,12 +75,6 @@ export function VideoImportDialog({
         playUiSound("close");
         onCancel();
       }}
-      onTransitionEnd={(event) => {
-        if (event.target !== event.currentTarget) return;
-        if (!open && event.propertyName === "background-color") {
-          setMounted(false);
-        }
-      }}
     >
       <div
         className="modal-dialog reset-canvas-dialog video-import-dialog"
@@ -89,6 +83,12 @@ export function VideoImportDialog({
         aria-labelledby={titleId}
         aria-describedby={descId}
         onClick={(event) => event.stopPropagation()}
+        onTransitionEnd={(event) => {
+          if (event.target !== event.currentTarget) return;
+          if (!open && event.propertyName === "opacity") {
+            setMounted(false);
+          }
+        }}
       >
         <TypewriterReveal
           as="h2"
