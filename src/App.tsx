@@ -22,6 +22,7 @@ import { ResetCanvasDialog } from "./components/ResetCanvasDialog";
 import { VideoImportDialog } from "./components/VideoImportDialog";
 import { VideoImportOverlay } from "./components/VideoImportOverlay";
 import { dismissActionNotice, showActionNotice } from "./ui/actionNotices";
+import { SWEEP_START_MS } from "./render/newCanvasSequence";
 import { exportGif, gifExportToast } from "./export/exportGif";
 import { exportMp4, mp4ExportToast } from "./export/exportMp4";
 import { downloadBlob } from "./export/downloadBlob";
@@ -235,6 +236,7 @@ export default function App() {
   const layoutRegenTimer = useRef<number | null>(null);
   const shapeRerollTimer = useRef<number | null>(null);
   const newCanvasSoundTimer = useRef<number | null>(null);
+  const newCanvasLaserSoundTimer = useRef<number | null>(null);
   const flushLayoutRegenRef = useRef<(() => void) | null>(null);
   const flushShapeRerollRef = useRef<(() => void) | null>(null);
   const appRef = useRef<HTMLDivElement>(null);
@@ -1165,10 +1167,17 @@ export default function App() {
       void exitAppFullscreen();
     }
 
-    // The button click plays the clear beeps; the build cue lands with the laser.
+    // Clear beeps on click; laser cue when the wall starts; build cue mid-sweep.
     if (newCanvasSoundTimer.current) {
       window.clearTimeout(newCanvasSoundTimer.current);
     }
+    if (newCanvasLaserSoundTimer.current) {
+      window.clearTimeout(newCanvasLaserSoundTimer.current);
+    }
+    newCanvasLaserSoundTimer.current = window.setTimeout(() => {
+      newCanvasLaserSoundTimer.current = null;
+      playUiSound("newCanvasLaser");
+    }, SWEEP_START_MS);
     newCanvasSoundTimer.current = window.setTimeout(() => {
       newCanvasSoundTimer.current = null;
       playUiSound("newCanvas");

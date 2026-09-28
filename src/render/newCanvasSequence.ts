@@ -15,7 +15,8 @@ const WIPE_END_MS = 640;
 const BUILD_START_MS = 640;
 export const NEW_CANVAS_SEQUENCE_MS = BUILD_START_MS + 3000;
 
-const SWEEP_START_MS = BUILD_START_MS + 90;
+/** When the vertical laser wall begins its left-to-right sweep. */
+export const SWEEP_START_MS = BUILD_START_MS + 90;
 const SWEEP_END_MS = BUILD_START_MS + 1380;
 /** Leading edge glow reach, in grid cells. */
 const SWEEP_TRAIL_CELLS = 5.25;
