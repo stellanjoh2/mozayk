@@ -11,6 +11,8 @@ import {
   ACTION_NOTICE_EVENT,
   type ActionNotice as ActionNoticeData,
 } from "../ui/actionNotices";
+import { getProTipsVoiceAssist } from "../ui/proTips";
+import { playUiSoundOnNextGesture, stopVoiceSound } from "../ui/sounds";
 
 const HOLD_MS = 9_000;
 /** Match `.action-notice` slide duration. */
@@ -50,6 +52,21 @@ export function ActionNotice({ enabled = true }: ActionNoticeProps) {
   const hideTimerRef = useRef(0);
   const clearTimerRef = useRef(0);
   const generationRef = useRef(0);
+  const cancelVoiceRef = useRef<(() => void) | null>(null);
+  const ownsVoiceRef = useRef(false);
+
+  const clearVoiceGesture = () => {
+    cancelVoiceRef.current?.();
+    cancelVoiceRef.current = null;
+  };
+
+  const stopNoticeVoice = () => {
+    clearVoiceGesture();
+    if (ownsVoiceRef.current) {
+      ownsVoiceRef.current = false;
+      stopVoiceSound();
+    }
+  };
 
   useLayoutEffect(() => {
     if (!notice) {
@@ -89,10 +106,18 @@ export function ActionNotice({ enabled = true }: ActionNoticeProps) {
       raf2 = requestAnimationFrame(() => {
         if (generationRef.current !== gen) return;
         setOpen(true);
+        if (getProTipsVoiceAssist() && notice.sound) {
+          clearVoiceGesture();
+          ownsVoiceRef.current = false;
+          cancelVoiceRef.current = playUiSoundOnNextGesture(notice.sound, () => {
+            ownsVoiceRef.current = true;
+          });
+        }
         window.clearTimeout(hideTimerRef.current);
         hideTimerRef.current = window.setTimeout(() => {
           if (generationRef.current !== gen) return;
           setOpen(false);
+          clearVoiceGesture();
           window.clearTimeout(clearTimerRef.current);
           clearTimerRef.current = window.setTimeout(() => {
             if (generationRef.current !== gen) return;
@@ -112,6 +137,7 @@ export function ActionNotice({ enabled = true }: ActionNoticeProps) {
     generationRef.current += 1;
     window.clearTimeout(hideTimerRef.current);
     window.clearTimeout(clearTimerRef.current);
+    stopNoticeVoice();
     setOpen(false);
     clearTimerRef.current = window.setTimeout(() => setNotice(null), SLIDE_MS);
   };
@@ -121,6 +147,7 @@ export function ActionNotice({ enabled = true }: ActionNoticeProps) {
       generationRef.current += 1;
       window.clearTimeout(hideTimerRef.current);
       window.clearTimeout(clearTimerRef.current);
+      stopNoticeVoice();
       setOpen(false);
       setNotice(null);
       return;
@@ -132,6 +159,7 @@ export function ActionNotice({ enabled = true }: ActionNoticeProps) {
       generationRef.current += 1;
       window.clearTimeout(hideTimerRef.current);
       window.clearTimeout(clearTimerRef.current);
+      clearVoiceGesture();
       setOpen(false);
       setTravel(0);
       setNotice(detail);
@@ -146,6 +174,7 @@ export function ActionNotice({ enabled = true }: ActionNoticeProps) {
       window.removeEventListener(ACTION_NOTICE_DISMISS_EVENT, onDismiss);
       window.clearTimeout(hideTimerRef.current);
       window.clearTimeout(clearTimerRef.current);
+      stopNoticeVoice();
     };
   }, [enabled]);
 

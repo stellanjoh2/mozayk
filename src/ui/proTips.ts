@@ -1,10 +1,12 @@
+import type { VoiceSound } from "./sounds";
+
 export type ProTip = {
   id: string;
   body: string;
   /** Keyboard keys (or other tokens) to accent in the body. */
   keys?: readonly string[];
-  /** Spoken cue from `ui/sounds` (tip1…tip7). */
-  sound?: "tip1" | "tip2" | "tip3" | "tip4" | "tip5" | "tip6" | "tip7";
+  /** Spoken cue from `ui/sounds` (tip1…tip7, hint1). */
+  sound?: VoiceSound;
 };
 
 /** Bump when tip copy/order changes so seen tips reset for everyone. */

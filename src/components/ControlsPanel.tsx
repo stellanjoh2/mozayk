@@ -865,6 +865,7 @@ export function ControlsPanel({
       title="Restore colours from photo?"
       message="This replaces your current colour palette with the colours taken from the photo. You will lose your custom colour assignments."
       confirmLabel="Restore"
+      voice="general2"
       onConfirm={() => {
         onRestorePhotoColors();
         setRestorePhotoDialogOpen(false);

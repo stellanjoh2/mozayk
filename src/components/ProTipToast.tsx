@@ -15,7 +15,7 @@ import {
   setProTipsEnabled,
   type ProTip,
 } from "../ui/proTips";
-import { playUiSoundOnNextGesture } from "../ui/sounds";
+import { playUiSoundOnNextGesture, stopVoiceSound } from "../ui/sounds";
 import { TypewriterReveal } from "./TypewriterReveal";
 
 const INITIAL_DELAY_MS = 5_000;
@@ -251,6 +251,7 @@ export function ProTipToast({ enabled = true }: ProTipToastProps) {
       setTip(current);
       setCardOpen(false);
       let cancelVoice: (() => void) | undefined;
+      let ownsVoice = false;
 
       try {
         await waitTwoFrames(signal);
@@ -258,7 +259,9 @@ export function ProTipToast({ enabled = true }: ProTipToastProps) {
         // Voice assist and typewriter clicks are either/or.
         const voiceAssist = getProTipsVoiceAssist();
         if (voiceAssist && current.sound) {
-          cancelVoice = playUiSoundOnNextGesture(current.sound);
+          cancelVoice = playUiSoundOnNextGesture(current.sound, () => {
+            ownsVoice = true;
+          });
         }
         await sleep(SLIDE_MS, signal);
 
@@ -273,6 +276,7 @@ export function ProTipToast({ enabled = true }: ProTipToastProps) {
         markProTipSeen(current.id);
       } catch (error) {
         if (!isAbort(error)) throw error;
+        if (ownsVoice) stopVoiceSound();
         if (getProTipsEnabled() && !loopSignal.aborted) {
           await closeCard(loopSignal);
           markProTipSeen(current.id);

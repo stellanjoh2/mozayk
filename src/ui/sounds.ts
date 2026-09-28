@@ -14,6 +14,10 @@ const FILES = {
   tip5: "sounds/protip-05.wav",
   tip6: "sounds/protip-06.wav",
   tip7: "sounds/protip-07.wav",
+  hint1: "sounds/hint-01.wav",
+  general1: "sounds/voice-general01.wav",
+  general2: "sounds/voice-general02.wav",
+  general3: "sounds/voice-general03.wav",
   // hoverBlink: "sounds/uisound-hoverblink.wav",
 } as const;
 
@@ -41,6 +45,10 @@ const SOUND_GAIN: Partial<Record<UiSound, number>> = {
   tip5: 1,
   tip6: 1,
   tip7: 1,
+  hint1: 1,
+  general1: 1,
+  general2: 1,
+  general3: 1,
   // hoverBlink: 5.8449 * 10 ** (-20 / 20),
 };
 
@@ -94,6 +102,67 @@ let sliderPlaying = false;
 let sliderToken = 0;
 let hoverUntil = 0;
 const HOVER_MIN_INTERVAL_MS = 120;
+
+/** Spoken tips/hints — only one may play at a time; new cues wait until it finishes. */
+export type VoiceSound =
+  | "tip1"
+  | "tip2"
+  | "tip3"
+  | "tip4"
+  | "tip5"
+  | "tip6"
+  | "tip7"
+  | "hint1"
+  | "general1"
+  | "general2"
+  | "general3";
+
+function isVoiceSound(name: UiSound): name is VoiceSound {
+  return (
+    name === "tip1" ||
+    name === "tip2" ||
+    name === "tip3" ||
+    name === "tip4" ||
+    name === "tip5" ||
+    name === "tip6" ||
+    name === "tip7" ||
+    name === "hint1" ||
+    name === "general1" ||
+    name === "general2" ||
+    name === "general3"
+  );
+}
+
+type ActiveVoice = {
+  source: AudioBufferSourceNode;
+  gain: GainNode;
+  token: number;
+};
+
+let activeVoice: ActiveVoice | null = null;
+let voiceToken = 0;
+
+export function isVoicePlaying(): boolean {
+  return activeVoice != null;
+}
+
+/** Stop any in-flight spoken tip/hint (e.g. when its popup is dismissed). */
+export function stopVoiceSound(): void {
+  const current = activeVoice;
+  if (!current) return;
+  activeVoice = null;
+  const { source, gain } = current;
+  try {
+    const ctx = gain.context;
+    const now = ctx.currentTime;
+    gain.gain.cancelScheduledValues(now);
+    gain.gain.setValueAtTime(gain.gain.value, now);
+    gain.gain.linearRampToValueAtTime(0, now + 0.04);
+    source.stop(now + 0.05);
+  } catch {
+    /* already stopped */
+  }
+}
 
 function createAudioContext(): AudioContext | null {
   const AC = window.AudioContext ?? (window as WindowWithWebkit).webkitAudioContext;
@@ -180,18 +249,20 @@ function releaseSliderSound(token: number): void {
   sliderPlaying = false;
 }
 
-function startSound(name: UiSound, buf: AudioBuffer): void {
+function startSound(name: UiSound, buf: AudioBuffer): boolean {
   const ctx = unlockAudio();
   const token = sliderToken;
   if (!ctx || ctx.state === "closed") {
     if (isSliderSound(name)) releaseSliderSound(token);
-    return;
+    return false;
   }
-  const play = () => {
+  const play = (): boolean => {
     if (!prefs.enabled || prefs.volume <= 0 || ctx.state !== "running") {
       if (isSliderSound(name)) releaseSliderSound(token);
-      return;
+      return false;
     }
+    // Let the first spoken cue finish — do not cut it off for a newer one.
+    if (isVoiceSound(name) && activeVoice) return false;
     const source = ctx.createBufferSource();
     source.buffer = buf;
     const rate = PLAYBACK_RATE[name] ?? 1;
@@ -202,6 +273,14 @@ function startSound(name: UiSound, buf: AudioBuffer): void {
     source.connect(gain);
     gain.connect(ctx.destination);
     source.start(0);
+    if (isVoiceSound(name)) {
+      voiceToken += 1;
+      const myToken = voiceToken;
+      activeVoice = { source, gain, token: myToken };
+      source.onended = () => {
+        if (activeVoice?.token === myToken) activeVoice = null;
+      };
+    }
     if (isSliderSound(name)) {
       const unlock = () => releaseSliderSound(token);
       source.onended = unlock;
@@ -213,10 +292,10 @@ function startSound(name: UiSound, buf: AudioBuffer): void {
         performance.now() + Math.max((buf.duration / rate) * 1000, 80),
       );
     }
+    return true;
   };
   if (ctx.state === "running") {
-    play();
-    return;
+    return play();
   }
   void ctx.resume().then(() => {
     if (ctx.state === "running") play();
@@ -224,6 +303,8 @@ function startSound(name: UiSound, buf: AudioBuffer): void {
   }).catch(() => {
     if (isSliderSound(name)) releaseSliderSound(token);
   });
+  // Resume is async — treat as accepted if we queued play.
+  return !isVoiceSound(name) || !activeVoice;
 }
 
 export function getUiSoundsEnabled(): boolean {
@@ -288,6 +369,7 @@ export function playUiSound(name: UiSound, unthrottled = false): void {
 /** Await decode + context resume — better for longer spoken tips. */
 export async function playUiSoundAsync(name: UiSound): Promise<boolean> {
   if (!prefs.enabled || prefs.volume <= 0) return false;
+  if (isVoiceSound(name) && activeVoice) return false;
   const ctx = unlockAudio();
   if (!ctx) return false;
   try {
@@ -297,18 +379,21 @@ export async function playUiSoundAsync(name: UiSound): Promise<boolean> {
   }
   const buf = await bufferFor(name);
   if (!buf || !prefs.enabled || prefs.volume <= 0) return false;
+  if (isVoiceSound(name) && activeVoice) return false;
   try {
     if (ctx.state !== "running") await ctx.resume();
   } catch {
     return false;
   }
   if (ctx.state !== "running") return false;
-  startSound(name, buf);
-  return true;
+  return startSound(name, buf);
 }
 
 /** If autoplay is blocked, play once on the next pointer/key gesture. */
-export function playUiSoundOnNextGesture(name: UiSound): () => void {
+export function playUiSoundOnNextGesture(
+  name: UiSound,
+  onStarted?: () => void,
+): () => void {
   let cleaned = false;
   const teardown = () => {
     if (cleaned) return;
@@ -316,13 +401,20 @@ export function playUiSoundOnNextGesture(name: UiSound): () => void {
     document.removeEventListener("pointerdown", onGesture, true);
     document.removeEventListener("keydown", onGesture, true);
   };
-  const onGesture = () => {
-    void playUiSoundAsync(name).then((ok) => {
-      if (ok) teardown();
+  const tryPlay = () =>
+    playUiSoundAsync(name).then((ok) => {
+      if (!ok) return false;
+      onStarted?.();
+      teardown();
+      return true;
     });
+  const onGesture = () => {
+    void tryPlay();
   };
-  void playUiSoundAsync(name).then((ok) => {
-    if (ok) {
+  void tryPlay().then((ok) => {
+    if (ok) return;
+    // Busy voice: do not queue a late replay on the next click.
+    if (isVoiceSound(name) && activeVoice) {
       teardown();
       return;
     }

@@ -1,6 +1,15 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { playUiSound } from "../ui/sounds";
+import { getProTipsVoiceAssist } from "../ui/proTips";
+import {
+  playUiSound,
+  playUiSoundOnNextGesture,
+  stopVoiceSound,
+} from "../ui/sounds";
 import { TypewriterReveal } from "./TypewriterReveal";
+
+const RESET_VOICE = "general1" as const;
+const RESET_MESSAGE =
+  "Clear the current mosaic and restore the default canvas? This can be undone.";
 
 type ResetCanvasDialogProps = {
   open: boolean;
@@ -14,6 +23,17 @@ export function ResetCanvasDialog({ open, onConfirm, onCancel }: ResetCanvasDial
   const cancelRef = useRef<HTMLButtonElement>(null);
   const [mounted, setMounted] = useState(open);
   const [entered, setEntered] = useState(false);
+  const cancelVoiceRef = useRef<(() => void) | null>(null);
+  const ownsVoiceRef = useRef(false);
+
+  const stopDialogVoice = () => {
+    cancelVoiceRef.current?.();
+    cancelVoiceRef.current = null;
+    if (ownsVoiceRef.current) {
+      ownsVoiceRef.current = false;
+      stopVoiceSound();
+    }
+  };
 
   useEffect(() => {
     if (open) {
@@ -24,7 +44,22 @@ export function ResetCanvasDialog({ open, onConfirm, onCancel }: ResetCanvasDial
       return () => window.cancelAnimationFrame(id);
     }
     setEntered(false);
+    stopDialogVoice();
   }, [open]);
+
+  useEffect(() => {
+    if (!open || !entered) return;
+    if (!getProTipsVoiceAssist()) return;
+    cancelVoiceRef.current?.();
+    ownsVoiceRef.current = false;
+    cancelVoiceRef.current = playUiSoundOnNextGesture(RESET_VOICE, () => {
+      ownsVoiceRef.current = true;
+    });
+    return () => {
+      cancelVoiceRef.current?.();
+      cancelVoiceRef.current = null;
+    };
+  }, [open, entered]);
 
   useEffect(() => {
     if (!open || !mounted) return;
@@ -37,6 +72,7 @@ export function ResetCanvasDialog({ open, onConfirm, onCancel }: ResetCanvasDial
       if (event.key === "Escape") {
         event.preventDefault();
         playUiSound("close");
+        stopDialogVoice();
         onCancel();
       }
     };
@@ -52,6 +88,7 @@ export function ResetCanvasDialog({ open, onConfirm, onCancel }: ResetCanvasDial
       role="presentation"
       onClick={() => {
         playUiSound("close");
+        stopDialogVoice();
         onCancel();
       }}
       onTransitionEnd={(event) => {
@@ -78,7 +115,7 @@ export function ResetCanvasDialog({ open, onConfirm, onCancel }: ResetCanvasDial
           as="p"
           id={descId}
           className="reset-canvas-dialog__message"
-          text="Clear the current mosaic and restore the default canvas? This can be undone."
+          text={RESET_MESSAGE}
           active={entered}
         />
         <div className="reset-canvas-dialog__actions">
@@ -87,7 +124,10 @@ export function ResetCanvasDialog({ open, onConfirm, onCancel }: ResetCanvasDial
             type="button"
             className="panel-btn panel-btn--ghost"
             data-ui-sound="close"
-            onClick={onCancel}
+            onClick={() => {
+              stopDialogVoice();
+              onCancel();
+            }}
           >
             Cancel
           </button>
@@ -95,7 +135,10 @@ export function ResetCanvasDialog({ open, onConfirm, onCancel }: ResetCanvasDial
             type="button"
             className="panel-btn"
             data-ui-sound="delete"
-            onClick={onConfirm}
+            onClick={() => {
+              stopDialogVoice();
+              onConfirm();
+            }}
           >
             Reset
           </button>

@@ -1,5 +1,12 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { playUiSound, type UiSound } from "../ui/sounds";
+import { getProTipsVoiceAssist } from "../ui/proTips";
+import {
+  playUiSound,
+  playUiSoundOnNextGesture,
+  stopVoiceSound,
+  type UiSound,
+  type VoiceSound,
+} from "../ui/sounds";
 import { TypewriterReveal } from "./TypewriterReveal";
 
 type ConfirmDialogProps = {
@@ -9,6 +16,8 @@ type ConfirmDialogProps = {
   confirmLabel: string;
   cancelLabel?: string;
   confirmSound?: UiSound;
+  /** Spoken message when Voice Assist is on. */
+  voice?: VoiceSound;
   onConfirm: () => void;
   onCancel: () => void;
 };
@@ -20,6 +29,7 @@ export function ConfirmDialog({
   confirmLabel,
   cancelLabel = "Cancel",
   confirmSound = "ok",
+  voice,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
@@ -28,6 +38,17 @@ export function ConfirmDialog({
   const cancelRef = useRef<HTMLButtonElement>(null);
   const [mounted, setMounted] = useState(open);
   const [entered, setEntered] = useState(false);
+  const cancelVoiceRef = useRef<(() => void) | null>(null);
+  const ownsVoiceRef = useRef(false);
+
+  const stopDialogVoice = () => {
+    cancelVoiceRef.current?.();
+    cancelVoiceRef.current = null;
+    if (ownsVoiceRef.current) {
+      ownsVoiceRef.current = false;
+      stopVoiceSound();
+    }
+  };
 
   useEffect(() => {
     if (open) {
@@ -38,7 +59,22 @@ export function ConfirmDialog({
       return () => window.cancelAnimationFrame(id);
     }
     setEntered(false);
+    stopDialogVoice();
   }, [open]);
+
+  useEffect(() => {
+    if (!open || !entered || !voice) return;
+    if (!getProTipsVoiceAssist()) return;
+    cancelVoiceRef.current?.();
+    ownsVoiceRef.current = false;
+    cancelVoiceRef.current = playUiSoundOnNextGesture(voice, () => {
+      ownsVoiceRef.current = true;
+    });
+    return () => {
+      cancelVoiceRef.current?.();
+      cancelVoiceRef.current = null;
+    };
+  }, [open, entered, voice]);
 
   useEffect(() => {
     if (!open || !mounted) return;
@@ -51,6 +87,7 @@ export function ConfirmDialog({
       if (event.key === "Escape") {
         event.preventDefault();
         playUiSound("close");
+        stopDialogVoice();
         onCancel();
       }
     };
@@ -66,6 +103,7 @@ export function ConfirmDialog({
       role="presentation"
       onClick={() => {
         playUiSound("close");
+        stopDialogVoice();
         onCancel();
       }}
       onTransitionEnd={(event) => {
@@ -103,7 +141,10 @@ export function ConfirmDialog({
             type="button"
             className="panel-btn panel-btn--ghost"
             data-ui-sound="close"
-            onClick={onCancel}
+            onClick={() => {
+              stopDialogVoice();
+              onCancel();
+            }}
           >
             {cancelLabel}
           </button>
@@ -111,7 +152,10 @@ export function ConfirmDialog({
             type="button"
             className="panel-btn"
             data-ui-sound={confirmSound}
-            onClick={onConfirm}
+            onClick={() => {
+              stopDialogVoice();
+              onConfirm();
+            }}
           >
             {confirmLabel}
           </button>

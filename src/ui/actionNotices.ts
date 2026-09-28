@@ -1,14 +1,18 @@
+import type { VoiceSound } from "./sounds";
+
 export type ActionNoticeId = "single-frame-play";
 
 export type ActionNotice = {
   id: ActionNoticeId;
   body: string;
+  sound?: VoiceSound;
 };
 
 export const ACTION_NOTICES: Record<ActionNoticeId, ActionNotice> = {
   "single-frame-play": {
     id: "single-frame-play",
-    body: "Please add some more frames (and modify those) if you want stuff to happen on playback. Right now there is only one frame in the timeline",
+    body: "Please add some more frames (and modify those) if you want stuff to happen on playback. Right now there is only one frame in the timeline.",
+    sound: "hint1",
   },
 };
 
