@@ -10,7 +10,6 @@ const FILES = {
   canvasClear: "sounds/572393__lgnsip__device-beeping-fade.wav",
   newCanvasLaser: "sounds/77088__defunct3__laser-short-2.wav",
   newCanvas: "sounds/614898__beetlemuse__open_program_a.wav",
-  imageFill: "sounds/109663__grunz__success_low.wav",
   tip1: "sounds/protip-01.wav",
   tip2: "sounds/protip-02.wav",
   tip3: "sounds/protip-03.wav",
@@ -23,7 +22,6 @@ const FILES = {
   general1: "sounds/voice-general01.wav",
   general2: "sounds/voice-general02.wav",
   general3: "sounds/voice-general03.wav",
-  // hoverBlink: "sounds/uisound-hoverblink.wav",
 } as const;
 
 const HOVER_SELECTOR =
@@ -46,7 +44,6 @@ const SOUND_GAIN: Partial<Record<UiSound, number>> = {
   canvasClear: 0.4343,
   newCanvasLaser: 0.5078,
   newCanvas: 0.6678,
-  imageFill: 10 ** (-11 / 20),
   tip1: 1,
   tip2: 1,
   tip3: 1,
@@ -59,7 +56,6 @@ const SOUND_GAIN: Partial<Record<UiSound, number>> = {
   general1: 1,
   general2: 1,
   general3: 1,
-  // hoverBlink: 5.8449 * 10 ** (-20 / 20),
 };
 
 /** Left-drag reuses the slider clip a half octave down. */

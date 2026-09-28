@@ -55,13 +55,33 @@ These are built into supported browsers rather than npm packages:
 | --- | --- | --- |
 | [shapes.gallery](https://www.shapes.gallery/) by [Monika Michalczyk](https://www.monikamichalczyk.com/) | SVG path shapes in the Add Shapes gallery (`src/shapes/galleryShapes.ts`) | Free shapes by the author |
 
+## Sounds
+
+### Freesound
+
+| Sound | Author | Used for | License |
+| --- | --- | --- | --- |
+| [Device Beeping](https://freesound.org/s/572393/) (`572393__lgnsip__device-beeping-fade.wav`) | [lgnsip](https://freesound.org/people/lgnsip/) | Canvas clear confirm | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| [Laser short 2](https://freesound.org/s/77088/) (`77088__defunct3__laser-short-2.wav`) | [Defunct3](https://freesound.org/people/Defunct3/) | New-canvas laser sweep | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| [Open_Program_A](https://freesound.org/s/614898/) (`614898__beetlemuse__open_program_a.wav`) | [Beetlemuse](https://freesound.org/people/Beetlemuse/) | New-canvas build cue | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+
+The canvas-clear file is a faded cut of lgnsip’s original download.
+
+### Project-owned
+
+These UI and voice clips are project-owned and need no external attribution:
+
+- `uisound-*.wav` (click, hover, slider, drop, etc.)
+- `protip-01.wav` … `protip-08.wav`
+- `hint-01.wav`
+- `voice-general01.wav` … `voice-general03.wav`
+
 ## Project assets
 
 The following appear to be project-owned and have no external attribution in the repository:
 
 - Logo SVGs (`src/assets/mozayk_logo.svg`, `public/mosaik_logo2.svg`)
 - Icon sprite (`public/icons.svg`)
-- UI sound files (`public/sounds/*.wav`)
 
 ## License notes
 

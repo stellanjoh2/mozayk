@@ -6,7 +6,6 @@ import {
   type BlockCue,
 } from "../render/newCanvasSequence";
 import { pauseFrost } from "../ui/frostPause";
-import { playUiSound } from "../ui/sounds";
 import type { GridDimensions, MosaicBlock } from "../types";
 
 type ImageFillSequenceProps = {
@@ -58,8 +57,6 @@ export function ImageFillSequence({
       onDoneRef.current();
       return;
     }
-
-    playUiSound("imageFill");
 
     const start = performance.now();
 
