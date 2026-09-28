@@ -262,9 +262,9 @@ export default function App() {
   // fresh canvas is an exact "has this been touched?" test.
   const pristineFramesRef = useRef(frames);
   const pristineOrientationRef = useRef(orientation);
-  const captureMosaicRef = useRef<
-    ((quantizeTo?: Density) => HTMLCanvasElement | null) | null
-  >(null);
+  const captureMosaicRef = useRef<(() => HTMLCanvasElement | null) | null>(
+    null,
+  );
 
   activeIndexRef.current = activeIndex;
   orientationRef.current = orientation;
@@ -1133,11 +1133,9 @@ export default function App() {
     const { orientation: defaultOrientation, frames: defaultFrames } =
       createDefaultCanvas();
 
-    // Snapshot the mosaic before state flips, snapped onto the density the
-    // incoming canvas uses so the wiped pieces sit on the same lattice.
-    setNewCanvasWipe(
-      captureMosaicRef.current?.(defaultFrames[0].settings.density) ?? null,
-    );
+    // Snapshot the mosaic as-is before state flips. No density snap — it
+    // fades to black, so remeshing onto the incoming grid only looks glitchy.
+    setNewCanvasWipe(captureMosaicRef.current?.() ?? null);
     pushUndoCheckpoint();
     if (layoutRegenTimer.current) {
       window.clearTimeout(layoutRegenTimer.current);

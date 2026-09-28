@@ -1,6 +1,5 @@
-import { gridScale } from "../grid/density";
 import { blockPixelRect, gridEdge, type PixelRect } from "../grid/gridMath";
-import type { Density, GridDimensions, MosaicBlock } from "../types";
+import type { GridDimensions, MosaicBlock } from "../types";
 
 /**
  * "New canvas" construction — a grid sweep followed by blocks lighting up.
@@ -292,39 +291,6 @@ function drawSweepBeam(
   ctx.lineTo(edgeX, grid.height);
   ctx.stroke();
   ctx.restore();
-}
-
-/**
- * Snaps a layout onto another density's lattice, so the outgoing mosaic lines
- * up with the grid the sweep is about to draw. Pieces may overlap after the
- * rounding — this only ever feeds a throwaway snapshot, never canvas state.
- */
-export function quantizeBlocksToDensity(
-  blocks: readonly MosaicBlock[],
-  fromDensity: Density,
-  toDensity: Density,
-  columns: number,
-  rows: number,
-): MosaicBlock[] {
-  const from = gridScale(fromDensity);
-  const to = gridScale(toDensity);
-  if (from <= 0 || to <= 0 || from === to) return [...blocks];
-
-  const ratio = to / from;
-  return blocks.map((block) => {
-    const col = Math.min(columns - 1, Math.round(block.col * ratio));
-    const row = Math.min(rows - 1, Math.round(block.row * ratio));
-    return {
-      ...block,
-      col,
-      row,
-      width: Math.max(
-        1,
-        Math.min(columns - col, Math.round(block.width * ratio)),
-      ),
-      height: Math.max(1, Math.min(rows - row, Math.round(block.height * ratio))),
-    };
-  });
 }
 
 /** How far past the right edge the sweep must be for the old canvas to be gone. */
