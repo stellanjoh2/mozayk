@@ -83,6 +83,7 @@ type ToggleRowProps = {
   label: string;
   hint?: string;
   checked: boolean;
+  disabled?: boolean;
   onChange: (checked: boolean) => void;
   shortcut?: string;
 };
@@ -90,10 +91,12 @@ type ToggleRowProps = {
 function SwitchControl({
   checked,
   onChange,
+  disabled = false,
   ariaLabel,
 }: {
   checked: boolean;
   onChange: (checked: boolean) => void;
+  disabled?: boolean;
   ariaLabel?: string;
 }) {
   return (
@@ -101,6 +104,7 @@ function SwitchControl({
       <input
         type="checkbox"
         checked={checked}
+        disabled={disabled}
         aria-label={ariaLabel}
         onChange={(e) => {
           const next = e.target.checked;
@@ -117,12 +121,13 @@ export function ToggleRow({
   label,
   hint,
   checked,
+  disabled = false,
   onChange,
   shortcut,
 }: ToggleRowProps) {
   return (
     <label
-      className="control-row control-row--toggle"
+      className={`control-row control-row--toggle${disabled ? " control-row--muted" : ""}`}
       data-shortcut={shortcut}
       aria-keyshortcuts={
         shortcut?.startsWith("Key")
@@ -133,7 +138,11 @@ export function ToggleRow({
       <span className="control-row__label">
         <HintLabel hint={hint}>{label}</HintLabel>
       </span>
-      <SwitchControl checked={checked} onChange={onChange} />
+      <SwitchControl
+        checked={checked}
+        disabled={disabled}
+        onChange={onChange}
+      />
     </label>
   );
 }

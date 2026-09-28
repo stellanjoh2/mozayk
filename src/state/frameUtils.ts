@@ -145,7 +145,7 @@ export function colorsLockedForSettings(settings: FrameSettings): boolean[] {
 }
 
 export function createDefaultSettings(): FrameSettings {
-  const density = 8 as Density;
+  const density = 4 as Density;
   const orientation: Orientation = "landscape";
   const heightMax = maxHeightSliderMax(density, orientation);
   const widthMax = maxWidthSliderMax(density, orientation);
