@@ -2511,7 +2511,6 @@ export function ControlsPanel({
           label="Voice Assist"
           hint="Speak tips · no typewriter clicks"
           checked={proTipsVoiceOn}
-          disabled={!proTipsOn}
           onChange={(next) => {
             setProTipsVoiceAssist(next);
             setProTipsVoiceOn(next);
