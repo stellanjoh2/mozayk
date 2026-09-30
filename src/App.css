@@ -975,6 +975,18 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
   line-height: 1.4;
 }
 
+.shortcut-list--tips {
+  gap: 20px;
+}
+
+.shortcut-list--tips .shortcut-list__row {
+  grid-template-columns: 128px 1fr;
+}
+
+.shortcut-list--tips .shortcut-list__keys kbd {
+  text-transform: none;
+}
+
 .shortcut-list__keys {
   margin: 0;
   color: var(--chrome);

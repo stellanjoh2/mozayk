@@ -2727,6 +2727,62 @@ export function ControlsPanel({
       </section>
 
       <section className="panel-section">
+        <h2>Useful Tips</h2>
+        <ul className="shortcut-list shortcut-list--tips">
+          <li className="shortcut-list__row">
+            <p className="shortcut-list__keys">
+              <kbd>Right-click</kbd>
+            </p>
+            <p className="shortcut-list__desc">
+              Timeline frame for style, duplicate, delete
+            </p>
+          </li>
+          <li className="shortcut-list__row">
+            <p className="shortcut-list__keys">
+              <kbd>Shift</kbd>+<kbd>Click</kbd>
+            </p>
+            <p className="shortcut-list__desc">Multi-select timeline frames</p>
+          </li>
+          <li className="shortcut-list__row">
+            <p className="shortcut-list__keys">
+              <kbd>Drag</kbd>
+            </p>
+            <p className="shortcut-list__desc">
+              Mosaic pieces to free slots (same-size swaps)
+            </p>
+          </li>
+          <li className="shortcut-list__row">
+            <p className="shortcut-list__keys">
+              <kbd>Drag</kbd>
+            </p>
+            <p className="shortcut-list__desc">
+              Shape icons to paint a row; Shift+click for a range
+            </p>
+          </li>
+          <li className="shortcut-list__row">
+            <p className="shortcut-list__keys">
+              <kbd>Pause</kbd>
+            </p>
+            <p className="shortcut-list__desc">
+              Colour swatch to lock it through randomize
+            </p>
+          </li>
+          <li className="shortcut-list__row">
+            <p className="shortcut-list__keys">
+              <kbd>Drag</kbd>
+            </p>
+            <p className="shortcut-list__desc">Timeline frames to reorder</p>
+          </li>
+          <li className="shortcut-list__row">
+            <p className="shortcut-list__keys">
+              <kbd>Hover</kbd>
+            </p>
+            <p className="shortcut-list__desc">Controls for more hints</p>
+          </li>
+        </ul>
+      </section>
+
+      <section className="panel-section">
         <h2>Extras</h2>
         <a
           className="panel-btn"
