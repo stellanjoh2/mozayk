@@ -259,7 +259,7 @@
 
 @media (min-width: 1601px) and (max-width: 1920px) {
   .rfrct-color-picker {
-    --ui-compact-zoom: 0.875;
+    --ui-compact-zoom: 0.82;
     --panel-label-size: 18px;
   }
 

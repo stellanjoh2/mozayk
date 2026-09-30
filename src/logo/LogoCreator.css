@@ -474,17 +474,6 @@ body,
   }
 }
 
-/* MacBook / laptop viewports — tighten vertical UI gaps */
-@media (max-height: 960px) {
-  .logo-creator__chrome {
-    gap: 40px;
-  }
-
-  .logo-creator__tools {
-    gap: 40px;
-  }
-}
-
 .logo-creator__dock .logo-creator__speed-btn {
   display: inline-flex;
   align-items: center;

@@ -358,12 +358,18 @@ export function LogoCreator() {
 
     const fit = () => {
       // Measure at scale 1 — CSS zoom is unreliable in Safari; use transform.
+      // Density matches main chrome bands; capped at 1 so 2560×1440 stays perfect.
       el.style.transform = "none";
       const width = el.offsetWidth;
       const height = el.offsetHeight;
-      const viewport = window.visualViewport?.width ?? window.innerWidth;
-      const avail = Math.max(1, viewport - 48);
-      const scale = Math.min(1, avail / Math.max(width, 1));
+      const vw = window.visualViewport?.width ?? window.innerWidth;
+      const vh = window.visualViewport?.height ?? window.innerHeight;
+      let density = 1;
+      if (vw <= 1920 || vh <= 1080) density = 0.82;
+      if (vw <= 1600 || vh <= 945) density = 0.75;
+      const avail = Math.max(1, vw - 48);
+      const widthFit = Math.min(1, avail / Math.max(width, 1));
+      const scale = Math.min(density, widthFit);
       el.style.transform = scale < 1 ? `scale(${scale})` : "";
       slot.style.width = `${Math.ceil(width * scale)}px`;
       slot.style.height = `${Math.ceil(height * scale)}px`;

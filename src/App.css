@@ -365,10 +365,10 @@ body {
   }
 }
 
-/* 15" laptop / 1080p: 87.5% zoom, panel occupies 403px. */
+/* 15" laptop / 1080p: 82% zoom, panel occupies 403px. */
 @media (min-width: 1601px) and (max-width: 1920px) {
   :root {
-    --ui-compact-zoom: 0.875;
+    --ui-compact-zoom: 0.82;
     --ui-panel-width: 403px;
     --panel-label-size: 18px;
   }
