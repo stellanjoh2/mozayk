@@ -40,6 +40,7 @@ import {
   peeledBlockSet,
   resolveWireframePeelStroke,
   svgWireframeBlock,
+  wireframePeelStrokePx,
 } from "./wireframePeel";
 
 function svgRing(
@@ -285,7 +286,11 @@ export function renderMosaicToSvg(options: SvgRenderOptions): string {
   const shapeGap = settings.shapeGap ?? 0;
   const fillRadius = largestRingRadius(blocks, grid);
   const peeled = peeledBlockSet(blocks, settings);
-  const peelStroke = resolveWireframePeelStroke(settings.wireframePeelStroke);
+  const peelStroke = wireframePeelStrokePx(
+    resolveWireframePeelStroke(settings.wireframePeelStroke),
+    width,
+    height,
+  );
   const shapes = blocks
     .filter((block) => block.color)
     .map((block, index) =>

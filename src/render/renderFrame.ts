@@ -46,6 +46,7 @@ import {
   drawWireframeBlock,
   peeledBlockSet,
   resolveWireframePeelStroke,
+  wireframePeelStrokePx,
 } from "./wireframePeel";
 
 export type RenderOptions = {
@@ -375,7 +376,12 @@ export function renderMosaic(
 
   const fillRadius = largestRingRadius(blocks, grid);
   const peeled = peeledBlockSet(blocks, settings);
-  const peelStroke = resolveWireframePeelStroke(settings.wireframePeelStroke);
+  const peelStroke = wireframePeelStrokePx(
+    resolveWireframePeelStroke(settings.wireframePeelStroke),
+    width,
+    height,
+    options.displayScale ?? 1,
+  );
   const {
     selectedBlockIndex = null,
     selectionPulseOpacity,

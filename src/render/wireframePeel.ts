@@ -19,6 +19,7 @@ import {
 import { isCustomShapeRef } from "../shapes/customShapes";
 import { blockCornerRadiusPx } from "./cornerRadius";
 import { resolveGridOverlayStroke } from "./gridOverlayParams";
+import { scaledOverlayLineWidth } from "./gridOverlay";
 import { isExtrasEnabled } from "./bonusFx";
 import { insetCrossRects, insetPixelRect } from "./shapeGap";
 
@@ -44,6 +45,21 @@ export function resolveWireframePeelAmount(value: unknown): number {
 
 export function resolveWireframePeelStroke(value: unknown): GridOverlayStroke {
   return resolveGridOverlayStroke(value, WIREFRAME_PEEL_STROKE_DEFAULT);
+}
+
+/**
+ * Peel stroke in canvas pixels. "1px" is 1px at 1080p (same as grid overlay)
+ * and at least 1 CSS pixel on a downscaled preview so hairlines don't AA.
+ */
+export function wireframePeelStrokePx(
+  stroke: GridOverlayStroke,
+  width: number,
+  height: number,
+  displayScale = 1,
+): number {
+  const imagePx = scaledOverlayLineWidth(stroke, width, height);
+  const screenPx = stroke * Math.max(0, displayScale);
+  return Math.max(1, Math.round(Math.max(imagePx, screenPx)));
 }
 
 /** Smallest-area blocks first. Stable by original index on ties. */
