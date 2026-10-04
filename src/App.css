@@ -935,13 +935,26 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
   padding-bottom: var(--settings-row-gap);
 }
 
-/* Custom shape row: keep tight spacing vs built-in icons. */
+/* Custom shape row: keep 8px after the last built-in row.
+   Do not use negative margin inside overflow:hidden — that clips the square. */
+.shape-library:has(> .collapsible-controls.is-open)
+  > .button-row--shape-icons:has(+ .collapsible-controls) {
+  margin-bottom: 8px;
+}
+
 .shape-library
-  > .button-row--shape-icons
-  + .collapsible-controls
+  > .collapsible-controls.is-open
+  > .collapsible-controls__inner {
+  overflow: visible;
+}
+
+.shape-library
+  > .collapsible-controls
   > .collapsible-controls__inner
   > .button-row--shape-icons {
-  margin-top: calc(8px - var(--settings-row-gap));
+  margin-top: 0;
+  /* Last-child of the inner would otherwise drop the gap before Shape Mix. */
+  margin-bottom: var(--settings-row-gap);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1895,6 +1908,24 @@ html.normal-hover
 .button-row--shape-icons .shape-slot-wrap {
   position: relative;
   min-width: 0;
+  width: 100%;
+  /* Width-based square. aspect-ratio is ignored as a height contribution
+     inside the collapsible (overflow + min-height: 0). */
+  align-self: start;
+}
+
+.button-row--shape-icons .shape-slot-wrap::before {
+  content: "";
+  display: block;
+  padding-top: 100%;
+}
+
+.button-row--shape-icons .shape-slot-wrap > .shape-slot--custom {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: unset;
 }
 
 .button-row--shape-icons .shape-slot-wrap .ui-icon-btn--remove {
