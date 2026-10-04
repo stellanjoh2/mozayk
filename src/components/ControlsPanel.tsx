@@ -73,9 +73,11 @@ import {
 import { anyOptionalShapeEnabled, getShapePool } from "../shapes/shapePalette";
 import {
   CUSTOM_SHAPE_ACCEPT,
+  CUSTOM_SHAPE_HEAVY_MESSAGE,
   MAX_CUSTOM_SHAPE_SLOTS,
   createCustomShapeSlotId,
   customShapeIconUsesAccentMask,
+  customShapeLooksHeavy,
   fitForCustomShapeImage,
   normalizeCustomShapeDataUrl,
   toCustomShapeRef,
@@ -377,6 +379,12 @@ export function ControlsPanel({
   const [themesOpen, setThemesOpen] = useState(false);
   const [themesAnimating, setThemesAnimating] = useState(false);
   const [restorePhotoDialogOpen, setRestorePhotoDialogOpen] = useState(false);
+  const [pendingHeavyShape, setPendingHeavyShape] = useState<{
+    slotId: string;
+    dataUrl: string;
+    name: string;
+    fit: "cover" | "contain";
+  } | null>(null);
   const shapes = {
     ...createDefaultShapePalette(),
     ...settings.shapes,
@@ -770,6 +778,22 @@ export function ControlsPanel({
       const dataUrl = normalizeCustomShapeDataUrl(rawDataUrl);
       const image = await ensureCachedSourceImage(dataUrl);
       const fit = fitForCustomShapeImage(image, dataUrl);
+      const payload = {
+        slotId,
+        dataUrl,
+        name: file.name,
+        fit,
+      };
+      if (
+        customShapeLooksHeavy({
+          byteSize: file.size,
+          width: image.naturalWidth || image.width,
+          height: image.naturalHeight || image.height,
+        })
+      ) {
+        setPendingHeavyShape(payload);
+        return;
+      }
       playUiSound("ok");
       onSettingsChange({
         customShapes: customShapes.map((item) =>
@@ -932,6 +956,33 @@ export function ControlsPanel({
         setHighQualityDialogOpen(false);
       }}
       onCancel={() => setHighQualityDialogOpen(false)}
+    />
+    <ConfirmDialog
+      open={pendingHeavyShape !== null}
+      title="Large file"
+      message={CUSTOM_SHAPE_HEAVY_MESSAGE}
+      confirmLabel="I understand"
+      cancelLabel="Cancel upload"
+      onConfirm={() => {
+        const pending = pendingHeavyShape;
+        setPendingHeavyShape(null);
+        if (!pending) return;
+        onSettingsChange({
+          customShapes: customShapes.map((item) =>
+            item.id === pending.slotId
+              ? {
+                  ...item,
+                  dataUrl: pending.dataUrl,
+                  name: pending.name,
+                  enabled: true,
+                  fit: pending.fit,
+                }
+              : item,
+          ),
+        });
+        onToast?.("Shape uploaded");
+      }}
+      onCancel={() => setPendingHeavyShape(null)}
     />
     <ConfirmDialog
       open={restorePhotoDialogOpen}
@@ -1460,7 +1511,11 @@ export function ControlsPanel({
                         />
                       ) : (
                         <img
-                          className="shape-icon shape-icon--custom"
+                          className={`shape-icon shape-icon--custom${
+                            slot.fit === "contain"
+                              ? " shape-icon--custom-contain"
+                              : ""
+                          }`}
                           src={preparedUrl}
                           alt=""
                           draggable={false}

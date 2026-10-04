@@ -1,4 +1,7 @@
 import {
+  CUSTOM_SHAPE_HEAVY_BYTES,
+  CUSTOM_SHAPE_HEAVY_EDGE,
+  customShapeLooksHeavy,
   decodeSvgDataUrl,
   encodeSvgDataUrl,
   customShapeIconUsesAccentMask,
@@ -15,8 +18,34 @@ function assert(condition: boolean, message: string): asserts condition {
 function run(): void {
   assert(isSvgDataUrl("data:image/svg+xml;base64,abc"), "svg data url detected");
   assert(!isSvgDataUrl("data:image/png;base64,abc"), "png data url not svg");
-  assert(tintCustomShapeWithBlockColor("contain"), "contain cutouts tint");
-  assert(!tintCustomShapeWithBlockColor("cover"), "cover photos do not tint");
+  assert(
+    !customShapeLooksHeavy({ byteSize: 80_000, width: 512, height: 512 }),
+    "typical cutout is not heavy",
+  );
+  assert(
+    customShapeLooksHeavy({ byteSize: CUSTOM_SHAPE_HEAVY_BYTES }),
+    "2MB file is heavy",
+  );
+  assert(
+    customShapeLooksHeavy({
+      byteSize: 20_000,
+      width: CUSTOM_SHAPE_HEAVY_EDGE,
+      height: 400,
+    }),
+    "2048px edge is heavy",
+  );
+  assert(
+    !customShapeLooksHeavy({ byteSize: 20_000, width: 1920, height: 1080 }),
+    "1080p screenshot is under the pixel cap",
+  );
+  assert(
+    tintCustomShapeWithBlockColor("data:image/svg+xml;base64,abc"),
+    "svg marks tint",
+  );
+  assert(
+    !tintCustomShapeWithBlockColor("data:image/png;base64,abc"),
+    "raster pngs keep their pixels",
+  );
   assert(
     customShapeIconUsesAccentMask({
       dataUrl: "data:image/svg+xml;base64,abc",
@@ -24,11 +53,11 @@ function run(): void {
     "svg preview uses accent mask",
   );
   assert(
-    customShapeIconUsesAccentMask({
+    !customShapeIconUsesAccentMask({
       dataUrl: "data:image/png;base64,abc",
       fit: "contain",
     }),
-    "contain cutout preview uses accent mask",
+    "transparent png preview stays as pixels",
   );
   assert(
     !customShapeIconUsesAccentMask({
@@ -84,6 +113,17 @@ function run(): void {
   );
   assert(photo.startsWith("<image "), "opaque photo stays an image stamp");
   assert(!photo.includes("mask-type"), "opaque photo has no mask tint");
+
+  const cutout = svgCustomShape(
+    "data:image/png;base64,abc",
+    { x: 0, y: 0, width: 20, height: 20 },
+    0,
+    undefined,
+    "contain",
+    "#ff0000",
+  );
+  assert(cutout.startsWith("<image "), "transparent png stays an image stamp");
+  assert(!cutout.includes("mask-type"), "transparent png has no mask tint");
 
   console.log("customShapes tests passed");
 }

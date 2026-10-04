@@ -2213,7 +2213,7 @@ html.normal-hover
 .button-row--shape-icons .shape-icon--custom {
   width: 100%;
   height: 100%;
-  /* Opaque photos fill the slot; cutouts opt into contain via fit. */
+  /* Opaque photos fill the slot; transparent rasters letterbox via contain. */
   object-fit: cover;
   box-sizing: border-box;
   border: 0;
@@ -2224,7 +2224,7 @@ html.normal-hover
   pointer-events: none;
 }
 
-/* SVG / transparent cutouts: paint with button currentColor (accent). */
+/* SVG marks: paint with button currentColor (accent). */
 .button-row--shape-icons .shape-icon--custom-mask {
   width: calc(100% * 2 / 3);
   height: calc(100% * 2 / 3);
@@ -2238,6 +2238,10 @@ html.normal-hover
   -webkit-mask-size: contain;
   mask-size: contain;
   object-fit: unset;
+}
+
+.button-row--shape-icons .shape-icon--custom-contain {
+  object-fit: contain;
 }
 
 .button-row button:not(.is-active) .shape-icon--custom-mask {

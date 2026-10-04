@@ -15,6 +15,28 @@ import type {
 
 export const MAX_CUSTOM_SHAPE_SLOTS = 8;
 
+/** Data URLs sit in project state; a couple of megabytes already hurts. */
+export const CUSTOM_SHAPE_HEAVY_BYTES = 2 * 1024 * 1024;
+/** Tile stamps don't need photo resolution — 2048px is already a texture. */
+export const CUSTOM_SHAPE_HEAVY_EDGE = 2048;
+
+export const CUSTOM_SHAPE_HEAVY_MESSAGE =
+  "This looks like a large file, so your experience might be slowed down.";
+
+/** True when the file weight or pixel size is beyond a typical icon/cutout. */
+export function customShapeLooksHeavy(input: {
+  byteSize: number;
+  width?: number;
+  height?: number;
+}): boolean {
+  if (input.byteSize >= CUSTOM_SHAPE_HEAVY_BYTES) return true;
+  const width = input.width ?? 0;
+  const height = input.height ?? 0;
+  return (
+    width >= CUSTOM_SHAPE_HEAVY_EDGE || height >= CUSTOM_SHAPE_HEAVY_EDGE
+  );
+}
+
 export const CUSTOM_SHAPE_ACCEPT =
   "image/svg+xml,image/png,image/jpeg,image/webp,image/bmp,.svg,.png,.jpg,.jpeg,.webp,.bmp";
 
@@ -285,22 +307,21 @@ export function fitForCustomShapeImage(
   return imageHasTransparency(image) ? "contain" : "cover";
 }
 
-/** Cutouts (contain) take the mosaic colour; opaque photos keep their own pixels. */
-export function tintCustomShapeWithBlockColor(fit: ImageFitMode): boolean {
-  return fit === "contain";
+/** SVG marks take the mosaic colour; raster images keep their own pixels. */
+export function tintCustomShapeWithBlockColor(
+  dataUrl: string | undefined,
+): boolean {
+  return Boolean(dataUrl && isSvgDataUrl(dataUrl));
 }
 
 /**
- * Library preview: SVG / transparent cutouts are accent-tinted via CSS mask
- * (same idea as mosaic tint). Opaque photos stay as plain <img> pixels.
+ * Library preview: SVGs are accent-tinted via CSS mask (same as mosaic tint).
+ * Raster images stay as plain <img> pixels, including transparent PNGs.
  */
 export function customShapeIconUsesAccentMask(
   slot: Pick<CustomShapeSlot, "dataUrl" | "fit">,
 ): boolean {
-  if (!slot.dataUrl) return false;
-  if (slot.fit === "contain") return true;
-  if (slot.fit === "cover") return false;
-  return isSvgDataUrl(slot.dataUrl);
+  return tintCustomShapeWithBlockColor(slot.dataUrl);
 }
 
 let tintScratch: HTMLCanvasElement | null = null;
@@ -362,7 +383,7 @@ export function fillCustomShape(
   rect: PixelRect,
   cornerRadius = 0,
   fit: ImageFitMode = fitForCustomShapeImage(image),
-  /** Mosaic block colour — applied as a silhouette tint for transparent cutouts. */
+  /** Mosaic block colour — applied as a silhouette tint for SVG marks. */
   fillColor?: string,
 ): void {
   const square = inscribedPixelSquare(rect);
@@ -376,7 +397,10 @@ export function fillCustomShape(
     square.height / 2,
   );
   const tint =
-    fillColor && tintCustomShapeWithBlockColor(fit) ? fillColor : undefined;
+    fillColor &&
+    tintCustomShapeWithBlockColor(image.currentSrc || image.src)
+      ? fillColor
+      : undefined;
 
   ctx.save();
   if (radius > 0) {
@@ -450,7 +474,7 @@ export function svgCustomShape(
     fit === "cover" ? "xMidYMid slice" : "xMidYMid meet";
   const image = `<image href="${href}" x="${square.x}" y="${square.y}" width="${square.width}" height="${square.height}" preserveAspectRatio="${aspect}"/>`;
   const tint =
-    fillColor && tintCustomShapeWithBlockColor(fit)
+    fillColor && tintCustomShapeWithBlockColor(dataUrl)
       ? fillColor.replace(/"/g, "")
       : undefined;
   const defs: string[] = [];
