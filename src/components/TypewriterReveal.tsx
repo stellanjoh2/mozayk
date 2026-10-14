@@ -206,7 +206,7 @@ export function TypewriterReveal({
         i -= 1;
         setTyped(text.slice(0, Math.max(0, i)));
         if (playTypeSoundRef.current && i >= 0 && isWordStart(text, i)) {
-          playUiSound("hover", true);
+          playUiSound("typewriter");
         }
         if (i <= 0) {
           window.clearInterval(timer);
@@ -237,7 +237,7 @@ export function TypewriterReveal({
       i += 1;
       setTyped(text.slice(0, i));
       if (playTypeSoundRef.current && isWordStart(text, next)) {
-        playUiSound("hover", true);
+        playUiSound("typewriter");
       }
       if (i >= text.length) {
         window.clearInterval(timer);

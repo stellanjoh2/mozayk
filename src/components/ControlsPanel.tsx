@@ -413,8 +413,10 @@ export function ControlsPanel({
     const pool = getShapePool({ ...settings, shapes, customShapes });
     return pool.length === 1 ? pool[0]! : null;
   })();
+  const generatedLayoutHint = (hint: string) =>
+    frame.imageSource ? "Only applies to generated layouts" : hint;
   const shapeBtnClass = (on: boolean, id: ShapeType) =>
-    on ? (soleShape === id ? "is-active is-sole" : "is-active") : "";
+    on ? (soleShape === id ? "has-hint is-active is-sole" : "has-hint is-active") : "has-hint";
 
   /** Drag across icons paints the same on/off as the first icon hit. */
   const shapeLibraryRef = useRef<HTMLDivElement>(null);
@@ -1078,7 +1080,11 @@ export function ControlsPanel({
           ))}
         </div>
         <label className="control-row">
-          <span className="control-row__label">Grid Density</span>
+          <span className="control-row__label">
+            <HintLabel hint="How many cells the canvas is split into · higher = finer grid, smaller shapes · ↑ ↓ to step">
+              Grid Density
+            </HintLabel>
+          </span>
           <UiSelect
             value={settings.density}
             options={DENSITY_SELECT_OPTIONS}
@@ -1116,6 +1122,8 @@ export function ControlsPanel({
         <div className="button-row">
           <button
             type="button"
+            className="has-hint"
+            data-hint="Builds the mosaic from a photo's shapes and colours"
             disabled={importingImage}
             onClick={() => fileInputRef.current?.click()}
           >
@@ -1123,8 +1131,9 @@ export function ControlsPanel({
           </button>
           <button
             type="button"
+            className="has-hint"
+            data-hint="MP4 or MOV, up to 150 frames · one mosaic per frame"
             disabled={importingImage}
-            title="MP4 or MOV, up to 150 frames"
             onClick={() => videoInputRef.current?.click()}
           >
             {importingLabel ?? "Import Video"}
@@ -1204,6 +1213,7 @@ export function ControlsPanel({
             type="button"
             data-shape-paint="block"
             aria-label="Boxes"
+            data-hint="Boxes"
             aria-pressed={shapes.block}
             className={shapeBtnClass(shapes.block, "block")}
             onClick={() => toggleShape("block")}
@@ -1216,6 +1226,7 @@ export function ControlsPanel({
             type="button"
             data-shape-paint="sphere"
             aria-label="Spheres"
+            data-hint="Spheres"
             aria-pressed={shapes.sphere}
             className={shapeBtnClass(shapes.sphere, "sphere")}
             onClick={() => toggleShape("sphere")}
@@ -1228,6 +1239,7 @@ export function ControlsPanel({
             type="button"
             data-shape-paint="triangle"
             aria-label="Triangles"
+            data-hint="Triangles"
             aria-pressed={Boolean(shapes.triangle)}
             className={shapeBtnClass(Boolean(shapes.triangle), "triangle")}
             onClick={() => toggleShape("triangle")}
@@ -1240,6 +1252,7 @@ export function ControlsPanel({
             type="button"
             data-shape-paint="ring"
             aria-label="Rings"
+            data-hint="Rings"
             aria-pressed={shapes.ring}
             className={shapeBtnClass(shapes.ring, "ring")}
             onClick={() => toggleShape("ring")}
@@ -1261,6 +1274,7 @@ export function ControlsPanel({
             type="button"
             data-shape-paint="ex"
             aria-label="Xs"
+            data-hint="Xs"
             aria-pressed={Boolean(shapes.ex)}
             className={shapeBtnClass(Boolean(shapes.ex), "ex")}
             onClick={() => toggleShape("ex")}
@@ -1271,6 +1285,7 @@ export function ControlsPanel({
             type="button"
             data-shape-paint="rays"
             aria-label="Rays"
+            data-hint="Rays"
             aria-pressed={Boolean(shapes.rays)}
             className={shapeBtnClass(Boolean(shapes.rays), "rays")}
             onClick={() => toggleShape("rays")}
@@ -1281,6 +1296,7 @@ export function ControlsPanel({
             type="button"
             data-shape-paint="pluses"
             aria-label="Pluses"
+            data-hint="Pluses"
             aria-pressed={Boolean(shapes.pluses)}
             className={shapeBtnClass(Boolean(shapes.pluses), "pluses")}
             onClick={() => toggleShape("pluses")}
@@ -1291,6 +1307,7 @@ export function ControlsPanel({
             type="button"
             data-shape-paint="clover"
             aria-label="Clovers"
+            data-hint="Clovers"
             aria-pressed={Boolean(shapes.clover)}
             className={shapeBtnClass(Boolean(shapes.clover), "clover")}
             onClick={() => toggleShape("clover")}
@@ -1303,6 +1320,7 @@ export function ControlsPanel({
             type="button"
             data-shape-paint="star"
             aria-label="Stars"
+            data-hint="Stars"
             aria-pressed={Boolean(shapes.star)}
             className={shapeBtnClass(Boolean(shapes.star), "star")}
             onClick={() => toggleShape("star")}
@@ -1313,6 +1331,7 @@ export function ControlsPanel({
             type="button"
             data-shape-paint="bloom"
             aria-label="Blooms"
+            data-hint="Blooms"
             aria-pressed={Boolean(shapes.bloom)}
             className={shapeBtnClass(Boolean(shapes.bloom), "bloom")}
             onClick={() => toggleShape("bloom")}
@@ -1323,6 +1342,7 @@ export function ControlsPanel({
             type="button"
             data-shape-paint="flower"
             aria-label="Flowers"
+            data-hint="Flowers"
             aria-pressed={Boolean(shapes.flower)}
             className={shapeBtnClass(Boolean(shapes.flower), "flower")}
             onClick={() => toggleShape("flower")}
@@ -1333,6 +1353,7 @@ export function ControlsPanel({
             type="button"
             data-shape-paint="arches"
             aria-label="Arches"
+            data-hint="Arches"
             aria-pressed={Boolean(shapes.arches)}
             className={shapeBtnClass(Boolean(shapes.arches), "arches")}
             onClick={() => toggleShape("arches")}
@@ -1345,6 +1366,7 @@ export function ControlsPanel({
             type="button"
             data-shape-paint="quads"
             aria-label="Quads"
+            data-hint="Quads"
             aria-pressed={Boolean(shapes.quads)}
             className={shapeBtnClass(Boolean(shapes.quads), "quads")}
             onClick={() => toggleShape("quads")}
@@ -1355,6 +1377,7 @@ export function ControlsPanel({
             type="button"
             data-shape-paint="blossom"
             aria-label="Blossoms"
+            data-hint="Blossoms"
             aria-pressed={Boolean(shapes.blossom)}
             className={shapeBtnClass(Boolean(shapes.blossom), "blossom")}
             onClick={() => toggleShape("blossom")}
@@ -1365,6 +1388,7 @@ export function ControlsPanel({
             type="button"
             data-shape-paint="dots"
             aria-label="Dots"
+            data-hint="Dots"
             aria-pressed={Boolean(shapes.dots)}
             className={shapeBtnClass(Boolean(shapes.dots), "dots")}
             onClick={() => toggleShape("dots")}
@@ -1375,6 +1399,7 @@ export function ControlsPanel({
             type="button"
             data-shape-paint="checks"
             aria-label="Checks"
+            data-hint="Checks"
             aria-pressed={Boolean(shapes.checks)}
             className={shapeBtnClass(Boolean(shapes.checks), "checks")}
             onClick={() => toggleShape("checks")}
@@ -1387,6 +1412,7 @@ export function ControlsPanel({
             type="button"
             data-shape-paint="spots"
             aria-label="Spots"
+            data-hint="Spots"
             aria-pressed={Boolean(shapes.spots)}
             className={shapeBtnClass(Boolean(shapes.spots), "spots")}
             onClick={() => toggleShape("spots")}
@@ -1397,6 +1423,7 @@ export function ControlsPanel({
             type="button"
             data-shape-paint="targets"
             aria-label="Targets"
+            data-hint="Targets"
             aria-pressed={Boolean(shapes.targets)}
             className={shapeBtnClass(Boolean(shapes.targets), "targets")}
             onClick={() => toggleShape("targets")}
@@ -1407,6 +1434,7 @@ export function ControlsPanel({
             type="button"
             data-shape-paint="arcs"
             aria-label="Arcs"
+            data-hint="Arcs"
             aria-pressed={Boolean(shapes.arcs)}
             className={shapeBtnClass(Boolean(shapes.arcs), "arcs")}
             onClick={() => toggleShape("arcs")}
@@ -1417,6 +1445,7 @@ export function ControlsPanel({
             type="button"
             data-shape-paint="moons"
             aria-label="Moons"
+            data-hint="Moons"
             aria-pressed={Boolean(shapes.moons)}
             className={shapeBtnClass(Boolean(shapes.moons), "moons")}
             onClick={() => toggleShape("moons")}
@@ -1429,6 +1458,7 @@ export function ControlsPanel({
             type="button"
             data-shape-paint="wedges"
             aria-label="Wedges"
+            data-hint="Wedges"
             aria-pressed={Boolean(shapes.wedges)}
             className={shapeBtnClass(Boolean(shapes.wedges), "wedges")}
             onClick={() => toggleShape("wedges")}
@@ -1439,6 +1469,7 @@ export function ControlsPanel({
             type="button"
             data-shape-paint="steps"
             aria-label="Steps"
+            data-hint="Steps"
             aria-pressed={Boolean(shapes.steps)}
             className={shapeBtnClass(Boolean(shapes.steps), "steps")}
             onClick={() => toggleShape("steps")}
@@ -1449,6 +1480,7 @@ export function ControlsPanel({
             type="button"
             data-shape-paint="chevrons"
             aria-label="Chevrons"
+            data-hint="Chevrons"
             aria-pressed={Boolean(shapes.chevrons)}
             className={shapeBtnClass(Boolean(shapes.chevrons), "chevrons")}
             onClick={() => toggleShape("chevrons")}
@@ -1459,6 +1491,7 @@ export function ControlsPanel({
             type="button"
             data-shape-paint="waves"
             aria-label="Waves"
+            data-hint="Waves"
             aria-pressed={Boolean(shapes.waves)}
             className={shapeBtnClass(Boolean(shapes.waves), "waves")}
             onClick={() => toggleShape("waves")}
@@ -1477,18 +1510,22 @@ export function ControlsPanel({
               const accentMask = Boolean(
                 preparedUrl && customShapeIconUsesAccentMask(slot),
               );
+              const slotLabel = slot.dataUrl
+                ? slot.name
+                  ? `Custom shape ${slot.name}`
+                  : "Custom shape"
+                : "Choose custom shape file";
               return (
                 <div key={slot.id} className="shape-slot-wrap">
                   <button
                     type="button"
                     data-custom-slot-id={slot.id}
                     data-shape-paint={toCustomShapeRef(slot.id)}
-                    aria-label={
+                    aria-label={slotLabel}
+                    data-hint={
                       slot.dataUrl
-                        ? slot.name
-                          ? `Custom shape ${slot.name}`
-                          : "Custom shape"
-                        : "Choose custom shape file"
+                        ? slotLabel
+                        : "Upload an SVG or image to use as a shape"
                     }
                     aria-pressed={isOn}
                     className={`shape-slot--custom${
@@ -1563,6 +1600,7 @@ export function ControlsPanel({
         />
         <SliderRow
           label="Fill Amount"
+          hint="How much of the grid gets shapes · 0 = sparse · 100 = every cell filled"
           value={settings.fillAmount}
           onChange={(fillAmount) => onSettingsChange({ fillAmount })}
         />
@@ -1577,11 +1615,7 @@ export function ControlsPanel({
         />
         <SliderRow
           label="Distribution"
-          hint={
-            frame.imageSource
-              ? "Only applies to generated layouts"
-              : "Left ← even → right"
-          }
+          hint={generatedLayoutHint("Left ← even → right")}
           value={settings.weight}
           disabled={Boolean(frame.imageSource)}
           onChange={(weight) => onSettingsChange({ weight })}
@@ -1592,6 +1626,7 @@ export function ControlsPanel({
         <h2>Size</h2>
         <SliderRow
           label="Max Height"
+          hint={generatedLayoutHint("Tallest a shape can be, in grid cells · needs Random Height")}
           value={settings.maxHeight}
           min={1}
           max={heightMax}
@@ -1599,6 +1634,7 @@ export function ControlsPanel({
         />
         <ToggleRow
           label="Random Height"
+          hint={generatedLayoutHint("Vary shape heights up to Max Height · off = one cell tall")}
           checked={settings.randomHeight}
           onChange={(randomHeight) =>
             onSettingsChange({ randomHeight }, true)
@@ -1606,6 +1642,7 @@ export function ControlsPanel({
         />
         <SliderRow
           label="Max Width"
+          hint={generatedLayoutHint("Widest a shape can be, in grid cells · needs Random Width")}
           value={settings.maxWidth}
           min={1}
           max={widthMax}
@@ -1613,6 +1650,7 @@ export function ControlsPanel({
         />
         <ToggleRow
           label="Random Width"
+          hint={generatedLayoutHint("Vary shape widths up to Max Width · off = one cell wide")}
           checked={settings.randomWidth}
           onChange={(randomWidth) => onSettingsChange({ randomWidth }, true)}
         />
@@ -1640,8 +1678,8 @@ export function ControlsPanel({
         </button>
         <CollapsibleControls open={importColors !== null}>
           <SliderRow
-            label="Image Colour Threshold"
-            hint="Merges the most similar image colours step by step. Lower = fewer, bolder colours and larger shapes"
+            label="Image Colours Amount"
+            hint="Merges the most similar image colours step by step. Lower = fewer, bolder colours and larger shapes. Changing this resets modified colours back to the originally uploaded image colours"
             value={importColors?.value ?? 2}
             min={importColors?.min ?? 2}
             max={importColors?.max ?? 8}
@@ -1652,7 +1690,8 @@ export function ControlsPanel({
         <CollapsibleControls open={canRestorePhotoColors(frame)}>
           <button
             type="button"
-            className="panel-btn"
+            className="panel-btn has-hint"
+            data-hint="Swap the current colours or theme back to the ones picked from the image · unlocks all colours"
             data-ui-sound="ok"
             onClick={() => setRestorePhotoDialogOpen(true)}
           >
@@ -1702,20 +1741,27 @@ export function ControlsPanel({
         </div>
         <button
           type="button"
-          className="panel-btn panel-btn--ghost"
+          className="panel-btn panel-btn--ghost has-hint"
+          data-hint="Copies the hex codes of this palette"
           onClick={onCopyPalette}
         >
           Copy Palette to Clipboard
         </button>
         <button
           type="button"
-          className="panel-btn"
+          className="panel-btn has-hint"
+          data-hint="Reshuffles which shapes get which colour · keeps the palette"
           data-shortcut="KeyE"
           onClick={onRandomizeCurrentColors}
         >
           Randomize Current Colours
         </button>
-        <button type="button" className="panel-btn panel-btn--ghost" onClick={onRandomizeNewColors}>
+        <button
+          type="button"
+          className="panel-btn panel-btn--ghost has-hint"
+          data-hint="Generates a fresh palette · locked colours stay"
+          onClick={onRandomizeNewColors}
+        >
           New Random Colours
         </button>
       </section>
@@ -1751,7 +1797,12 @@ export function ControlsPanel({
         <div className="color-swatch-wrap">
           <button
             type="button"
-            className="panel-btn"
+            className={frame.backgroundImage ? "panel-btn" : "panel-btn has-hint"}
+            data-hint={
+              frame.backgroundImage
+                ? undefined
+                : "Image shown behind the mosaic · fills the gaps between shapes"
+            }
             disabled={uploadingBackgroundImage}
             onClick={() => backgroundInputRef.current?.click()}
           >
@@ -1784,7 +1835,11 @@ export function ControlsPanel({
           onChange={(gridOverlay) => onSettingsChange({ gridOverlay }, false)}
         >
         <label className="control-row">
-          <span className="control-row__label">Grid Density</span>
+          <span className="control-row__label">
+            <HintLabel hint="Cell size of the overlay grid · independent of the mosaic grid">
+              Grid Density
+            </HintLabel>
+          </span>
           <UiSelect
             value={settings.gridOverlayDensity ?? 1}
             options={OVERLAY_DENSITY_SELECT_OPTIONS}
@@ -1826,6 +1881,7 @@ export function ControlsPanel({
         />
         <SliderRow
           label="Opacity"
+          hint="Strength of the grid lines"
           value={settings.gridOverlayOpacity ?? 100}
           min={0}
           max={100}
@@ -1877,7 +1933,11 @@ export function ControlsPanel({
           onChange={(gridCrosses) => onSettingsChange({ gridCrosses }, false)}
         >
         <label className="control-row">
-          <span className="control-row__label">Grid Density</span>
+          <span className="control-row__label">
+            <HintLabel hint="Spacing of the crosses grid · independent of the mosaic grid">
+              Grid Density
+            </HintLabel>
+          </span>
           <UiSelect
             value={settings.gridCrossesDensity ?? 1}
             options={OVERLAY_DENSITY_SELECT_OPTIONS}
@@ -1930,6 +1990,7 @@ export function ControlsPanel({
         />
         <SliderRow
           label="Opacity"
+          hint="Strength of the crosses"
           value={settings.gridCrossesOpacity ?? 100}
           min={0}
           max={100}
@@ -2077,7 +2138,11 @@ export function ControlsPanel({
           }}
         >
         <label className="control-row">
-          <span className="control-row__label">Grid Density</span>
+          <span className="control-row__label">
+            <HintLabel hint="Cell size of the blur patches · independent of the mosaic grid">
+              Grid Density
+            </HintLabel>
+          </span>
           <UiSelect
             value={settings.gridBlurDensity ?? (settings.density || 1)}
             options={OVERLAY_DENSITY_SELECT_OPTIONS}
@@ -2341,7 +2406,8 @@ export function ControlsPanel({
       <section className="panel-section">
         <button
           type="button"
-          className="panel-btn panel-btn--ghost"
+          className="panel-btn panel-btn--ghost has-hint"
+          data-hint="Start over with the default canvas · all frames are cleared · undoable"
           disabled={!canResetCanvas}
           onClick={onResetCanvas}
         >
@@ -2577,12 +2643,18 @@ export function ControlsPanel({
           }}
         />
         <div className="button-row">
-          <button type="button" className="panel-btn" onClick={onSaveProject}>
+          <button
+            type="button"
+            className="panel-btn has-hint"
+            data-hint="Downloads an .mzk file with every frame and setting"
+            onClick={onSaveProject}
+          >
             Save Project
           </button>
           <button
             type="button"
-            className="panel-btn panel-btn--ghost"
+            className="panel-btn panel-btn--ghost has-hint"
+            data-hint="Opens an .mzk file · replaces the current project"
             disabled={loadingProject}
             onClick={() => projectInputRef.current?.click()}
           >
@@ -2594,12 +2666,18 @@ export function ControlsPanel({
       <section className="panel-section">
         <h2>Copy / Paste Settings</h2>
         <div className="button-row">
-          <button type="button" className="panel-btn panel-btn--ghost" onClick={onCopySettings}>
+          <button
+            type="button"
+            className="panel-btn panel-btn--ghost has-hint"
+            data-hint="Copies this frame's settings and layout to the clipboard"
+            onClick={onCopySettings}
+          >
             Copy Settings
           </button>
           <button
             type="button"
-            className="panel-btn panel-btn--ghost"
+            className="panel-btn panel-btn--ghost has-hint"
+            data-hint="Applies copied settings to the current frame"
             onClick={onPasteSettings}
           >
             Paste Settings
@@ -2631,6 +2709,7 @@ export function ControlsPanel({
         <h2>More</h2>
         <ToggleRow
           label="UI Sounds"
+          hint="Clicks and cues for buttons, sliders and tips"
           checked={soundsOn}
           onChange={(next) => {
             setUiSoundsEnabled(next);
@@ -2639,6 +2718,7 @@ export function ControlsPanel({
         />
         <SliderRow
           label="UI Sounds Volume"
+          hint="Loudness of UI sounds and spoken tips"
           value={soundVolume}
           min={0}
           max={100}
@@ -2695,7 +2775,11 @@ export function ControlsPanel({
           }}
         />
         <div className="control-row">
-          <span className="control-row__label">Theme</span>
+          <span className="control-row__label">
+            <HintLabel hint="Interface appearance · does not affect the mosaic">
+              Theme
+            </HintLabel>
+          </span>
           <div className="button-row button-row--choice">
             {CHROME_APPEARANCES.map((id) => (
               <button
@@ -2710,7 +2794,11 @@ export function ControlsPanel({
           </div>
         </div>
         <div className="control-row">
-          <span className="control-row__label">Colour</span>
+          <span className="control-row__label">
+            <HintLabel hint="Interface accent colour · does not affect the mosaic">
+              Colour
+            </HintLabel>
+          </span>
           <div className="button-row button-row--3 button-row--choice">
             {CHROME_COLORS.map((id) => (
               <button
@@ -2763,7 +2851,7 @@ export function ControlsPanel({
             <p className="shortcut-list__keys">
               <kbd>Esc</kbd>
             </p>
-            <p className="shortcut-list__desc">Exit 100% inspect</p>
+            <p className="shortcut-list__desc">Exit 100% inspect / deselect piece</p>
           </li>
           <li className="shortcut-list__row">
             <p className="shortcut-list__keys">

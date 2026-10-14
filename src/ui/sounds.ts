@@ -6,6 +6,7 @@ const FILES = {
   slider: "sounds/uisound-slider.wav",
   sliderLeft: "sounds/uisound-slider.wav",
   hover: "sounds/uisound-hover.wav",
+  typewriter: "sounds/uisound-typewriter.wav",
   drop: "sounds/uisound-drop.wav",
   canvasClear: "sounds/572393__lgnsip__device-beeping-fade.wav",
   newCanvasLaser: "sounds/77088__defunct3__laser-short-2.wav",
@@ -40,6 +41,7 @@ const SOUND_GAIN: Partial<Record<UiSound, number>> = {
   slider: 0.7532,
   sliderLeft: 0.7532,
   hover: 0.9189 * 10 ** (5 / 20),
+  typewriter: 0.9189 * 10 ** (5 / 20),
   drop: 1.8205 * 10 ** (-5 / 20),
   canvasClear: 0.4343,
   newCanvasLaser: 0.5078,
@@ -106,8 +108,42 @@ const loadingRaw = new Map<UiSound, Promise<ArrayBuffer | null>>();
 const loadingDecoded = new Map<UiSound, Promise<AudioBuffer | null>>();
 let sliderPlaying = false;
 let sliderToken = 0;
+let sliderDragging = false;
+let sliderHoldUntil = 0;
+/** Keeps other UI cues muted between slider clicks while a slider is moving. */
+const SLIDER_HOLD_MS = 180;
 let hoverUntil = 0;
 const HOVER_MIN_INTERVAL_MS = 120;
+
+/** One non-voice UI cue at a time; sliders win, others are dropped while a slider is engaged. */
+type ActiveSfx = {
+  source: AudioBufferSourceNode;
+  gain: GainNode;
+  token: number;
+};
+
+let activeSfx: ActiveSfx | null = null;
+let sfxToken = 0;
+
+function isSliderEngaged(): boolean {
+  return sliderPlaying || sliderDragging || performance.now() < sliderHoldUntil;
+}
+
+function stopActiveSfx(): void {
+  const current = activeSfx;
+  if (!current) return;
+  activeSfx = null;
+  const { source, gain } = current;
+  try {
+    const now = gain.context.currentTime;
+    gain.gain.cancelScheduledValues(now);
+    gain.gain.setValueAtTime(gain.gain.value, now);
+    gain.gain.linearRampToValueAtTime(0, now + 0.012);
+    source.stop(now + 0.015);
+  } catch {
+    /* already stopped */
+  }
+}
 
 /** Spoken tips/hints — only one may play at a time; new cues wait until it finishes. */
 export type VoiceSound =
@@ -271,6 +307,11 @@ function startSound(name: UiSound, buf: AudioBuffer): boolean {
     }
     // Let the first spoken cue finish — do not cut it off for a newer one.
     if (isVoiceSound(name) && activeVoice) return false;
+    const slider = isSliderSound(name);
+    if (!isVoiceSound(name)) {
+      if (!slider && isSliderEngaged()) return false;
+      stopActiveSfx();
+    }
     const source = ctx.createBufferSource();
     source.buffer = buf;
     const rate = PLAYBACK_RATE[name] ?? 1;
@@ -288,11 +329,18 @@ function startSound(name: UiSound, buf: AudioBuffer): boolean {
       source.onended = () => {
         if (activeVoice?.token === myToken) activeVoice = null;
       };
-    }
-    if (isSliderSound(name)) {
-      const unlock = () => releaseSliderSound(token);
+    } else {
+      sfxToken += 1;
+      const myToken = sfxToken;
+      activeSfx = { source, gain, token: myToken };
+      const unlock = () => {
+        if (activeSfx?.token === myToken) activeSfx = null;
+        if (slider) releaseSliderSound(token);
+      };
       source.onended = unlock;
-      window.setTimeout(unlock, Math.max((buf.duration / rate) * 1000, 30));
+      if (slider) {
+        window.setTimeout(unlock, Math.max((buf.duration / rate) * 1000, 30));
+      }
     }
     if (name === "drop") {
       hoverUntil = Math.max(
@@ -334,9 +382,10 @@ export function setUiSoundsVolume(volume: number): void {
   savePrefs();
 }
 
-export function playUiSound(name: UiSound, unthrottled = false): void {
+export function playUiSound(name: UiSound): void {
   if (!prefs.enabled || prefs.volume <= 0) return;
-  if (name === "hover" && !unthrottled) {
+  if (!isSliderSound(name) && !isVoiceSound(name) && isSliderEngaged()) return;
+  if (name === "hover") {
     const now = performance.now();
     if (now < hoverUntil) return;
     hoverUntil = now + HOVER_MIN_INTERVAL_MS;
@@ -567,13 +616,22 @@ function playRangeSliderSound(el: HTMLInputElement): void {
   const prev = lastRangeValues.get(el);
   lastRangeValues.set(el, value);
   if (prev === undefined || value === prev) return;
+  sliderHoldUntil = performance.now() + SLIDER_HOLD_MS;
   if (sliderPlaying) return;
   playUiSound(value < prev ? "sliderLeft" : "slider");
 }
 
 function onRangePointerDown(event: Event): void {
   if (!isRangeInput(event.target)) return;
+  if (event.target.closest(".live-show")) return;
   snapshotRangeValue(event.target);
+  sliderDragging = true;
+}
+
+function onRangePointerUp(): void {
+  if (!sliderDragging) return;
+  sliderDragging = false;
+  sliderHoldUntil = performance.now() + SLIDER_HOLD_MS;
 }
 
 function onRangeKeyDown(event: Event): void {
@@ -604,6 +662,9 @@ export function initUiSounds(): void {
   // document.addEventListener("animationstart", onHoverBlink, true);
   // document.addEventListener("animationiteration", onHoverBlink, true);
   document.addEventListener("pointerdown", onRangePointerDown, true);
+  window.addEventListener("pointerup", onRangePointerUp, true);
+  window.addEventListener("pointercancel", onRangePointerUp, true);
+  window.addEventListener("blur", onRangePointerUp);
   document.addEventListener("keydown", onRangeKeyDown, true);
   document.addEventListener("input", onRangeInput, true);
   document.addEventListener("visibilitychange", () => {

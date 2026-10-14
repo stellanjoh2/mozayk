@@ -19,7 +19,7 @@ import {
   type ImageSourceData,
 } from "./imageSource";
 
-export const IMPORT_COLOR_COUNT = 8;
+export const IMPORT_COLOR_COUNT = 12;
 
 export type ImageImportResult = {
   colors: string[];

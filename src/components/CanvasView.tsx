@@ -895,16 +895,28 @@ export function CanvasView({
       clearPieceSelection();
     };
 
+    // Bubble phase on window so dialogs/menus that handle Escape (preventDefault) win.
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      if (selectedBlockIndexRef.current == null) return;
+      event.preventDefault();
+      clearPiecePointer();
+      clearPieceSelection();
+      playUiSound("close");
+    };
+
     window.addEventListener("pointermove", onMove, { passive: false });
     window.addEventListener("pointerup", onUp);
     window.addEventListener("pointercancel", onCancel);
     window.addEventListener("pointerdown", onOutsidePointerDown, true);
+    window.addEventListener("keydown", onEscape);
 
     return () => {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onCancel);
       window.removeEventListener("pointerdown", onOutsidePointerDown, true);
+      window.removeEventListener("keydown", onEscape);
     };
   }, [canEditPieces]);
 

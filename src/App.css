@@ -1898,6 +1898,23 @@ html.normal-hover
   cursor: var(--cursor-pointer);
 }
 
+.shape-library.is-painting .has-hint::after {
+  opacity: 0;
+  transition: none;
+}
+
+/* Right-hand cells grow their tip leftwards so it stays inside the panel. */
+.button-row:not(.button-row--3, .button-row--4) > .has-hint:nth-child(2n)::after {
+  left: auto;
+  right: 0;
+}
+
+.button-row--shape-icons > :is(:nth-child(4n + 3), :nth-child(4n)).has-hint::after,
+.button-row--shape-icons > :is(:nth-child(4n + 3), :nth-child(4n)) > .has-hint::after {
+  left: auto;
+  right: 0;
+}
+
 .shape-library.is-painting .button-row--shape-icons > button,
 .shape-library.is-painting
   .button-row--shape-icons
