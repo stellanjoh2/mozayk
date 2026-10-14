@@ -117,34 +117,9 @@ const SLIDER_MIN_INTERVAL_MS = 60;
 let hoverUntil = 0;
 const HOVER_MIN_INTERVAL_MS = 120;
 
-/** One non-voice UI cue at a time; sliders win, others are dropped while a slider is engaged. */
-type ActiveSfx = {
-  source: AudioBufferSourceNode;
-  gain: GainNode;
-  token: number;
-};
-
-let activeSfx: ActiveSfx | null = null;
-let sfxToken = 0;
-
+/** Other UI cues are dropped while a slider is engaged. */
 function isSliderEngaged(): boolean {
   return sliderPlaying || sliderDragging || performance.now() < sliderHoldUntil;
-}
-
-function stopActiveSfx(): void {
-  const current = activeSfx;
-  if (!current) return;
-  activeSfx = null;
-  const { source, gain } = current;
-  try {
-    const now = gain.context.currentTime;
-    gain.gain.cancelScheduledValues(now);
-    gain.gain.setValueAtTime(gain.gain.value, now);
-    gain.gain.linearRampToValueAtTime(0, now + 0.012);
-    source.stop(now + 0.015);
-  } catch {
-    /* already stopped */
-  }
 }
 
 /** Spoken tips/hints — only one may play at a time; new cues wait until it finishes. */
@@ -310,10 +285,7 @@ function startSound(name: UiSound, buf: AudioBuffer): boolean {
     // Let the first spoken cue finish — do not cut it off for a newer one.
     if (isVoiceSound(name) && activeVoice) return false;
     const slider = isSliderSound(name);
-    if (!isVoiceSound(name)) {
-      if (!slider && isSliderEngaged()) return false;
-      stopActiveSfx();
-    }
+    if (!slider && !isVoiceSound(name) && isSliderEngaged()) return false;
     const source = ctx.createBufferSource();
     source.buffer = buf;
     const rate = PLAYBACK_RATE[name] ?? 1;
@@ -331,19 +303,11 @@ function startSound(name: UiSound, buf: AudioBuffer): boolean {
       source.onended = () => {
         if (activeVoice?.token === myToken) activeVoice = null;
       };
-    } else {
-      sfxToken += 1;
-      const myToken = sfxToken;
-      activeSfx = { source, gain, token: myToken };
-      source.onended = () => {
-        if (activeSfx?.token === myToken) activeSfx = null;
-      };
-      if (slider) {
-        window.setTimeout(
-          () => releaseSliderSound(token),
-          Math.max((buf.duration / rate) * 1000, SLIDER_MIN_INTERVAL_MS),
-        );
-      }
+    } else if (slider) {
+      window.setTimeout(
+        () => releaseSliderSound(token),
+        Math.max((buf.duration / rate) * 1000, SLIDER_MIN_INTERVAL_MS),
+      );
     }
     if (name === "drop") {
       hoverUntil = Math.max(
