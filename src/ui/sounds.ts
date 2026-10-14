@@ -112,6 +112,8 @@ let sliderDragging = false;
 let sliderHoldUntil = 0;
 /** Keeps other UI cues muted between slider clicks while a slider is moving. */
 const SLIDER_HOLD_MS = 180;
+/** Fast drags tick at a steady rate instead of retriggering the short clip back-to-back. */
+const SLIDER_MIN_INTERVAL_MS = 60;
 let hoverUntil = 0;
 const HOVER_MIN_INTERVAL_MS = 120;
 
@@ -333,13 +335,14 @@ function startSound(name: UiSound, buf: AudioBuffer): boolean {
       sfxToken += 1;
       const myToken = sfxToken;
       activeSfx = { source, gain, token: myToken };
-      const unlock = () => {
+      source.onended = () => {
         if (activeSfx?.token === myToken) activeSfx = null;
-        if (slider) releaseSliderSound(token);
       };
-      source.onended = unlock;
       if (slider) {
-        window.setTimeout(unlock, Math.max((buf.duration / rate) * 1000, 30));
+        window.setTimeout(
+          () => releaseSliderSound(token),
+          Math.max((buf.duration / rate) * 1000, SLIDER_MIN_INTERVAL_MS),
+        );
       }
     }
     if (name === "drop") {
