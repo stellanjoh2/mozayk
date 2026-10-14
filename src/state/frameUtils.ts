@@ -23,15 +23,27 @@ import {
   randomizeLayoutSettings,
 } from "../layout/randomizeLayoutSettings";
 import {
+  amountsFromCounts,
   buildMergedLayoutFromColorGrid,
   buildMergedLayoutFromImage,
   coverCropBlocks,
   coverCropColorGrid,
   gridExtentsFromBlocks,
+  nearestPaletteIndex,
   rasterizeBlockColorGrid,
 } from "../import/imageImport";
 import type { ImageImportResult } from "../import/imageImport";
 import { getCachedSourceImage } from "../import/imageSource";
+import type { ImageSourceData } from "../import/imageSource";
+import {
+  importColorCount,
+  maxImportColorCount,
+  MIN_IMPORT_COLOR_COUNT,
+  reducedImportPalette,
+  reducedPhotoColors,
+  themeIndicesForSlots,
+} from "../import/reducePalette";
+import { hexToRgb } from "../colorMath";
 import { OPTIONAL_SHAPES } from "../shapes/shapePalette";
 import type { SettingsClipboard } from "./settingsClipboard";
 import type { PalettePreset } from "../presets/palettePresets";
@@ -126,6 +138,41 @@ export function equalColorAmounts(count: number): number[] {
   return Array.from({ length: count }, (_, index) =>
     base + (index < remainder ? 1 : 0),
   );
+}
+
+/**
+ * Set one Amount and scale the others from `base` so the total stays 100.
+ * If the others in `base` are all 0, the freed share splits evenly.
+ */
+export function redistributeAmounts(
+  base: number[],
+  index: number,
+  amount: number,
+): number[] {
+  const target = Math.max(0, Math.min(100, Math.round(amount)));
+  const otherCount = base.length - 1;
+  if (otherCount <= 0) return [100];
+  const others = base.reduce(
+    (sum, value, i) => (i === index ? sum : sum + Math.max(0, value)),
+    0,
+  );
+  const remaining = 100 - target;
+  const exact = base.map((value, i) => {
+    if (i === index) return target;
+    return others > 0
+      ? (Math.max(0, value) / others) * remaining
+      : remaining / otherCount;
+  });
+  const rounded = exact.map((value) => Math.round(value));
+  const drift = 100 - rounded.reduce((sum, value) => sum + value, 0);
+  if (drift !== 0) {
+    let fix = -1;
+    exact.forEach((value, i) => {
+      if (i !== index && (fix < 0 || value > exact[fix]!)) fix = i;
+    });
+    rounded[fix] = Math.max(0, rounded[fix]! + drift);
+  }
+  return rounded;
 }
 
 export function colorAmountsForSettings(settings: FrameSettings): number[] {
@@ -278,7 +325,7 @@ function remapBlockColors(
 /** When blocks still use the photo palette, remap by import slot — not current settings. */
 function importPaletteForRemap(frame: Frame): string[] | null {
   if (!frame.imageSource) return null;
-  const importPalette = frame.imageSource.palette;
+  const importPalette = reducedPhotoColors(frame.imageSource);
   if (importPalette.length === 0) return null;
   const importColors = new Set(importPalette);
   if (!frame.blocks.every((block) => importColors.has(block.color))) return null;
@@ -557,6 +604,34 @@ function relayoutFromExistingColorGrid(
   return { ...frame, settings, blocks };
 }
 
+/** Each reduced slot's share of the image, as Amount values (sum 100). */
+function importNaturalAmounts(source: ImageSourceData): number[] {
+  return amountsFromCounts(reducedImportPalette(source).weights);
+}
+
+/** Amount values for an imported frame: each slot's share of the image. */
+function importedColorAmounts(source: ImageSourceData, length: number): number[] {
+  if (source.paletteWeights) {
+    const natural = importNaturalAmounts(source);
+    if (natural.length === length) return natural;
+  }
+  return equalColorAmounts(length);
+}
+
+/** Same seed per frame so slider drags only move colour regions, not every shape. */
+function frameLayoutRng(frame: Frame): () => number {
+  let seed = 0;
+  for (let i = 0; i < frame.id.length; i++) {
+    seed = (Math.imul(seed, 31) + frame.id.charCodeAt(i)) | 0;
+  }
+  return () => {
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 export function relayoutImportedFrame(
   frame: Frame,
   orientation: Orientation,
@@ -587,7 +662,7 @@ export function relayoutImportedFrame(
       orientation,
       settings,
       displayPalette,
-      frame.imageSource.paletteRgb,
+      reducedImportPalette(frame.imageSource).centers,
       rng,
       frame.imageSource.fit ?? "cover",
     );
@@ -747,8 +822,12 @@ export function randomizeFrameNewColors(frame: Frame): Frame {
 export function applyPalettePresetToFrame(
   frame: Frame,
   preset: PalettePreset,
+  orientation: Orientation,
 ): Frame {
   const colors = preset.colors.slice(0, MAX_COLORS);
+  if (frame.imageSource && frame.imageSource.paletteRgb.length > 0) {
+    return applyThemeToImportedFrame(frame, colors, orientation);
+  }
   const colorAmounts =
     preset.colorAmounts && preset.colorAmounts.length === colors.length
       ? preset.colorAmounts
@@ -760,12 +839,6 @@ export function applyPalettePresetToFrame(
     colorAmounts,
     colorsLocked,
   };
-  // Imported frames derive block colours from the photo — remap by palette
-  // slot instead of shuffling, so the silhouette stays intact.
-  if (frame.imageSource) {
-    const blocks = remapBlockColors(frame.blocks, frame.settings.colors, colors);
-    return { ...frame, settings, blocks };
-  }
   const blocks = randomizeColors(
     frame.blocks,
     colors,
@@ -778,8 +851,9 @@ export function applyPalettePresetToFrame(
 
 /** True when an import exists and the working palette differs from the photo's. */
 export function canRestorePhotoColors(frame: Frame): boolean {
-  const photo = frame.imageSource?.palette;
-  if (!photo || photo.length === 0) return false;
+  if (!frame.imageSource) return false;
+  const photo = reducedPhotoColors(frame.imageSource);
+  if (photo.length === 0) return false;
   const current = frame.settings.colors;
   if (current.length !== photo.length) return true;
   return current.some((color, index) => color !== photo[index]);
@@ -788,9 +862,10 @@ export function canRestorePhotoColors(frame: Frame): boolean {
 /** Put the photo-extracted palette back, remapping slots (same path as themes). */
 export function restorePhotoColorsToFrame(frame: Frame): Frame {
   if (!canRestorePhotoColors(frame) || !frame.imageSource) return frame;
-  const colors = frame.imageSource.palette.slice(0, MAX_COLORS);
+  const { themeColors: _theme, ...imageSource } = frame.imageSource;
+  const colors = reducedPhotoColors(imageSource).slice(0, MAX_COLORS);
   if (colors.length === 0) return frame;
-  const colorAmounts = equalColorAmounts(colors.length);
+  const colorAmounts = importedColorAmounts(imageSource, colors.length);
   const colorsLocked = colors.map(() => false);
   const settings: FrameSettings = {
     ...frame.settings,
@@ -799,7 +874,199 @@ export function restorePhotoColorsToFrame(frame: Frame): Frame {
     colorsLocked,
   };
   const blocks = remapBlockColors(frame.blocks, frame.settings.colors, colors);
-  return { ...frame, settings, blocks };
+  return { ...frame, imageSource, settings, blocks };
+}
+
+/** Theme index per slot at the source's current threshold. */
+function themeSlotIndices(source: ImageSourceData, theme: string[]): number[] {
+  return themeIndicesForSlots(
+    reducedImportPalette(source).centers,
+    theme.map((hex) => hexToRgb(hex)),
+  );
+}
+
+/**
+ * Fold swatch edits made since the theme was applied back into it, so the
+ * threshold keeps working from what is on screen. A changed colour count
+ * (add/remove/paste) makes the current swatches the new theme.
+ */
+function themeWithSwatchEdits(frame: Frame, theme: string[]): string[] {
+  const source = frame.imageSource!;
+  const current = frame.settings.colors;
+  const slots = themeSlotIndices(source, theme);
+  if (slots.length !== current.length) return current.slice();
+  const next = theme.slice();
+  slots.forEach((themeIndex, slot) => {
+    next[themeIndex] = current[slot]!;
+  });
+  return next;
+}
+
+/** Re-pick slot colours from the theme for the current threshold and rebuild. */
+function recolorFromTheme(
+  frame: Frame,
+  imageSource: ImageSourceData,
+  theme: string[],
+  lockedByTheme: Map<number, boolean>,
+  orientation?: Orientation,
+): Frame {
+  const slots = themeSlotIndices(imageSource, theme);
+  const colors = slots.map((index) => theme[index]!);
+  const settings: FrameSettings = {
+    ...frame.settings,
+    colors,
+    colorAmounts: importNaturalAmounts(imageSource),
+    colorsLocked: slots.map((index) => lockedByTheme.get(index) ?? false),
+  };
+  const blocks = frame.imageSource
+    ? remapBlocksAcrossThresholds(frame.blocks, frame, imageSource, colors)
+    : frame.blocks;
+  const next = { ...frame, imageSource, settings, blocks };
+  return orientation
+    ? relayoutImportedFrame(next, orientation, frameLayoutRng(frame))
+    : next;
+}
+
+/** Old slot → whichever new group its colour centre now falls in. */
+function remapBlocksAcrossThresholds(
+  blocks: MosaicBlock[],
+  frame: Frame,
+  nextSource: ImageSourceData,
+  nextColors: string[],
+): MosaicBlock[] {
+  const oldCenters = reducedImportPalette(frame.imageSource!).centers;
+  const newCenters = reducedImportPalette(nextSource).centers;
+  const oldColors = frame.settings.colors;
+  return blocks.map((block) => {
+    const slot = oldColors.indexOf(block.color);
+    const center = oldCenters[Math.min(Math.max(slot, 0), oldCenters.length - 1)];
+    if (!center) return block;
+    const color = nextColors[nearestPaletteIndex(center, newCenters)] ?? block.color;
+    return color === block.color ? block : { ...block, color };
+  });
+}
+
+/** Themes on imported frames drive the slots by tone, at any threshold. */
+function applyThemeToImportedFrame(
+  frame: Frame,
+  theme: string[],
+  orientation: Orientation,
+): Frame {
+  const source = frame.imageSource!;
+  if (theme.length < MIN_IMPORT_COLOR_COUNT) {
+    const { themeColors: _theme, ...rest } = source;
+    const colors = theme.slice();
+    return {
+      ...frame,
+      imageSource: rest,
+      settings: {
+        ...frame.settings,
+        colors,
+        colorAmounts: equalColorAmounts(colors.length),
+        colorsLocked: colors.map(() => false),
+      },
+      blocks: remapBlockColors(frame.blocks, frame.settings.colors, colors),
+    };
+  }
+  const { colorCount: _count, ...rest } = source;
+  const themed: ImageSourceData = { ...rest, themeColors: theme };
+  const count = Math.min(importColorCount(source), maxImportColorCount(themed));
+  const imageSource =
+    count >= source.paletteRgb.length ? themed : { ...themed, colorCount: count };
+  // Same slots as on screen: recolour in place. Otherwise the tiles no longer
+  // match the groups and must be rebuilt from the image.
+  const slotsUnchanged =
+    count === importColorCount(source) &&
+    frame.settings.colors.length === count;
+  return recolorFromTheme(
+    frame,
+    imageSource,
+    theme,
+    new Map(),
+    slotsUnchanged ? undefined : orientation,
+  );
+}
+
+/** Slider range for merging image colours, or null when the frame has no import. */
+export function importColorCountRange(
+  frame: Frame,
+): { min: number; max: number; value: number } | null {
+  const source = frame.imageSource;
+  if (!source) return null;
+  const max = maxImportColorCount(source);
+  if (max <= MIN_IMPORT_COLOR_COUNT) return null;
+  return {
+    min: MIN_IMPORT_COLOR_COUNT,
+    max,
+    value: importColorCount(source),
+  };
+}
+
+/**
+ * Merge the image's colours down (or back up) to `count` and rebuild from the image.
+ * With a theme, slots re-pick from the theme by tone. Otherwise each merged group
+ * keeps the display colour, lock and slot of its heaviest member.
+ */
+export function setImportColorCount(
+  frame: Frame,
+  count: number,
+  orientation: Orientation,
+): Frame {
+  const source = frame.imageSource;
+  if (!source || source.paletteRgb.length === 0) return frame;
+
+  const withCount = (base: ImageSourceData): ImageSourceData => {
+    const max = maxImportColorCount(base);
+    const clamped = Math.max(
+      Math.min(MIN_IMPORT_COLOR_COUNT, max),
+      Math.min(max, Math.round(count)),
+    );
+    const { colorCount: _previousCount, ...rest } = base;
+    return clamped >= base.paletteRgb.length ? rest : { ...rest, colorCount: clamped };
+  };
+
+  if (source.themeColors) {
+    const previousSlots = themeSlotIndices(source, source.themeColors);
+    const theme = themeWithSwatchEdits(frame, source.themeColors);
+    const lockedByTheme = new Map<number, boolean>();
+    if (previousSlots.length === frame.settings.colors.length) {
+      previousSlots.forEach((themeIndex, slot) => {
+        lockedByTheme.set(themeIndex, frame.settings.colorsLocked?.[slot] ?? false);
+      });
+    }
+    if (theme.length >= MIN_IMPORT_COLOR_COUNT) {
+      const imageSource = withCount({ ...source, themeColors: theme });
+      return recolorFromTheme(frame, imageSource, theme, lockedByTheme, orientation);
+    }
+  }
+
+  const previous = reducedImportPalette(source);
+  const displayByRep = new Map<number, string>();
+  const lockedByRep = new Map<number, boolean>();
+  previous.representatives.forEach((rep, slot) => {
+    const color = frame.settings.colors[slot];
+    if (color) displayByRep.set(rep, color);
+    lockedByRep.set(rep, frame.settings.colorsLocked?.[slot] ?? false);
+  });
+
+  const { themeColors: _theme, ...untinted } = source;
+  const imageSource = withCount(untinted);
+  const next = reducedImportPalette(imageSource);
+
+  const colors = next.representatives.map(
+    (rep) => displayByRep.get(rep) ?? source.palette[rep] ?? "#000000",
+  );
+  const settings: FrameSettings = {
+    ...frame.settings,
+    colors,
+    colorAmounts: amountsFromCounts(next.weights),
+    colorsLocked: next.representatives.map((rep) => lockedByRep.get(rep) ?? false),
+  };
+  return relayoutImportedFrame(
+    { ...frame, imageSource, settings },
+    orientation,
+    frameLayoutRng(frame),
+  );
 }
 
 export function transposeFrameBlocks(

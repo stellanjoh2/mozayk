@@ -23,6 +23,12 @@ export type ImageSourceData = {
   dataUrl: string;
   palette: string[];
   paletteRgb: ImageRgb[];
+  /** Pixel share per paletteRgb slot. Missing on older projects = equal. */
+  paletteWeights?: number[];
+  /** Merge paletteRgb down to this many colours. Missing = all of them. */
+  colorCount?: number;
+  /** Theme palette that drives slot colours at any threshold. Missing = image colours. */
+  themeColors?: string[];
   /** Transparent cutouts use contain so subject pixels never leave the canvas. */
   fit?: ImageFitMode;
 };

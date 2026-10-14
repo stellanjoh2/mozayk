@@ -92,6 +92,7 @@ import {
 import {
   canRestorePhotoColors,
   createDefaultShapePalette,
+  importColorCountRange,
 } from "../state/frameUtils";
 import {
   ORIENTATION_LABELS,
@@ -230,6 +231,7 @@ type ControlsPanelProps = {
   onRandomizeNewColors: () => void;
   onApplyPalettePreset: (preset: PalettePreset) => void;
   onRestorePhotoColors: () => void;
+  onImportColorCountChange: (count: number) => void;
   onAddColor: () => void;
   onRemoveColor: (index: number) => void;
   onColorChange: (index: number, hex: string) => void;
@@ -305,6 +307,7 @@ export function ControlsPanel({
   onRandomizeNewColors,
   onApplyPalettePreset,
   onRestorePhotoColors,
+  onImportColorCountChange,
   onAddColor,
   onRemoveColor,
   onColorChange,
@@ -860,6 +863,7 @@ export function ControlsPanel({
     null,
   );
 
+  const importColors = importColorCountRange(frame);
   const colorCount = settings.colors.length;
   const colorRowKeys = colorRowKeysRef.current;
   if (colorRowKeys.length !== colorCount) {
@@ -986,8 +990,8 @@ export function ControlsPanel({
     />
     <ConfirmDialog
       open={restorePhotoDialogOpen}
-      title="Restore colours from photo?"
-      message="This replaces your current colour palette with the colours taken from the photo. You will lose your custom colour assignments."
+      title="Restore colours from image?"
+      message="This replaces your current colour palette with the colours taken from the image. You will lose your custom colour assignments."
       confirmLabel="Restore"
       voice="general2"
       onConfirm={() => {
@@ -1129,7 +1133,7 @@ export function ControlsPanel({
         <CollapsibleControls open={Boolean(frame.imageSource)}>
           <ToggleRow
             label="Show Source Image"
-            hint="Reveal the photo in gaps between shapes"
+            hint="Reveal the image in gaps between shapes"
             checked={Boolean(frame.settings.showSourceImage)}
             onChange={(showSourceImage) => onSettingsChange({ showSourceImage })}
           />
@@ -1634,6 +1638,17 @@ export function ControlsPanel({
         >
           View Themes
         </button>
+        <CollapsibleControls open={importColors !== null}>
+          <SliderRow
+            label="Image Colour Threshold"
+            hint="Merges the most similar image colours step by step. Lower = fewer, bolder colours and larger shapes"
+            value={importColors?.value ?? 2}
+            min={importColors?.min ?? 2}
+            max={importColors?.max ?? 8}
+            step={1}
+            onChange={onImportColorCountChange}
+          />
+        </CollapsibleControls>
         <CollapsibleControls open={canRestorePhotoColors(frame)}>
           <button
             type="button"
@@ -1641,7 +1656,7 @@ export function ControlsPanel({
             data-ui-sound="ok"
             onClick={() => setRestorePhotoDialogOpen(true)}
           >
-            Restore Colours from Photo
+            Restore Colours from Image
           </button>
         </CollapsibleControls>
         <CollapsibleControls open={settings.colors.length < MAX_COLORS}>
@@ -1672,13 +1687,15 @@ export function ControlsPanel({
                       : undefined
                   }
                 />
-                <SliderRow
-                  label="Amount"
-                  hint="Share of canvas for this colour"
-                  value={settings.colorAmounts?.[index] ?? Math.round(100 / settings.colors.length)}
-                  min={1}
-                  onChange={(amount) => onColorAmountChange(index, amount)}
-                />
+                {frame.imageSource ? null : (
+                  <SliderRow
+                    label="Amount"
+                    hint="Share of canvas · others adjust to keep 100"
+                    value={settings.colorAmounts?.[index] ?? Math.round(100 / settings.colors.length)}
+                    min={0}
+                    onChange={(amount) => onColorAmountChange(index, amount)}
+                  />
+                )}
               </div>
             </div>
           ))}
@@ -2740,7 +2757,7 @@ export function ControlsPanel({
             <p className="shortcut-list__keys">
               <kbd>O</kbd>
             </p>
-            <p className="shortcut-list__desc">Toggle original photo</p>
+            <p className="shortcut-list__desc">Toggle original image</p>
           </li>
           <li className="shortcut-list__row">
             <p className="shortcut-list__keys">

@@ -982,7 +982,7 @@ export function CanvasView({
             onPointerDown={canEditPieces ? handlePiecePointerDown : undefined}
             aria-label={
               viewOriginal && frame.imageSource
-                ? "Original photo preview"
+                ? "Original image preview"
                 : "Mosaic preview"
             }
           />

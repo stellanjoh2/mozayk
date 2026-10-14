@@ -92,10 +92,31 @@ function parseImageSource(value: unknown): ImageSourceData | undefined {
     }
   }
 
+  const paletteWeights = Array.isArray(record.paletteWeights)
+    ? record.paletteWeights.map(Number)
+    : [];
+  const colorCount = Number(record.colorCount);
+  const themeColors = Array.isArray(record.themeColors)
+    ? record.themeColors.filter(
+        (item): item is string =>
+          typeof item === "string" && /^#[0-9a-f]{6}$/i.test(item),
+      )
+    : [];
+
   return {
     dataUrl: record.dataUrl,
     palette,
     paletteRgb,
+    ...(paletteWeights.length === paletteRgb.length &&
+    paletteWeights.every((w) => Number.isFinite(w) && w >= 0)
+      ? { paletteWeights }
+      : {}),
+    ...(Number.isInteger(colorCount) &&
+    colorCount >= 1 &&
+    colorCount < paletteRgb.length
+      ? { colorCount }
+      : {}),
+    ...(themeColors.length >= 2 ? { themeColors } : {}),
     ...(record.fit === "contain" || record.fit === "cover"
       ? { fit: record.fit }
       : {}),

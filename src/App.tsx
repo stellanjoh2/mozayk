@@ -61,7 +61,9 @@ import {
   randomizeFrameCurrentColors,
   randomizeFrameNewColors,
   applyPalettePresetToFrame,
+  redistributeAmounts,
   restorePhotoColorsToFrame,
+  setImportColorCount,
   randomizeFrameLayout,
   removeColorFromFrame,
   transposeFrameBlocks,
@@ -530,6 +532,14 @@ export default function App() {
       regenerateLayout();
     }, LAYOUT_REGEN_MS);
   }, [regenerateLayout]);
+
+  /** Amounts when the current Amount drag began — others scale from these. */
+  const amountDragRef = useRef<{
+    frameId: string;
+    index: number;
+    base: number[];
+    at: number;
+  } | null>(null);
 
   const flushLayoutRegen = useCallback(() => {
     if (!layoutRegenTimer.current) return;
@@ -1654,11 +1664,27 @@ export default function App() {
         }}
         onApplyPalettePreset={(preset) => {
           pushUndoCheckpoint();
-          updateActiveFrame((frame) => applyPalettePresetToFrame(frame, preset));
+          updateActiveFrame((frame) =>
+            applyPalettePresetToFrame(frame, preset, orientationRef.current),
+          );
         }}
         onRestorePhotoColors={() => {
           pushUndoCheckpoint();
           updateActiveFrame((frame) => restorePhotoColorsToFrame(frame));
+        }}
+        onImportColorCountChange={(count) => {
+          pushUndoCheckpoint(true);
+          updateActiveFrame((frame) =>
+            setImportColorCount(frame, count, orientationRef.current),
+          );
+          const dataUrl = activeFrame.imageSource?.dataUrl;
+          if (dataUrl && !getCachedSourceImage(dataUrl)) {
+            void ensureCachedSourceImage(dataUrl).then(() => {
+              updateActiveFrame((frame) =>
+                regenerateFrameLayout(frame, orientationRef.current),
+              );
+            });
+          }
         }}
         onAddColor={() => {
           pushUndoCheckpoint();
@@ -1703,11 +1729,29 @@ export default function App() {
           });
         }}
         onColorAmountChange={(index, amount) => {
+          const active = framesRef.current[activeIndexRef.current];
+          if (!active || active.imageSource) return;
           pushUndoCheckpoint(true);
+          const now = performance.now();
+          const drag = amountDragRef.current;
+          if (
+            !drag ||
+            drag.frameId !== active.id ||
+            drag.index !== index ||
+            now - drag.at > UNDO_COALESCE_MS
+          ) {
+            amountDragRef.current = {
+              frameId: active.id,
+              index,
+              base: colorAmountsForSettings(active.settings).slice(),
+              at: now,
+            };
+          } else {
+            drag.at = now;
+          }
+          const base = amountDragRef.current!.base;
           updateActiveFrame((frame) => {
-            const colorAmounts = colorAmountsForSettings(frame.settings).map(
-              (value, i) => (i === index ? amount : value),
-            );
+            const colorAmounts = redistributeAmounts(base, index, amount);
             return randomizeFrameCurrentColors({
               ...frame,
               settings: { ...frame.settings, colorAmounts },

@@ -64,10 +64,10 @@ function mimeTypeLabel(mime: string): string {
 
 export function unsupportedImageMessage(label: string): string {
   if (label === "HEIC" || label === "HEIF") {
-    return `${label} isn't supported in this browser. Convert the photo to JPEG or PNG and try again.`;
+    return `${label} isn't supported in this browser. Convert the image to JPEG or PNG and try again.`;
   }
   if (label === "SVG") {
-    return "SVG vector files aren't supported. Use a photo format like JPEG, PNG, or WebP.";
+    return "SVG vector files aren't supported. Use an image format like JPEG, PNG, or WebP.";
   }
   if (label === "TIFF" || label === "PSD" || label === "RAW") {
     return `${label} files aren't supported. Use JPEG, PNG, WebP, GIF, or AVIF instead.`;

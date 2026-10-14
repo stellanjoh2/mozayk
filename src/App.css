@@ -930,6 +930,21 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
   margin-bottom: 20px;
 }
 
+.panel-section
+  > .collapsible-controls:not(:last-child)
+  > .collapsible-controls__inner
+  > .control-row:last-child {
+  margin-bottom: var(--settings-row-gap);
+}
+
+/* Button keeps its 20px when the reveal is closed; top up to the row gap when open. */
+.panel-section
+  > .panel-btn
+  + .collapsible-controls
+  > .collapsible-controls__inner:has(> .control-row:first-child) {
+  padding-top: calc(var(--settings-row-gap) - 20px);
+}
+
 /* Trailing gap before the next row when a toggle reveals extra controls. */
 .control-row--toggle + .collapsible-controls > .collapsible-controls__inner {
   padding-bottom: var(--settings-row-gap);

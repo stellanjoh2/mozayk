@@ -114,7 +114,7 @@ function kMeans(
   return { centers, counts };
 }
 
-function amountsFromCounts(counts: number[]): number[] {
+export function amountsFromCounts(counts: number[]): number[] {
   const total = counts.reduce((sum, count) => sum + count, 0);
   if (total <= 0) return [100];
 
@@ -722,11 +722,40 @@ function blocksFromCells(
 /** Alpha below this = no tile (letterbox / PNG cutout). */
 const EMPTY_CELL_ALPHA = 32;
 
+let lastSample: {
+  image: HTMLImageElement;
+  columns: number;
+  rows: number;
+  fit: ImageFitMode;
+  grid: (Rgb | null)[][];
+} | null = null;
+
+/** Read-only result; repeat calls with the same inputs reuse the last grid. */
 export function sampleImageGrid(
   image: HTMLImageElement,
   columns: number,
   rows: number,
   fit: ImageFitMode = "cover",
+): (Rgb | null)[][] {
+  if (
+    lastSample &&
+    lastSample.image === image &&
+    lastSample.columns === columns &&
+    lastSample.rows === rows &&
+    lastSample.fit === fit
+  ) {
+    return lastSample.grid;
+  }
+  const grid = sampleImageGridUncached(image, columns, rows, fit);
+  lastSample = { image, columns, rows, fit, grid };
+  return grid;
+}
+
+function sampleImageGridUncached(
+  image: HTMLImageElement,
+  columns: number,
+  rows: number,
+  fit: ImageFitMode,
 ): (Rgb | null)[][] {
   const canvas = document.createElement("canvas");
   canvas.width = columns;
@@ -886,6 +915,7 @@ export function importImageToMosaicWithPalette(
         dataUrl,
         palette: palette.colors,
         paletteRgb: palette.paletteRgb,
+        paletteWeights: palette.colorAmounts,
         fit,
       },
     };
@@ -917,6 +947,7 @@ export function importImageToMosaicWithPalette(
       dataUrl,
       palette: palette.colors,
       paletteRgb: palette.paletteRgb,
+      paletteWeights: palette.colorAmounts,
       fit,
     },
   };

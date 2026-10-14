@@ -5,7 +5,10 @@ import {
   canRestorePhotoColors,
   cloneFrameLook,
   createDefaultSettings,
+  importColorCountRange,
+  redistributeAmounts,
   restorePhotoColorsToFrame,
+  setImportColorCount,
 } from "./frameUtils";
 import type { Frame, MosaicBlock } from "../types";
 
@@ -50,7 +53,26 @@ function importedFrame(
   };
 }
 
+function amountTests(): void {
+  const raised = redistributeAmounts([40, 35, 25], 2, 65);
+  assert(raised.join() === "19,16,65", `others shrink proportionally, got ${raised.join()}`);
+  assert(redistributeAmounts([40, 35, 25], 0, 100).join() === "100,0,0", "100 takes all");
+  assert(
+    redistributeAmounts([40, 35, 25], 0, 40).join() === "40,35,25",
+    "dragging back against the drag-start base restores the shares",
+  );
+  assert(
+    redistributeAmounts([100, 0, 0], 0, 70).join() === "70,15,15",
+    "freed share splits evenly when the others were 0",
+  );
+  assert(
+    redistributeAmounts([34, 64, 20, 20, 20], 1, 50).reduce((a, b) => a + b, 0) === 100,
+    "older over-100 totals normalise on the next drag",
+  );
+}
+
 function run(): void {
+  amountTests();
   const lookColors: [string, string, string] = ["#111111", "#222222", "#333333"];
   const otherColors: [string, string, string] = ["#ff0000", "#00ff00", "#0000ff"];
   const look = importedFrame("look", lookColors, {
@@ -140,11 +162,16 @@ function run(): void {
     label: "Test",
     category: "common",
     colors: themeColors,
-  });
-  assert(withTheme.blocks[0].color === "#111111", "imported theme remaps slot 0");
-  assert(withTheme.blocks[1].color === "#222222", "imported theme remaps slot 1");
-  assert(withTheme.blocks[2].color === "#333333", "imported theme remaps slot 2");
+  }, "landscape");
+  // Image slots by tone: blue (darkest) < red < green (lightest).
+  assert(withTheme.blocks[2].color === "#111111", "darkest slot gets darkest theme colour");
+  assert(withTheme.blocks[0].color === "#222222", "middle slot gets middle theme colour");
+  assert(withTheme.blocks[1].color === "#333333", "lightest slot gets lightest theme colour");
   assert(withTheme.blocks[0].width === 4, "imported theme keeps tile geometry");
+  assert(
+    withTheme.imageSource?.themeColors?.join(",") === themeColors.join(","),
+    "theme is kept with the image so the threshold uses it",
+  );
 
   const eightColorFrame = importedFrame("eight", [
     "#100000",
@@ -173,14 +200,37 @@ function run(): void {
     label: "Five",
     category: "common",
     colors: fiveColorTheme,
-  });
+  }, "landscape");
   assert(
     themedEight.settings.colors.length === 5,
     "preset replaces palette length",
   );
   assert(
     themedEight.blocks[0].color === "#111111",
-    "shorter theme remaps by slot",
+    "darkest image colour lands on darkest theme colour",
+  );
+  assert(
+    themedEight.blocks.every((block) => fiveColorTheme.includes(block.color as never)),
+    "every tile uses a theme colour after a shorter theme caps the threshold",
+  );
+  const range = importColorCountRange(themedEight);
+  assert(range?.max === 5 && range.value === 5, "threshold caps at theme length");
+
+  const themedThree = setImportColorCount(themedEight, 3, "landscape");
+  assert(themedThree.settings.colors.length === 3, "threshold reduces themed slots");
+  assert(
+    themedThree.settings.colors.every((color) => fiveColorTheme.includes(color as never)),
+    "reduced slots pick only theme colours",
+  );
+  assert(
+    themedThree.blocks.every((block) => themedThree.settings.colors.includes(block.color)),
+    "tiles follow the reduced themed slots",
+  );
+  const themedBack = setImportColorCount(themedThree, 5, "landscape");
+  assert(
+    themedBack.settings.colors.slice().sort().join(",") ===
+      fiveColorTheme.slice().sort().join(","),
+    "raising the threshold brings every theme colour back, no image colours",
   );
 
   assert(
