@@ -27,6 +27,8 @@ type TypewriterRevealProps = {
 } & Omit<React.HTMLAttributes<HTMLElement>, "children">;
 
 const DEFAULT_SPEED_MS = 10;
+/** Type clicks run on their own steady clock, not per character. */
+const TYPE_SOUND_INTERVAL_MS = 70;
 
 type TextHit =
   | { start: number; end: number; kind: "link"; href: string }
@@ -122,12 +124,6 @@ function renderTypedText(
   return nodes;
 }
 
-function isWordStart(text: string, index: number) {
-  const ch = text[index];
-  if (!ch || /\s/.test(ch)) return false;
-  return index === 0 || /\s/.test(text[index - 1]);
-}
-
 export function TypewriterReveal({
   as = "span",
   text,
@@ -167,7 +163,22 @@ export function TypewriterReveal({
   useEffect(() => {
     const runId = ++runIdRef.current;
 
+    let soundTimer: number | null = null;
+    const stopTypeSound = () => {
+      if (soundTimer == null) return;
+      window.clearInterval(soundTimer);
+      soundTimer = null;
+    };
+    const startTypeSound = () => {
+      const tick = () => {
+        if (playTypeSoundRef.current) playUiSound("typewriter");
+      };
+      tick();
+      soundTimer = window.setInterval(tick, TYPE_SOUND_INTERVAL_MS);
+    };
+
     const complete = () => {
+      stopTypeSound();
       if (runId !== runIdRef.current) return;
       setIsComplete(true);
       onCompleteRef.current?.();
@@ -198,16 +209,15 @@ export function TypewriterReveal({
         return;
       }
       let i = text.length;
+      startTypeSound();
       const timer = window.setInterval(() => {
         if (runId !== runIdRef.current) {
           window.clearInterval(timer);
+          stopTypeSound();
           return;
         }
         i -= 1;
         setTyped(text.slice(0, Math.max(0, i)));
-        if (playTypeSoundRef.current && i >= 0 && isWordStart(text, i)) {
-          playUiSound("typewriter");
-        }
         if (i <= 0) {
           window.clearInterval(timer);
           complete();
@@ -215,6 +225,7 @@ export function TypewriterReveal({
       }, speedMs);
       return () => {
         window.clearInterval(timer);
+        stopTypeSound();
         // Invalidate so a mid-flight tick / Strict Mode remount cannot complete.
         if (runId === runIdRef.current) runIdRef.current += 1;
       };
@@ -228,17 +239,15 @@ export function TypewriterReveal({
     }
 
     let i = 0;
+    startTypeSound();
     const timer = window.setInterval(() => {
       if (runId !== runIdRef.current) {
         window.clearInterval(timer);
+        stopTypeSound();
         return;
       }
-      const next = i;
       i += 1;
       setTyped(text.slice(0, i));
-      if (playTypeSoundRef.current && isWordStart(text, next)) {
-        playUiSound("typewriter");
-      }
       if (i >= text.length) {
         window.clearInterval(timer);
         complete();
@@ -247,6 +256,7 @@ export function TypewriterReveal({
 
     return () => {
       window.clearInterval(timer);
+      stopTypeSound();
       if (runId === runIdRef.current) runIdRef.current += 1;
     };
     // playTypeSound is read from a ref so toggling sound mid-run does not restart.
