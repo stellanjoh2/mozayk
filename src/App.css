@@ -3877,6 +3877,8 @@ html.is-frost-paused .frame-context-menu {
     overflow: hidden;
     /* Was --glass at 53% black; 50% stronger → ~80%. */
     background: rgba(14, 14, 14, 0.8);
+    /* Bleed past the box so a subpixel gap can't flash the mosaic. */
+    box-shadow: 0 0 0 2px rgba(14, 14, 14, 0.8);
     user-select: none;
     touch-action: manipulation;
   }
@@ -3886,8 +3888,8 @@ html.is-frost-paused .frame-context-menu {
     position: absolute;
     top: calc(24px + env(safe-area-inset-top, 0px));
     left: 50%;
-    width: calc(36px * 198 / 248.77);
-    height: 36px;
+    width: calc(43.2px * 198 / 248.77);
+    height: 43.2px;
     transform: translateX(-50%);
     color: #ffffff;
     background-color: currentColor;
@@ -3930,11 +3932,16 @@ html.is-frost-paused .frame-context-menu {
   .mobile-gate__copy p {
     margin: 0;
   }
+
+  .mobile-gate__copy-hey {
+    opacity: 0.4;
+  }
 }
 
 html[data-theme="light"] .mobile-gate {
   /* Was --glass at 72% white; 50% stronger → fully opaque wash. */
   background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9);
 }
 
 html[data-theme="light"] .mobile-gate__s {
