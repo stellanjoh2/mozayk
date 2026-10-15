@@ -22,6 +22,11 @@ function reducedMotion(): boolean {
   return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 }
 
+/** Same breakpoint as App `useMobileGate` — skip the wordmark loop on that entry. */
+function isMobileGateEntry(): boolean {
+  return window.matchMedia?.("(max-width: 900px)").matches ?? false;
+}
+
 function nextFrame(): Promise<void> {
   return new Promise((resolve) => requestAnimationFrame(() => resolve()));
 }
@@ -44,7 +49,7 @@ function pinIntroFills(el: HTMLElement): void {
  */
 export function playEntryIntro(): Promise<void> {
   const veil = document.getElementById("entry-veil");
-  if (!veil || reducedMotion()) return Promise.resolve();
+  if (!veil || reducedMotion() || isMobileGateEntry()) return Promise.resolve();
 
   const mark = document.createElement("div");
   mark.className = "entry-intro";
