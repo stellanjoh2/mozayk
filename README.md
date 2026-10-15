@@ -2,7 +2,7 @@
 
 Browser-based mosaic generator for abstract grid compositions, animation, and image-driven layouts. Runs entirely in the browser — no install, no account.
 
-**Live:** [stellanjoh2.github.io/mozayk](https://stellanjoh2.github.io/mozayk/)
+**Live:** [mozayk.design](https://mozayk.design/)
 
 Created by [Stellan Johansson](https://github.com/stellanjoh2).
 
