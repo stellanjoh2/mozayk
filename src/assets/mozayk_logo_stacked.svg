@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 144 94.5">
+  <!-- Stacked MOZ / AYK lockup: horizontal letter gap = vertical row gap = 4.5 -->
+  <g id="moz">
+    <circle class="st0" cx="103.5" cy="31.5" r="4.5"/>
+    <circle class="st0" cx="139.5" cy="13.5" r="4.5"/>
+    <circle class="st0" cx="13.5" cy="4.5" r="4.5"/>
+    <rect class="st0" x="27" width="9" height="9" y="0"/>
+    <polygon class="st0" points="135 9 126 0 135 0 135 9"/>
+    <polyline class="st0" points="0 27 9 27 9 36 0 27"/>
+    <polyline class="st0" points="0 36 9 36 9 45 0 45"/>
+    <g>
+    <rect class="st0" x="67.5" y="36" width="9" height="9"/>
+    <polygon class="st0" points="58.5 36 67.5 45 67.5 36 58.5 36"/>
+  </g>
+    <rect class="st0" x="76.5" y="36" width="9" height="9"/>
+    <g>
+    <polygon class="st0" points="67.5 0 67.5 4.5 67.5 9 76.5 9 76.5 0 67.5 0"/>
+    <circle class="st0" cx="63" cy="4.5" r="4.5"/>
+  </g>
+    <rect class="st0" x="76.5" width="9" height="9" y="0"/>
+    <g>
+    <rect class="st0" x="85.5" y="27" width="9" height="9"/>
+    <rect class="st0" x="85.5" y="9" width="9" height="9"/>
+  </g>
+    <rect class="st0" x="85.5" y="18" width="9" height="9"/>
+    <g>
+    <rect class="st0" x="49.5" y="9" width="9" height="9"/>
+    <rect class="st0" x="49.5" y="27" width="9" height="9"/>
+  </g>
+    <rect class="st0" x="49.5" y="18" width="9" height="9"/>
+    <g>
+    <rect class="st0" x="36" y="27" width="9" height="9"/>
+    <rect class="st0" x="36" y="9" width="9" height="9"/>
+  </g>
+    <rect class="st0" x="36" y="18" width="9" height="9"/>
+    <rect class="st0" x="36" y="36" width="9" height="9"/>
+    <rect class="st0" x="18" y="9" width="9" height="9"/>
+    <rect class="st0" x="18" y="18" width="9" height="9"/>
+    <polyline class="st0" points="0 27 9 27 9 18 0 18"/>
+    <polyline class="st0" points="0 18 9 18 9 9 0 9"/>
+    <g>
+    <rect class="st0" x="108" y="18" width="9" height="9"/>
+    <rect class="st0" x="126" y="18" width="9" height="9"/>
+  </g>
+    <rect class="st0" x="117" y="18" width="9" height="9"/>
+    <g>
+    <rect class="st0" x="99" width="9" height="9" y="0"/>
+    <rect class="st0" x="117" width="9" height="9" y="0"/>
+  </g>
+    <rect class="st0" x="108" width="9" height="9" y="0"/>
+    <g>
+    <rect class="st0" x="108" y="36" width="9" height="9"/>
+    <rect class="st0" x="126" y="36" width="9" height="9"/>
+  </g>
+    <rect class="st0" x="117" y="36" width="9" height="9"/>
+    <rect class="st0" x="135" y="36" width="9" height="9"/>
+  </g>
+  <g id="ayk">
+    <polyline class="st0" points="49.5,58.5 49.5,67.5 58.5,67.5 58.5,58.5"/>
+    <polyline class="st0" points="85.5,58.5 85.5,67.5 94.5,67.5 94.5,58.5"/>
+    <rect class="st0" x="76.5" y="67.5" width="9" height="9"/>
+    <rect class="st0" x="126" y="58.5" width="9" height="9"/>
+    <rect class="st0" x="126" y="76.5" width="9" height="9"/>
+    <rect class="st0" x="135" y="85.5" width="9" height="9"/>
+    <circle class="st0" cx="139.5" cy="54" r="4.5"/>
+    <circle class="st0" cx="63" cy="72" r="4.5"/>
+    <circle class="st0" cx="40.5" cy="81" r="4.5"/>
+    <circle class="st0" cx="31.5" cy="54" r="4.5"/>
+    <circle class="st0" cx="90" cy="54" r="4.5"/>
+    <circle class="st0" cx="103.5" cy="81" r="4.5"/>
+    <rect class="st0" x="99" y="85.5" width="9" height="9"/>
+    <polygon class="st0" points="58.5,58.5 49.5,49.5 58.5,49.5 58.5,58.5"/>
+    <polygon class="st0" points="117,76.5 108,67.5 117,67.5 117,76.5"/>
+    <rect class="st0" x="117" y="67.5" width="9" height="9"/>
+    <rect class="st0" x="36" y="85.5" width="9" height="9"/>
+    <polygon class="st0" points="9,78.75 9,76.5 0,76.5 0,85.5 9,85.5 9,78.75"/>
+    <rect class="st0" x="0" y="67.5" width="9" height="9"/>
+    <rect class="st0" x="0" y="85.5" width="9" height="9"/>
+    <g>
+    <rect class="st0" x="9" y="49.5" width="9" height="9"/>
+    <polygon class="st0" points="0,67.5 9,67.5 9,65.25 9,58.5 0,58.5 0,67.5"/>
+  </g>
+    <rect class="st0" x="18" y="49.5" width="9" height="9"/>
+    <polygon class="st0" points="9,67.5 18,76.5 18,67.5 9,67.5"/>
+    <rect class="st0" x="18" y="67.5" width="9" height="9"/>
+    <polygon class="st0" points="31.5,67.5 27,67.5 27,76.5 36,76.5 36,67.5 31.5,67.5"/>
+    <rect class="st0" x="36" y="67.5" width="9" height="9"/>
+    <rect class="st0" x="36" y="58.5" width="9" height="9"/>
+    <g>
+    <rect class="st0" x="67.5" y="76.5" width="9" height="9"/>
+    <rect class="st0" x="67.5" y="85.5" width="9" height="9"/>
+  </g>
+    <g>
+    <rect class="st0" x="99" y="67.5" width="9" height="9"/>
+    <rect class="st0" x="99" y="58.5" width="9" height="9"/>
+  </g>
+    <rect class="st0" x="99" y="49.5" width="9" height="9"/>
+  </g>
+</svg>

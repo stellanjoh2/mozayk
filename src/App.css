@@ -3842,9 +3842,9 @@ html.is-frost-paused .frame-context-menu {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: clamp(56px, 10vh, 88px);
     padding: clamp(32px, 6vw, 56px);
-    background: var(--glass);
+    /* Was --glass at 53% black; 50% stronger → ~80%. */
+    background: rgba(14, 14, 14, 0.8);
     user-select: none;
   }
 
@@ -3854,21 +3854,11 @@ html.is-frost-paused .frame-context-menu {
     pointer-events: auto;
   }
 
-  .mobile-gate__mark {
-    display: block;
-    width: 100%;
-    height: auto;
-  }
-
-  .mobile-gate__mark svg {
-    display: block;
-    width: 100%;
-    height: auto;
-    pointer-events: none;
-  }
-
   .mobile-gate__copy {
-    margin: 0;
+    position: absolute;
+    left: clamp(24px, 6vw, 40px);
+    right: clamp(24px, 6vw, 40px);
+    margin: 0 auto;
     max-width: 22em;
     text-align: center;
     font-size: 14px;
@@ -3878,6 +3868,19 @@ html.is-frost-paused .frame-context-menu {
     text-transform: uppercase;
     color: var(--text);
   }
+
+  .mobile-gate__copy--top {
+    top: calc(24px + env(safe-area-inset-top, 0px));
+  }
+
+  .mobile-gate__copy--bottom {
+    bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+html[data-theme="light"] .mobile-gate {
+  /* Was --glass at 72% white; 50% stronger → fully opaque wash. */
+  background: rgba(255, 255, 255, 0.9);
 }
 
 @media (min-width: 600px) and (max-width: 900px) {
@@ -3891,3 +3894,4 @@ html.is-frost-paused .frame-context-menu {
     letter-spacing: 0.035em;
   }
 }
+

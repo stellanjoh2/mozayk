@@ -1,0 +1,16 @@
+/* Stacked MOZ / AYK lockup — mobile gate only. */
+
+.mobile-gate-logo {
+  display: block;
+  width: 100%;
+  height: auto;
+  cursor: var(--cursor-default);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-gate-logo svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  pointer-events: none;
+}
