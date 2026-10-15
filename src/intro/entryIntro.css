@@ -1,0 +1,15 @@
+.entry-intro {
+  box-sizing: border-box;
+  width: 66vw;
+  flex-shrink: 0;
+  aspect-ratio: 292.5 / 45;
+  /* Intro always sits on black; App.css light theme remaps this slot to #111. */
+  --logo-fill-4: #ffffff;
+}
+
+.entry-intro svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}

@@ -7,6 +7,7 @@ const FILES = {
   sliderLeft: "sounds/uisound-slider.wav",
   hover: "sounds/uisound-hover.wav",
   typewriter: "sounds/mozayk-typewriter.wav",
+  typewriterTip: "sounds/mozayk-typewriter.wav",
   drop: "sounds/uisound-drop.wav",
   canvasClear: "sounds/572393__lgnsip__device-beeping-fade.wav",
   newCanvasLaser: "sounds/77088__defunct3__laser-short-2.wav",
@@ -42,6 +43,7 @@ const SOUND_GAIN: Partial<Record<UiSound, number>> = {
   sliderLeft: 0.7532,
   hover: 0.9189 * 10 ** (5 / 20),
   typewriter: 1.7741 * 10 ** (-5 / 20),
+  typewriterTip: 1.7741 * 10 ** (-7 / 20),
   drop: 1.8205 * 10 ** (-5 / 20),
   canvasClear: 0.4343,
   newCanvasLaser: 0.5078,
@@ -63,6 +65,7 @@ const SOUND_GAIN: Partial<Record<UiSound, number>> = {
 /** Left-drag reuses the slider clip a half octave down. */
 const PLAYBACK_RATE: Partial<Record<UiSound, number>> = {
   sliderLeft: 2 ** -0.5,
+  typewriterTip: 1.25,
 };
 
 const STORAGE_KEY = "mozayk-ui-sounds";

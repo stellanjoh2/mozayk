@@ -1,16 +1,5 @@
 :root {
-  /* Brand palette — change these hex values if the logo or brand changes. */
-  --brand-blue: #2e1ebc;
-  --brand-purple: #cf41f2;
-  --brand-orange: #ff5300;
-  --brand-green: #41f24b;
-
-  /* Logo paints from these four slots (three chromatics + white).
-     Header idle remaps --logo-fill-4 to --panel so white tiles vanish until hover. */
-  --logo-fill-1: var(--brand-blue);
-  --logo-fill-2: var(--brand-purple);
-  --logo-fill-3: var(--brand-orange);
-  --logo-fill-4: #ffffff;
+  /* Brand palette and --logo-fill-* slots live in brand.css. */
 
   /* Chrome accent — UI highlight. Colour setting remaps this; logo slots stay
      put except Orby, which remaps the three chromatics.
@@ -131,18 +120,12 @@ html[data-chrome="purple"] {
   --chrome: var(--brand-purple);
 }
 
-/* Homage to Orby — https://github.com/stellanjoh2/orby */
+/* Homage to Orby — palette + logo slots in brand.css. */
 html[data-chrome="orby"] {
-  --orby-lime: #c4ff00;
-  --orby-purple: #3b00ff;
-  --orby-pink: #ff00c4;
   --chrome: var(--orby-lime);
   --chrome-fill: var(--orby-lime);
   --brand-green: var(--orby-lime);
   --on-chrome: #0f0f0f;
-  --logo-fill-1: var(--orby-purple);
-  --logo-fill-2: var(--orby-pink);
-  --logo-fill-3: var(--orby-lime);
 }
 
 html[data-theme="light"][data-chrome="orby"] {
@@ -937,12 +920,25 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
   margin-bottom: var(--settings-row-gap);
 }
 
-/* Button keeps its 20px when the reveal is closed; top up to the row gap when open. */
+/* Button keeps its 20px when the reveal is closed. When a slider opens under it,
+   drop that margin and use the same row gap as every other settings slider. */
+.panel-section > .panel-btn:has(+ .collapsible-controls.is-open) {
+  margin-bottom: 0;
+}
+
 .panel-section
   > .panel-btn
-  + .collapsible-controls
+  + .collapsible-controls.is-open
   > .collapsible-controls__inner:has(> .control-row:first-child) {
-  padding-top: calc(var(--settings-row-gap) - 20px);
+  padding-top: var(--settings-row-gap);
+}
+
+/* overflow:hidden on the clip wrapper can squeeze the label/track stack.
+   Lock the row to the settings rhythm (20 + 8 + 20). */
+.collapsible-controls__inner > .control-row {
+  min-height: calc(
+    var(--settings-label-h) + var(--settings-inner-gap) + var(--settings-control-h)
+  );
 }
 
 /* Trailing gap before the next row when a toggle reveals extra controls. */

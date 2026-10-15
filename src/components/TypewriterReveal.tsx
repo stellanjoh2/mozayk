@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type React from "react";
-import { playUiSound } from "../ui/sounds";
+import { playUiSound, type UiSound } from "../ui/sounds";
 
 type IntrinsicTag = keyof React.JSX.IntrinsicElements;
 
@@ -18,6 +18,7 @@ type TypewriterRevealProps = {
   speedMs?: number;
   caret?: boolean;
   playTypeSound?: boolean;
+  typeSound?: UiSound;
   hold?: boolean;
   className?: string;
   links?: TypewriterLink[];
@@ -132,6 +133,7 @@ export function TypewriterReveal({
   speedMs = DEFAULT_SPEED_MS,
   caret = true,
   playTypeSound = false,
+  typeSound = "typewriter",
   hold = false,
   className,
   links,
@@ -151,6 +153,8 @@ export function TypewriterReveal({
   onCompleteRef.current = onComplete;
   const playTypeSoundRef = useRef(playTypeSound);
   playTypeSoundRef.current = playTypeSound;
+  const typeSoundRef = useRef(typeSound);
+  typeSoundRef.current = typeSound;
   /** Only the latest activation may call onComplete. */
   const runIdRef = useRef(0);
 
@@ -171,7 +175,7 @@ export function TypewriterReveal({
     };
     const startTypeSound = () => {
       const tick = () => {
-        if (playTypeSoundRef.current) playUiSound("typewriter");
+        if (playTypeSoundRef.current) playUiSound(typeSoundRef.current);
       };
       tick();
       soundTimer = window.setInterval(tick, TYPE_SOUND_INTERVAL_MS);

@@ -11,7 +11,7 @@ import {
 } from "./logoShapes";
 
 /**
- * Must match --logo-fill-1/2/3/4 in App.css :root
+ * Must match --logo-fill-1/2/3/4 in brand.css :root
  * (blue / purple / orange / white — not UI --brand, --chrome, or --brand-green).
  * The wordmark paints from these tokens — never from hardcoded hex.
  */

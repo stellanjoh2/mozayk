@@ -1,22 +1,13 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import '@fontsource-variable/bitcount-grid-single' // swap with --font-ui in App.css
+import './brand.css'
 import './index.css'
-import App from './App.tsx'
-import { initNormalCursor } from './ui/cursors'
-import { initNormalHoverEffects } from './ui/hover'
-import { initScrollbar } from './ui/scrollbar'
-import { initUiSounds } from './ui/sounds'
-import { initChromeTheme } from './ui/theme'
+import { liftEntryVeil, playEntryIntro } from './intro/entryIntro'
 
-initChromeTheme()
-initScrollbar()
-initUiSounds()
-initNormalHoverEffects()
-initNormalCursor()
+// Intro paints from this small entry; the app bundle downloads alongside it and
+// mounts only once the loop has ended on black, so mounting can't stutter it.
+const intro = playEntryIntro()
+const boot = import('./boot.tsx')
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-)
+void Promise.all([boot, intro]).then(([{ mountApp }]) => {
+  mountApp()
+  return liftEntryVeil()
+})

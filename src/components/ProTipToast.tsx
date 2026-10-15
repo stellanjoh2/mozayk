@@ -22,6 +22,7 @@ const INITIAL_DELAY_MS = 5_000;
 const HOLD_MS = 10_000;
 const GAP_MS = 12_000;
 const SLIDE_MS = 500;
+const OPT_OUT_DELAY_MS = 450;
 const TEXT_FADE_MS = 280;
 const STAGE_INSET = 16;
 const STAGE_INSET_FULLSCREEN = 20;
@@ -268,7 +269,8 @@ export function ProTipToast({ enabled = true }: ProTipToastProps) {
         const typeSound = !voiceAssist;
         await awaitLine("title", typeSound, signal);
         await awaitLine("body", typeSound, signal);
-        await awaitLine("optOut", false, signal);
+        await sleep(OPT_OUT_DELAY_MS, signal);
+        await awaitLine("optOut", typeSound, signal);
 
         await sleep(HOLD_MS, signal);
 
@@ -349,6 +351,7 @@ export function ProTipToast({ enabled = true }: ProTipToastProps) {
           hold
           caret={false}
           playTypeSound={Boolean(titleRun?.sound)}
+          typeSound="typewriterTip"
           onComplete={() => finishLineRef.current(titleRun?.id)}
         />
         <TypewriterReveal
@@ -361,6 +364,7 @@ export function ProTipToast({ enabled = true }: ProTipToastProps) {
           hold
           caret={false}
           playTypeSound={Boolean(bodyRun?.sound)}
+          typeSound="typewriterTip"
           onComplete={() => finishLineRef.current(bodyRun?.id)}
         />
         <button
@@ -380,7 +384,8 @@ export function ProTipToast({ enabled = true }: ProTipToastProps) {
             active={Boolean(optOutRun)}
             hold
             caret={false}
-            playTypeSound={false}
+            playTypeSound={Boolean(optOutRun?.sound)}
+            typeSound="typewriterTip"
             onComplete={() => finishLineRef.current(optOutRun?.id)}
           />
         </button>

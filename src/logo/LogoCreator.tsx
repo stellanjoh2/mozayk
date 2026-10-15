@@ -33,7 +33,7 @@ import { CaretIcon, LoopIcon, PlayIcon, StopIcon } from "../ui/icons";
 import { playUiSound, triggerShortcutButton } from "../ui/sounds";
 import "./LogoCreator.css";
 
-/** Must match --brand-blue / --brand-purple / --brand-orange in App.css */
+/** Must match --brand-blue / --brand-purple / --brand-orange in brand.css */
 const ORIGINAL_CHROMATIC = ["#2e1ebc", "#cf41f2", "#ff5300"] as const;
 
 function LogoShapeIcon({ shape }: { shape: LogoShapeId }) {

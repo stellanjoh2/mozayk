@@ -1,0 +1,25 @@
+/* Loaded by the entry module so the intro logotype can paint before App.css. */
+:root {
+  /* Brand palette — change these hex values if the logo or brand changes. */
+  --brand-blue: #2e1ebc;
+  --brand-purple: #cf41f2;
+  --brand-orange: #ff5300;
+  --brand-green: #41f24b;
+
+  /* Logo paints from these four slots (three chromatics + white).
+     Header idle remaps --logo-fill-4 to --panel so white tiles vanish until hover. */
+  --logo-fill-1: var(--brand-blue);
+  --logo-fill-2: var(--brand-purple);
+  --logo-fill-3: var(--brand-orange);
+  --logo-fill-4: #ffffff;
+}
+
+/* Homage to Orby — https://github.com/stellanjoh2/orby */
+html[data-chrome="orby"] {
+  --orby-lime: #c4ff00;
+  --orby-purple: #3b00ff;
+  --orby-pink: #ff00c4;
+  --logo-fill-1: var(--orby-purple);
+  --logo-fill-2: var(--orby-pink);
+  --logo-fill-3: var(--orby-lime);
+}
