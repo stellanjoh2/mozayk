@@ -47,13 +47,14 @@ export function MobileGate({ onRandomizeAll }: { onRandomizeAll: () => void }) {
 
   return (
     <div ref={rootRef} className="mobile-gate" role="status">
-      <p className="mobile-gate__copy mobile-gate__copy--top">
-        Not intended for mobile screens, please go sit down at a real computer.
-      </p>
+      <span className="mobile-gate__s" aria-hidden="true" />
       <div className="mobile-gate__logo">
         <MobileGateLogo ariaLabel="Randomize all" onClick={onRandomizeAll} />
       </div>
-      <p className="mobile-gate__copy mobile-gate__copy--bottom">Hey tap the logotype!</p>
+      <div className="mobile-gate__copy">
+        <p>Not intended for mobile screens, please go sit down at a real computer.</p>
+        <p>Hey tap the logotype!</p>
+      </div>
     </div>
   );
 }

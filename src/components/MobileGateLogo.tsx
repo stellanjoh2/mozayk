@@ -7,7 +7,7 @@ import {
   LOGO_SHAPE_IDS,
   type LogoShapeId,
 } from "../logo/logoShapes";
-import { playUiSound } from "../ui/sounds";
+import { playUiSoundAsync } from "../ui/sounds";
 import "./MobileGateLogo.css";
 
 /** Brand chromatic defaults — match Logo Creator / brand.css. */
@@ -48,13 +48,17 @@ export function MobileGateLogo({
     "--logo-fill-4": LOGO_WHITE,
   } as CSSProperties;
 
-  const randomize = () => {
-    playUiSound("push");
+  const paintNext = () => {
     setMark({
       markup: paintStackedMark(pickRandomShapes(), Math.random() < 0.35),
       colors: generateRandomPalette(3),
     });
     onClick?.();
+  };
+
+  /** Same cue as desktop Randomize All (panel-btn → push). */
+  const playTap = () => {
+    void playUiSoundAsync("push");
   };
 
   return (
@@ -64,11 +68,17 @@ export function MobileGateLogo({
       role="button"
       tabIndex={0}
       aria-label={ariaLabel}
-      onClick={randomize}
+      onPointerDown={(event) => {
+        if (event.button !== 0) return;
+        // Fire in the gesture so iOS can resume AudioContext.
+        playTap();
+      }}
+      onClick={paintNext}
       onKeyDown={(event) => {
         if (event.key !== "Enter" && event.key !== " ") return;
         event.preventDefault();
-        randomize();
+        playTap();
+        paintNext();
       }}
       dangerouslySetInnerHTML={{ __html: mark.markup }}
     />
