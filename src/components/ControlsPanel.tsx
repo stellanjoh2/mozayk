@@ -346,6 +346,7 @@ export function ControlsPanel({
 }: ControlsPanelProps) {
   const { settings } = frame;
   const panelRef = useRef<HTMLElement>(null);
+  const panelBodyRef = useRef<HTMLDivElement>(null);
   const tabsRef = useRef<HTMLDivElement>(null);
   const tabLineRef = useRef<HTMLSpanElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -354,6 +355,8 @@ export function ControlsPanel({
   const textureInputRef = useRef<HTMLInputElement>(null);
   const projectInputRef = useRef<HTMLInputElement>(null);
   const [panelTab, setPanelTab] = useState<PanelTab>("create");
+  /** Keep panel scroll when switching tabs (sticky tab focus otherwise jumps to the logo). */
+  const panelTabScrollRef = useRef<number | null>(null);
   const [exportOpen, setExportOpen] = useState(() => ({ ...EXPORT_OPEN_DEFAULT }));
   const [soundsOn, setSoundsOn] = useState(getUiSoundsEnabled);
   const [soundVolume, setSoundVolume] = useState(getUiSoundsVolume);
@@ -830,10 +833,45 @@ export function ControlsPanel({
   };
   const selectPanelTab = (tab: PanelTab) => {
     if (tab === panelTab) return;
+    panelTabScrollRef.current = panelRef.current?.scrollTop ?? 0;
     setPanelTab(tab);
     if (tab === "export") setExportOpen({ ...EXPORT_OPEN_DEFAULT });
-    panelRef.current?.scrollTo({ top: 0 });
   };
+
+  useLayoutEffect(() => {
+    const y = panelTabScrollRef.current;
+    if (y === null) return;
+    panelTabScrollRef.current = null;
+    const panel = panelRef.current;
+    const body = panelBodyRef.current;
+    if (!panel) return;
+
+    // Short tabs otherwise clamp scrollTop and the logo slides back in.
+    // Iterate — CSS zoom on .controls-panel__zoom skews one-shot height math.
+    if (body) {
+      body.style.minHeight = "";
+      for (let i = 0; i < 6; i++) {
+        const maxScroll = panel.scrollHeight - panel.clientHeight;
+        if (y <= maxScroll) break;
+        body.style.minHeight = `${body.offsetHeight + (y - maxScroll)}px`;
+      }
+    }
+
+    const restore = () => {
+      panel.scrollTop = y;
+    };
+    restore();
+
+    // Focus / scroll-anchoring can nudge the scroller after layout.
+    let frames = 0;
+    let raf = 0;
+    const stick = () => {
+      restore();
+      if (++frames < 8) raf = requestAnimationFrame(stick);
+    };
+    raf = requestAnimationFrame(stick);
+    return () => cancelAnimationFrame(raf);
+  }, [panelTab]);
   const toggleExportFormat = (format: ExportFormat) => {
     setExportOpen((prev) => ({ ...prev, [format]: !prev[format] }));
   };
@@ -1019,6 +1057,15 @@ export function ControlsPanel({
         className="controls-panel__tabs"
         role="tablist"
         aria-label="Panel"
+        onPointerDown={(event) => {
+          // Sticky tabs: default focus scrolls them to their layout position (logo visible).
+          if (
+            event.button === 0 &&
+            (event.target as HTMLElement).closest('[role="tab"]')
+          ) {
+            event.preventDefault();
+          }
+        }}
       >
         <button
           type="button"
@@ -1062,7 +1109,7 @@ export function ControlsPanel({
         <span ref={tabLineRef} className="controls-panel__tab-line" aria-hidden />
       </div>
 
-      <div className="controls-panel__body">
+      <div ref={panelBodyRef} className="controls-panel__body">
       {panelTab === "create" ? (
       <>
       <section className="panel-section">

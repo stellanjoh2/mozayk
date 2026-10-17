@@ -51,7 +51,13 @@ export function MobileGate({ onRandomizeAll }: { onRandomizeAll: () => void }) {
 
   return (
     <div ref={rootRef} className="mobile-gate" role="status">
-      <span className="mobile-gate__s" aria-hidden="true" />
+      <a
+        className="mobile-gate__s"
+        href="https://x.com/johstell"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Stellan Johansson on X"
+      />
       <div className="mobile-gate__logo">
         <MobileGateLogo ariaLabel="Randomize all" onClick={onRandomizeAll} />
       </div>

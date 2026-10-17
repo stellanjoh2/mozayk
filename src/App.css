@@ -727,6 +727,7 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
   overflow-x: hidden;
   overflow-y: scroll;
   overscroll-behavior: none;
+  overflow-anchor: none;
   scrollbar-gutter: stable;
   height: 100%;
   /* Own layer so canvas / wipe invalidation doesn't shimmer zoomed panel text.
@@ -757,7 +758,8 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
 .controls-panel__tabs {
   position: sticky;
   top: 0;
-  z-index: 2;
+  /* Above .has-hint:hover (z-index 60) so scrolled-under buttons can't steal tab hits. */
+  z-index: 70;
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   margin: 0 -20px;
@@ -2976,7 +2978,8 @@ html.is-frost-paused .frame-context-menu {
 .palette-panel__tabs {
   position: sticky;
   top: 0;
-  z-index: 2;
+  /* Match .controls-panel__tabs — stay above .has-hint:hover (z-index 60). */
+  z-index: 70;
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   flex-shrink: 0;
@@ -3901,7 +3904,8 @@ html.is-frost-paused .frame-context-menu {
     mask-position: center;
     -webkit-mask-size: contain;
     mask-size: contain;
-    pointer-events: none;
+    pointer-events: auto;
+    cursor: var(--cursor-pointer);
   }
 
   .mobile-gate__logo {
