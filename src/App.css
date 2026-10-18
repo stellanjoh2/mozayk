@@ -1621,7 +1621,7 @@ a.panel-btn {
   width: 0.55em;
   height: 0.9em;
   margin-right: -0.55em;
-  background: currentColor;
+  background: var(--chrome);
   vertical-align: -0.12em;
   animation: typewriter-reveal-caret-blink 0.64s steps(1) infinite;
 }
@@ -1776,11 +1776,16 @@ a.panel-btn {
 }
 
 .about-overlay__content a {
-  color: inherit;
+  color: var(--chrome);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--chrome) 45%, transparent);
   text-underline-offset: 0.12em;
+  transition: color 0.1s linear;
 }
 
 .about-overlay__content a:hover {
+  color: #fff;
+  text-decoration-color: #fff;
   animation: hover-plate-blink calc(4s / 30) linear infinite;
 }
 

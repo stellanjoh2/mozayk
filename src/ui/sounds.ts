@@ -352,8 +352,19 @@ export function setUiSoundsVolume(volume: number): void {
   savePrefs();
 }
 
+/** Mute tip typewriter clicks (e.g. while About is typing). */
+let tipTypewriterPauseCount = 0;
+
+export function pauseTipTypewriterSound(): () => void {
+  tipTypewriterPauseCount += 1;
+  return () => {
+    tipTypewriterPauseCount = Math.max(0, tipTypewriterPauseCount - 1);
+  };
+}
+
 export function playUiSound(name: UiSound): void {
   if (!prefs.enabled || prefs.volume <= 0) return;
+  if (name === "typewriterTip" && tipTypewriterPauseCount > 0) return;
   if (!isSliderSound(name) && !isVoiceSound(name) && isSliderEngaged()) return;
   if (name === "hover") {
     const now = performance.now();
@@ -385,7 +396,12 @@ export function playUiSound(name: UiSound): void {
     }
   }
   void bufferFor(name).then((buf) => {
-    if (!buf || !prefs.enabled || prefs.volume <= 0) {
+    if (
+      !buf ||
+      !prefs.enabled ||
+      prefs.volume <= 0 ||
+      (name === "typewriterTip" && tipTypewriterPauseCount > 0)
+    ) {
       if (isSliderSound(name)) releaseSliderSound(token);
       return;
     }

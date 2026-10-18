@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { pauseFrost } from "../ui/frostPause";
-import { playUiSound } from "../ui/sounds";
+import { pauseTipTypewriterSound, playUiSound } from "../ui/sounds";
 import { TypewriterReveal } from "./TypewriterReveal";
 
 const ABOUT_TEXT =
@@ -56,6 +56,12 @@ export function AboutOverlay({ open, onClose }: AboutOverlayProps) {
   useEffect(() => {
     if (!mounted) return;
     return pauseFrost();
+  }, [mounted]);
+
+  // Tip typewriter clicks stack badly under About's own type clicks.
+  useEffect(() => {
+    if (!mounted) return;
+    return pauseTipTypewriterSound();
   }, [mounted]);
 
   if (!mounted) return null;
