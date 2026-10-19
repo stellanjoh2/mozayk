@@ -258,6 +258,248 @@ function run(): void {
     !canRestorePhotoColors(restored),
     "after restore the button should hide",
   );
+
+  // Apply Look must carry theme + threshold onto other imported frames.
+  const videoA = importedFrame("vid-a", importColors);
+  const videoB = importedFrame("vid-b", importColors);
+  const themedLook = applyPalettePresetToFrame(
+    videoA,
+    {
+      id: "look-theme",
+      label: "Look",
+      category: "common",
+      colors: themeColors,
+    },
+    "landscape",
+  );
+  const themedBatch = applyLookToFrame(videoB, themedLook, "landscape");
+  assert(
+    themedBatch.imageSource?.themeColors?.join(",") ===
+      themedLook.imageSource?.themeColors?.join(","),
+    "apply look copies themeColors onto the destination",
+  );
+  assert(
+    themedBatch.imageSource?.dataUrl === videoB.imageSource?.dataUrl,
+    "apply look keeps the destination picture when theming",
+  );
+  assert(
+    themedBatch.settings.colors.join(",") === themedLook.settings.colors.join(","),
+    "apply look copies the look swatches by slot (not re-tone-mapped)",
+  );
+  assert(
+    themedBatch.blocks.map((b) => b.color).join(",") ===
+      themedLook.blocks.map((b) => b.color).join(","),
+    "apply look remaps destination tiles to the look swatch slots",
+  );
+  assert(
+    themedBatch.blocks.length === videoB.blocks.length,
+    "without a cached source image, apply look recolors in place (no invented tiles)",
+  );
+
+  // Regression: painting a low-luminance red onto the brightest slot must stay
+  // on bright regions after Apply Look (tone-remap used to flip it to dark).
+  const toneColors: [string, string, string] = ["#808080", "#101010", "#f0f0f0"];
+  const toneLook = importedFrame("tone-look", toneColors);
+  toneLook.imageSource!.paletteRgb = [
+    { r: 128, g: 128, b: 128 },
+    { r: 16, g: 16, b: 16 },
+    { r: 240, g: 240, b: 240 },
+  ];
+  const toneTheme: [string, string, string] = ["#220000", "#888888", "#ffeeee"];
+  const toneThemed = applyPalettePresetToFrame(
+    toneLook,
+    { id: "tone", label: "Tone", category: "common", colors: toneTheme },
+    "landscape",
+  );
+  const brightHex = "#ffeeee";
+  const brightSlot = toneThemed.settings.colors.indexOf(brightHex);
+  assert(brightSlot >= 0, "theme exposes a light swatch");
+  toneThemed.settings = {
+    ...toneThemed.settings,
+    colors: toneThemed.settings.colors.map((c, i) =>
+      i === brightSlot ? "#ff0000" : c,
+    ),
+  };
+  toneThemed.blocks = toneThemed.blocks.map((b) =>
+    b.color === brightHex ? { ...b, color: "#ff0000" } : b,
+  );
+  const toneDest = importedFrame("tone-dest", toneColors);
+  toneDest.imageSource!.paletteRgb = toneLook.imageSource!.paletteRgb.map((c) => ({
+    ...c,
+  }));
+  toneDest.blocks = [
+    { col: 0, row: 0, width: 1, height: 1, shape: "block", color: "#101010" },
+    { col: 1, row: 0, width: 1, height: 1, shape: "block", color: "#f0f0f0" },
+    { col: 2, row: 0, width: 1, height: 1, shape: "block", color: "#808080" },
+  ];
+  const toneApplied = applyLookToFrame(toneDest, toneThemed, "landscape");
+  assert(
+    toneApplied.settings.colors[brightSlot] === "#ff0000",
+    "red stays on the brightest swatch slot after apply look",
+  );
+  assert(
+    toneApplied.blocks[1]?.color === "#ff0000",
+    "bright image regions keep red after apply look (not flipped to dark)",
+  );
+  assert(
+    toneApplied.blocks[0]?.color !== "#ff0000",
+    "dark image regions do not steal the bright-slot red",
+  );
+
+  const eight = importedFrame("thresh", [
+    "#100000",
+    "#200000",
+    "#300000",
+    "#400000",
+    "#500000",
+    "#600000",
+    "#700000",
+    "#800000",
+  ] as unknown as [string, string, string]);
+  eight.imageSource!.paletteRgb = Array.from({ length: 8 }, (_, i) => ({
+    r: (i + 1) * 16,
+    g: 0,
+    b: 0,
+  }));
+  eight.imageSource!.palette = Array.from(
+    { length: 8 },
+    (_, i) =>
+      `#${((i + 1) * 16).toString(16).padStart(2, "0")}0000`,
+  );
+  eight.settings = {
+    ...eight.settings,
+    colors: [...eight.imageSource!.palette],
+    colorAmounts: eight.imageSource!.palette.map(() => 12),
+  };
+  eight.blocks = eight.imageSource!.palette.map((color, i) => ({
+    col: i,
+    row: 0,
+    width: 1,
+    height: 1,
+    shape: "block",
+    color,
+  }));
+  const eightB = structuredClone(eight);
+  eightB.id = "thresh-b";
+  eightB.imageSource!.dataUrl = "data:image/png;base64,thresh-b";
+  const reducedLook = setImportColorCount(eight, 3, "landscape");
+  const reducedBatch = applyLookToFrame(eightB, reducedLook, "landscape");
+  assert(
+    reducedBatch.imageSource?.colorCount === 3,
+    "apply look copies the colour threshold onto the destination",
+  );
+  assert(
+    reducedBatch.settings.colors.length === 3,
+    "apply look threshold shortens the working palette",
+  );
+  assert(
+    importColorCountRange(reducedBatch)?.value === 3,
+    "apply look threshold updates the slider value",
+  );
+  assert(
+    reducedBatch.settings.colors.join(",") ===
+      reducedLook.settings.colors.join(","),
+    "reduce-then-apply-look keeps the source swatches (no theme)",
+  );
+  const again = applyLookToAllFrames(
+    [reducedLook, reducedBatch],
+    0,
+    "landscape",
+  );
+  const again2 = applyLookToAllFrames(again, 0, "landscape");
+  assert(
+    again2.every((f) => f.settings.colors.length === 3),
+    "repeated apply look must not shrink the palette",
+  );
+  assert(
+    again2[1]!.settings.colors.join(",") ===
+      reducedLook.settings.colors.join(","),
+    "repeated apply look keeps the same swatches",
+  );
+
+  // Paste style (clipboard look) must match live apply-look on reduced imports.
+  const eightC = structuredClone(eight);
+  eightC.id = "thresh-c";
+  eightC.imageSource!.dataUrl = "data:image/png;base64,thresh-c";
+  const clipboardReduced = cloneFrameLook(reducedLook);
+  const pastedReduced = applyLookToFrame(eightC, clipboardReduced, "landscape");
+  assert(
+    pastedReduced.imageSource?.dataUrl === eightC.imageSource?.dataUrl,
+    "paste style keeps the destination picture",
+  );
+  assert(
+    pastedReduced.imageSource?.colorCount === 3,
+    "paste style copies the colour threshold",
+  );
+  assert(
+    pastedReduced.settings.colors.join(",") ===
+      reducedLook.settings.colors.join(","),
+    "paste style copies the reduced swatches",
+  );
+  const pastedAgain = applyLookToFrame(
+    pastedReduced,
+    clipboardReduced,
+    "landscape",
+  );
+  assert(
+    pastedAgain.settings.colors.length === 3,
+    "pasting the same style again must not shrink colours",
+  );
+
+  const pausedLook = importedFrame("paused", lookColors, {
+    settings: {
+      ...importedFrame("paused", lookColors).settings,
+      gridOverlaySeed: 42,
+      gridCrossesSeed: 43,
+      randomizePaused: { gridOverlay: true },
+    },
+  });
+  const pausedDest = importedFrame("paused-dest", otherColors);
+  const pausedApplied = applyLookToFrame(pausedDest, pausedLook, "landscape");
+  assert(
+    pausedApplied.settings.gridOverlaySeed === 42,
+    "paused overlay keeps the look seed on apply look",
+  );
+  assert(
+    pausedApplied.settings.gridCrossesSeed !== 43,
+    "unpaused crosses still mint a new seed on apply look",
+  );
+
+  const clipboardThemed = cloneFrameLook(themedLook);
+  const pastedTheme = applyLookToFrame(videoB, clipboardThemed, "landscape");
+  assert(
+    pastedTheme.imageSource?.themeColors?.join(",") === themeColors.join(","),
+    "paste style carries themeColors from the clipboard look",
+  );
+  assert(
+    pastedTheme.imageSource?.dataUrl === videoB.imageSource?.dataUrl,
+    "paste style still keeps the destination picture",
+  );
+
+  // Hand-edited swatch (no theme): paste must not reset destinations to photo.
+  const editA = importedFrame("edit-a", importColors);
+  const editB = importedFrame("edit-b", importColors);
+  editA.settings = {
+    ...editA.settings,
+    colors: ["#abcdef", importColors[1], importColors[2]],
+  };
+  editA.blocks = editA.blocks.map((block, i) =>
+    i === 0 ? { ...block, color: "#abcdef" } : block,
+  );
+  const editedClipboard = cloneFrameLook(editA);
+  const pastedEdit = applyLookToFrame(editB, editedClipboard, "landscape");
+  assert(
+    pastedEdit.settings.colors[0] === "#abcdef",
+    "paste style keeps a hand-edited swatch (does not restore photo colours)",
+  );
+  assert(
+    pastedEdit.blocks[0]?.color === "#abcdef",
+    "paste style paints the hand-edited swatch onto destination tiles",
+  );
+  assert(
+    pastedEdit.imageSource?.dataUrl === editB.imageSource?.dataUrl,
+    "hand-edit paste keeps the destination picture",
+  );
 }
 
 run();

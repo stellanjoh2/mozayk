@@ -37,12 +37,10 @@ import {
   type GridSlot,
 } from "../layout/blockPlacement";
 import {
-  GIPHY_DURATION_MAX_S,
   MAX_FRAMES,
   PLAYBACK_FPS_OPTIONS,
   getPreviewSize,
   getPreviewSizeForDisplay,
-  playbackDurationSeconds,
 } from "../config";
 import type { Frame, Orientation } from "../types";
 import { PlayIcon, StopIcon } from "../ui/icons";
@@ -54,7 +52,10 @@ import { NewCanvasSequence } from "./NewCanvasSequence";
 import { ImageFillSequence } from "./ImageFillSequence";
 import { PhaseOrb } from "./PhaseOrb";
 import { UiSelect } from "./UiSelect";
-import { normalizeFrameIndices } from "../state/frameUtils";
+import {
+  canRestorePhotoColors,
+  normalizeFrameIndices,
+} from "../state/frameUtils";
 
 const STAGE_PADDING = 24;
 const PIECE_DRAG_THRESHOLD = 4;
@@ -1471,8 +1472,7 @@ type TimelineProps = {
   onRemove: (indices: number[]) => void;
   onCopyStyle: (index: number) => void;
   onPasteStyle: (indices: number[]) => void;
-  onApplyStyleToAll: (index: number) => void;
-  onApplyStyleToFrames: (sourceIndex: number, targetIndices: number[]) => void;
+  onRestoreColors: (indices: number[]) => void;
   canPasteStyle: boolean;
   canAddFrame: boolean;
   onTogglePlay: () => void;
@@ -1493,8 +1493,7 @@ export function Timeline({
   onRemove,
   onCopyStyle,
   onPasteStyle,
-  onApplyStyleToAll,
-  onApplyStyleToFrames,
+  onRestoreColors,
   canPasteStyle,
   canAddFrame,
   onTogglePlay,
@@ -2127,8 +2126,6 @@ export function Timeline({
           options={PLAYBACK_FPS_OPTIONS.map((fps) => ({
             value: String(fps),
             label: `${fps} FPS`,
-            disabled:
-              playbackDurationSeconds(frames.length, fps) > GIPHY_DURATION_MAX_S,
           }))}
           onChange={(fps) => {
             playUiSound("push");
@@ -2139,7 +2136,11 @@ export function Timeline({
           type="button"
           className="timeline__btn"
           onClick={() => handleRemoveClick(actionIndices())}
-          disabled={frames.length <= 1 || removing}
+          disabled={
+            frames.length <= 1 ||
+            removing ||
+            actionIndices().length >= frames.length
+          }
           aria-label={
             selectedIndices.length > 1 ? "Remove selected frames" : "Remove frame"
           }
@@ -2343,14 +2344,19 @@ export function Timeline({
           x={menu.x}
           y={menu.y}
           selectionCount={menu.indices.length}
+          frameCount={frames.length}
           canPaste={canPasteStyle}
-          canApplyStyle={
-            menu.indices.length > 1 || frames.length > 1
-          }
+          canRestoreColors={menu.indices.some((index) => {
+            const frame = frames[index];
+            return frame ? canRestorePhotoColors(frame) : false;
+          })}
           canDuplicate={
             frames.length + menu.indices.length <= MAX_FRAMES
           }
-          canDelete={frames.length > 1}
+          // removeFramesAt always keeps ≥1 frame — mute when the selection is everything.
+          canDelete={
+            frames.length > 1 && menu.indices.length < frames.length
+          }
           onCopyStyle={() => {
             playUiSound("ok");
             onCopyStyle(menu.index);
@@ -2359,13 +2365,13 @@ export function Timeline({
             playUiSound("ok");
             onPasteStyle(menu.indices);
           }}
-          onApplyStyle={() => {
+          onPasteStyleToAll={() => {
             playUiSound("ok");
-            if (menu.indices.length > 1) {
-              onApplyStyleToFrames(menu.index, menu.indices);
-            } else {
-              onApplyStyleToAll(menu.index);
-            }
+            onPasteStyle(frames.map((_, index) => index));
+          }}
+          onRestoreColors={() => {
+            playUiSound("ok");
+            onRestoreColors(menu.indices);
           }}
           onDuplicate={() => {
             handleDuplicateClick(menu.indices);

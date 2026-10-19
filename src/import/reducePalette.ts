@@ -100,11 +100,65 @@ function luminance(color: ImageRgb): number {
   return 0.2126 * color.r + 0.7152 * color.g + 0.0722 * color.b;
 }
 
-function indicesByLuminance(colors: ImageRgb[]): number[] {
+export function indicesByLuminance(colors: ImageRgb[]): number[] {
   return colors
     .map((color, index) => ({ index, lum: luminance(color) }))
     .sort((a, b) => a.lum - b.lum || a.index - b.index)
     .map((entry) => entry.index);
+}
+
+function rankScale(
+  rank: number,
+  fromCount: number,
+  toCount: number,
+): number {
+  if (toCount <= 1 || fromCount <= 1) return 0;
+  return Math.round((rank * (toCount - 1)) / (fromCount - 1));
+}
+
+/**
+ * Copy `sourceColors` onto `destCenters` by image-slot luminance rank.
+ * Bright regions keep whatever colour sat on the source's bright regions —
+ * even when that swatch is itself dark (e.g. pure red on a bright sky).
+ */
+export function transferSlotColorsByTone(
+  sourceCenters: ImageRgb[],
+  sourceColors: string[],
+  destCenters: ImageRgb[],
+): string[] {
+  const nSrc = sourceCenters.length;
+  const nDest = destCenters.length;
+  if (nSrc === 0 || nDest === 0 || sourceColors.length === 0) return [];
+
+  const srcOrder = indicesByLuminance(sourceCenters);
+  const destOrder = indicesByLuminance(destCenters);
+  const colors = new Array<string>(nDest);
+  destOrder.forEach((destSlot, rank) => {
+    const srcRank = rankScale(rank, nDest, nSrc);
+    const srcSlot = srcOrder[Math.min(srcRank, srcOrder.length - 1)]!;
+    colors[destSlot] =
+      sourceColors[Math.min(srcSlot, sourceColors.length - 1)] ??
+      sourceColors[0]!;
+  });
+  return colors;
+}
+
+/** Map each source slot index onto a dest slot with the same luminance rank. */
+export function mapSlotsByTone(
+  sourceCenters: ImageRgb[],
+  destCenters: ImageRgb[],
+): number[] {
+  const nSrc = sourceCenters.length;
+  const nDest = destCenters.length;
+  if (nSrc === 0 || nDest === 0) return [];
+  const srcOrder = indicesByLuminance(sourceCenters);
+  const destOrder = indicesByLuminance(destCenters);
+  const map = new Array<number>(nSrc);
+  srcOrder.forEach((srcSlot, rank) => {
+    const destRank = rankScale(rank, nSrc, nDest);
+    map[srcSlot] = destOrder[Math.min(destRank, destOrder.length - 1)]!;
+  });
+  return map;
 }
 
 /**

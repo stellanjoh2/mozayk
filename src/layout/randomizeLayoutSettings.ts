@@ -20,17 +20,26 @@ export function randomInstanceSeed(rng: Rng = Math.random): number {
   return (rng() * 0x100000000) >>> 0;
 }
 
-/** Mint seeds for overlays/crosses/blur/data-fields. */
+/** Mint seeds for overlays/crosses/blur/data-fields. Paused keys keep the look's seed. */
 export function mintChaosSeeds(
   settings: FrameSettings,
   rng: Rng = Math.random,
 ): FrameSettings {
+  const paused = settings.randomizePaused ?? {};
   return {
     ...settings,
-    gridOverlaySeed: randomInstanceSeed(rng),
-    gridCrossesSeed: randomInstanceSeed(rng),
-    gridBlurSeed: randomInstanceSeed(rng),
-    dataFieldsSeed: randomInstanceSeed(rng),
+    gridOverlaySeed: paused.gridOverlay
+      ? settings.gridOverlaySeed
+      : randomInstanceSeed(rng),
+    gridCrossesSeed: paused.gridCrosses
+      ? settings.gridCrossesSeed
+      : randomInstanceSeed(rng),
+    gridBlurSeed: paused.gridBlur
+      ? settings.gridBlurSeed
+      : randomInstanceSeed(rng),
+    dataFieldsSeed: paused.dataFields
+      ? settings.dataFieldsSeed
+      : randomInstanceSeed(rng),
   };
 }
 

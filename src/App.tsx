@@ -42,7 +42,6 @@ import {
   applyImageImport,
   applyLookToAllFrames,
   applyLookToFrame,
-  applyLookToFrames,
   cloneFrameLook,
   applyPastedSettings,
   clampSettingsForOrientation,
@@ -62,6 +61,7 @@ import {
   randomizeFrameNewColors,
   applyPalettePresetToFrame,
   redistributeAmounts,
+  canRestorePhotoColors,
   restorePhotoColorsToFrame,
   setImportColorCount,
   randomizeFrameLayout,
@@ -826,38 +826,31 @@ export default function App() {
     setToast("Settings pasted");
   }, [pushUndoCheckpoint, updateActiveFrame]);
 
-  const handleApplyLookToAllFrames = useCallback((sourceIndex?: number) => {
-    if (framesRef.current.length <= 1) return;
-    pushUndoCheckpoint();
-    setFrames((prev) =>
-      applyLookToAllFrames(
-        prev,
-        sourceIndex ?? activeIndexRef.current,
-        orientationRef.current,
-      ),
+  const preloadFrameImages = useCallback(async (frames: Frame[]) => {
+    // allSettled: one broken frame must not skip Apply Look for the rest.
+    await Promise.allSettled(
+      frames.map((frame) => {
+        const dataUrl = frame.imageSource?.dataUrl;
+        return dataUrl ? ensureCachedSourceImage(dataUrl) : Promise.resolve();
+      }),
     );
-    setToast("Look applied to all frames");
-  }, [pushUndoCheckpoint]);
+  }, []);
 
-  const handleApplyLookToFrames = useCallback(
-    (sourceIndex: number, targetIndices: number[]) => {
-      if (targetIndices.length === 0) return;
+  const handleApplyLookToAllFrames = useCallback(
+    async (sourceIndex?: number) => {
+      if (framesRef.current.length <= 1) return;
+      await preloadFrameImages(framesRef.current);
       pushUndoCheckpoint();
       setFrames((prev) =>
-        applyLookToFrames(
+        applyLookToAllFrames(
           prev,
-          sourceIndex,
-          targetIndices,
+          sourceIndex ?? activeIndexRef.current,
           orientationRef.current,
         ),
       );
-      setToast(
-        targetIndices.length > 1
-          ? "Look applied to selected frames"
-          : "Look applied",
-      );
+      setToast("Look applied to all frames");
     },
-    [pushUndoCheckpoint],
+    [preloadFrameImages, pushUndoCheckpoint],
   );
 
   const handleCopyStyle = useCallback((index: number) => {
@@ -868,8 +861,32 @@ export default function App() {
     setToast("Style copied");
   }, []);
 
-  const handlePasteStyle = useCallback(
+  const handleRestoreColors = useCallback(
     (indices: number[]) => {
+      const targets = [...new Set(indices)].filter(
+        (index) =>
+          Number.isInteger(index) &&
+          index >= 0 &&
+          index < framesRef.current.length &&
+          canRestorePhotoColors(framesRef.current[index]!),
+      );
+      if (targets.length === 0) return;
+      pushUndoCheckpoint();
+      const targetSet = new Set(targets);
+      setFrames((prev) =>
+        prev.map((frame, index) =>
+          targetSet.has(index) ? restorePhotoColorsToFrame(frame) : frame,
+        ),
+      );
+      setToast(
+        targets.length > 1 ? "Colours restored on selected frames" : "Colours restored",
+      );
+    },
+    [pushUndoCheckpoint],
+  );
+
+  const handlePasteStyle = useCallback(
+    async (indices: number[]) => {
       const look = styleLookRef.current;
       if (!look) {
         setToast("Nothing to paste");
@@ -877,6 +894,7 @@ export default function App() {
       }
       const targets = [...new Set(indices)].filter((index) => index >= 0);
       if (targets.length === 0) return;
+      await preloadFrameImages(framesRef.current);
       pushUndoCheckpoint();
       setFrames((prev) => {
         const targetSet = new Set(
@@ -890,11 +908,16 @@ export default function App() {
         );
       });
       setActiveIndex(targets[0]!);
+      const frameCount = framesRef.current.length;
       setToast(
-        targets.length > 1 ? "Style pasted to selected frames" : "Style pasted",
+        targets.length >= frameCount && frameCount > 1
+          ? "Style pasted to all frames"
+          : targets.length > 1
+            ? "Style pasted to selected frames"
+            : "Style pasted",
       );
     },
-    [pushUndoCheckpoint],
+    [preloadFrameImages, pushUndoCheckpoint],
   );
 
   const runExport = useCallback(async (task: () => Promise<void> | void) => {
@@ -1901,8 +1924,7 @@ export default function App() {
           onRemove={handleRemoveFrame}
           onCopyStyle={handleCopyStyle}
           onPasteStyle={handlePasteStyle}
-          onApplyStyleToAll={handleApplyLookToAllFrames}
-          onApplyStyleToFrames={handleApplyLookToFrames}
+          onRestoreColors={handleRestoreColors}
           canPasteStyle={canPasteStyle}
           canAddFrame={frames.length < MAX_FRAMES}
           onTogglePlay={togglePlay}

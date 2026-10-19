@@ -21,13 +21,15 @@ type FrameContextMenuProps = {
   x: number;
   y: number;
   selectionCount: number;
+  frameCount: number;
   canPaste: boolean;
-  canApplyStyle: boolean;
+  canRestoreColors: boolean;
   canDuplicate: boolean;
   canDelete: boolean;
   onCopyStyle: () => void;
   onPasteStyle: () => void;
-  onApplyStyle: () => void;
+  onPasteStyleToAll: () => void;
+  onRestoreColors: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
   onClose: () => void;
@@ -37,13 +39,15 @@ export function FrameContextMenu({
   x,
   y,
   selectionCount,
+  frameCount,
   canPaste,
-  canApplyStyle,
+  canRestoreColors,
   canDuplicate,
   canDelete,
   onCopyStyle,
   onPasteStyle,
-  onApplyStyle,
+  onPasteStyleToAll,
+  onRestoreColors,
   onDuplicate,
   onDelete,
   onClose,
@@ -56,6 +60,9 @@ export function FrameContextMenu({
     onCloseRef.current();
   });
   const multi = selectionCount > 1;
+  // Clipboard → every frame: only when a single frame is the focus and there
+  // are others to receive it (multi-select already has “Paste to Selected”).
+  const showPasteToAll = !multi && frameCount > 1;
 
   const { contextSafe } = useGSAP(
     () => {
@@ -198,14 +205,25 @@ export function FrameContextMenu({
       >
         {multi ? "Paste Style to Selected" : "Paste Style"}
       </button>
+      {showPasteToAll ? (
+        <button
+          type="button"
+          role="menuitem"
+          className="frame-context-menu__item"
+          disabled={!canPaste}
+          onClick={() => runThenClose(onPasteStyleToAll)}
+        >
+          Paste Style to All Frames
+        </button>
+      ) : null}
       <button
         type="button"
         role="menuitem"
         className="frame-context-menu__item"
-        disabled={!canApplyStyle}
-        onClick={() => runThenClose(onApplyStyle)}
+        disabled={!canRestoreColors}
+        onClick={() => runThenClose(onRestoreColors)}
       >
-        {multi ? "Apply Style to Selected" : "Apply Style to All Frames"}
+        {multi ? "Restore Colours on Selected" : "Restore Colours"}
       </button>
       <div className="frame-context-menu__rule" role="separator" />
       <button

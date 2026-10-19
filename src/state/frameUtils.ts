@@ -11,7 +11,6 @@ import { transposeBlocks } from "../grid/gridMath";
 import {
   generateLayout,
   generateRandomPalette,
-  IMPORTED_LAYOUT_SETTING_KEYS,
   LAYOUT_SETTING_KEYS,
   pickWeightedColor,
   randomizeColors,
@@ -322,16 +321,6 @@ function remapBlockColors(
   });
 }
 
-/** When blocks still use the photo palette, remap by import slot — not current settings. */
-function importPaletteForRemap(frame: Frame): string[] | null {
-  if (!frame.imageSource) return null;
-  const importPalette = reducedPhotoColors(frame.imageSource);
-  if (importPalette.length === 0) return null;
-  const importColors = new Set(importPalette);
-  if (!frame.blocks.every((block) => importColors.has(block.color))) return null;
-  return importPalette;
-}
-
 function settingsKeyChanged<K extends keyof FrameSettings>(
   keys: readonly K[],
   from: FrameSettings,
@@ -380,10 +369,95 @@ export function cloneFrameLook(frame: Frame): Frame {
     backgroundImage: frame.backgroundImage
       ? structuredClone(frame.backgroundImage)
       : undefined,
+    // Theme / threshold only — applyLook never copies the picture bytes.
+    imageSource: frame.imageSource
+      ? {
+          dataUrl: frame.imageSource.dataUrl,
+          palette: [...frame.imageSource.palette],
+          paletteRgb: frame.imageSource.paletteRgb.map((rgb) => ({ ...rgb })),
+          ...(frame.imageSource.paletteWeights
+            ? { paletteWeights: [...frame.imageSource.paletteWeights] }
+            : {}),
+          ...(frame.imageSource.themeColors
+            ? { themeColors: [...frame.imageSource.themeColors] }
+            : {}),
+          ...(typeof frame.imageSource.colorCount === "number"
+            ? { colorCount: frame.imageSource.colorCount }
+            : {}),
+          ...(frame.imageSource.fit ? { fit: frame.imageSource.fit } : {}),
+        }
+      : undefined,
   };
 }
 
-/** Copy style from `look` onto `frame`. Keeps this frame's picture and mosaic motion. */
+/**
+ * Full photo palette, no theme / threshold — the baseline before applying a
+ * look (same starting point as a fresh import).
+ */
+function resetImportedFrameToPhoto(frame: Frame): Frame {
+  const source = frame.imageSource;
+  if (!source || source.paletteRgb.length === 0) return frame;
+  const { themeColors: _theme, colorCount: _count, ...imageSource } = source;
+  const colors = imageSource.palette.slice(0, MAX_COLORS);
+  if (colors.length === 0) return frame;
+  const blocks = frame.blocks.map((block) => {
+    const idx = nearestPaletteIndex(
+      hexToRgb(block.color),
+      imageSource.paletteRgb,
+    );
+    const color = colors[Math.min(idx, colors.length - 1)] ?? block.color;
+    return color === block.color ? block : { ...block, color };
+  });
+  return {
+    ...frame,
+    imageSource,
+    settings: {
+      ...frame.settings,
+      colors,
+      colorAmounts: importedColorAmounts(imageSource, colors.length),
+      colorsLocked: colors.map(() => false),
+    },
+    blocks,
+  };
+}
+
+/**
+ * Paint photo-coloured tiles with `toColors` at the look's threshold.
+ * Classifies each tile by its photo-palette slot → reduced centre → swatch.
+ */
+function recolorPhotoBlocksToLook(
+  blocks: MosaicBlock[],
+  photoSource: ImageSourceData,
+  toSource: ImageSourceData,
+  toColors: string[],
+): MosaicBlock[] {
+  if (toColors.length === 0) return blocks;
+  const photoRgb = photoSource.paletteRgb;
+  const photoPalette = photoSource.palette;
+  const newCenters = reducedImportPalette(toSource).centers;
+  if (newCenters.length === 0 || photoRgb.length === 0) return blocks;
+
+  return blocks.map((block) => {
+    const photoIndex = photoPalette.indexOf(block.color);
+    const center =
+      photoIndex >= 0 && photoIndex < photoRgb.length
+        ? photoRgb[photoIndex]!
+        : photoRgb[nearestPaletteIndex(hexToRgb(block.color), photoRgb)]!;
+    const color =
+      toColors[
+        Math.min(nearestPaletteIndex(center, newCenters), toColors.length - 1)
+      ] ?? toColors[0]!;
+    return color === block.color ? block : { ...block, color };
+  });
+}
+
+/**
+ * Copy style from `look` onto `frame`. Keeps this frame's picture.
+ *
+ * Imports always reset to the full photo palette first, then re-apply the
+ * look's theme/threshold/swatches — same sequence as editing frame 1. Remapping
+ * from an already-reduced palette was what broke paste / apply-look.
+ */
 export function applyLookToFrame(
   frame: Frame,
   look: Frame,
@@ -400,9 +474,7 @@ export function applyLookToFrame(
     settings = mintChaosSeeds(settings);
   }
 
-  const next: Frame = {
-    ...frame,
-    settings,
+  const overlays = {
     textureOverlay: look.textureOverlay
       ? structuredClone(look.textureOverlay)
       : undefined,
@@ -411,23 +483,149 @@ export function applyLookToFrame(
       : undefined,
   };
 
-  const needsRelayout = frame.imageSource
-    ? settingsKeyChanged(IMPORTED_LAYOUT_SETTING_KEYS, frame.settings, settings)
-    : settingsKeyChanged(LAYOUT_SETTING_KEYS, frame.settings, settings);
+  if (frame.imageSource && look.imageSource) {
+    const lookColors = [...look.settings.colors];
+    if (lookColors.length < MIN_IMPORT_COLOR_COUNT) {
+      return { ...frame, settings, ...overlays };
+    }
 
-  if (needsRelayout) {
+    // Idempotent fast path: already on this look's swatches + threshold.
+    if (
+      frame.settings.colors.length === lookColors.length &&
+      frame.settings.colors.every((c, i) => c === lookColors[i]) &&
+      importColorCount(frame.imageSource) === lookColors.length
+    ) {
+      let next: Frame = {
+        ...frame,
+        settings: {
+          ...settings,
+          colors: frame.settings.colors,
+          colorAmounts:
+            look.settings.colorAmounts?.length === lookColors.length
+              ? [...look.settings.colorAmounts]
+              : frame.settings.colorAmounts,
+          colorsLocked:
+            look.settings.colorsLocked?.length === lookColors.length
+              ? [...look.settings.colorsLocked]
+              : frame.settings.colorsLocked,
+        },
+        ...overlays,
+      };
+      if (shapeSettingsChanged(frame.settings, next.settings)) {
+        next = { ...next, blocks: rerollShapes(frame.blocks, next.settings) };
+      }
+      return next;
+    }
+
+    const photoBase = resetImportedFrameToPhoto(frame);
+    const photoSource = photoBase.imageSource!;
+    let next: Frame = {
+      ...photoBase,
+      settings: {
+        ...settings,
+        colors: photoBase.settings.colors,
+        colorAmounts: photoBase.settings.colorAmounts,
+        colorsLocked: photoBase.settings.colorsLocked,
+      },
+      ...overlays,
+    };
+
+    const lookTheme = look.imageSource.themeColors;
+    if (lookTheme && lookTheme.length >= MIN_IMPORT_COLOR_COUNT) {
+      next = applyThemeToImportedFrame(next, lookTheme, orientation);
+    }
+
+    if (
+      lookColors.length !== next.settings.colors.length ||
+      lookColors.length !== importColorCount(next.imageSource!)
+    ) {
+      next = setImportColorCount(next, lookColors.length, orientation);
+    }
+
+    const colorAmounts =
+      look.settings.colorAmounts?.length === lookColors.length
+        ? [...look.settings.colorAmounts]
+        : next.settings.colorAmounts;
+    const colorsLocked =
+      look.settings.colorsLocked?.length === lookColors.length
+        ? [...look.settings.colorsLocked]
+        : lookColors.map(
+            (_, index) =>
+              look.settings.colorsLocked?.[
+                Math.min(index, (look.settings.colorsLocked?.length ?? 1) - 1)
+              ] ?? false,
+          );
+
+    if (getCachedSourceImage(frame.imageSource.dataUrl)) {
+      next = {
+        ...next,
+        settings: {
+          ...next.settings,
+          colors: lookColors,
+          colorAmounts,
+          colorsLocked,
+        },
+      };
+      next = relayoutImportedFrame(next, orientation, frameLayoutRng(frame));
+    } else {
+      // No photo in cache: classify from the photo-coloured mosaic.
+      let imageSource = next.imageSource!;
+      if (lookColors.length < imageSource.paletteRgb.length) {
+        imageSource = { ...imageSource, colorCount: lookColors.length };
+      } else {
+        const { colorCount: _c, ...rest } = imageSource;
+        imageSource = rest;
+      }
+      if (lookTheme && lookTheme.length >= lookColors.length) {
+        imageSource = { ...imageSource, themeColors: [...lookTheme] };
+      }
+      next = {
+        ...next,
+        imageSource,
+        settings: {
+          ...next.settings,
+          colors: lookColors,
+          colorAmounts,
+          colorsLocked,
+        },
+        blocks: recolorPhotoBlocksToLook(
+          photoBase.blocks,
+          photoSource,
+          imageSource,
+          lookColors,
+        ),
+      };
+    }
+
+    if (shapeSettingsChanged(frame.settings, next.settings)) {
+      next = { ...next, blocks: rerollShapes(next.blocks, next.settings) };
+    }
+    return next;
+  }
+
+  let next: Frame = {
+    ...frame,
+    settings,
+    blocks: frame.blocks,
+    ...overlays,
+  };
+
+  if (settingsKeyChanged(LAYOUT_SETTING_KEYS, frame.settings, settings)) {
     return regenerateFrameLayout(next, orientation);
   }
 
-  let blocks = remapBlockColors(
-    frame.blocks,
-    importPaletteForRemap(frame) ?? frame.settings.colors,
-    settings.colors,
-  );
-  if (shapeSettingsChanged(frame.settings, settings)) {
-    blocks = rerollShapes(blocks, settings);
+  next = {
+    ...next,
+    blocks: remapBlockColors(
+      frame.blocks,
+      frame.settings.colors,
+      settings.colors,
+    ),
+  };
+  if (shapeSettingsChanged(frame.settings, next.settings)) {
+    next = { ...next, blocks: rerollShapes(next.blocks, next.settings) };
   }
-  return { ...next, blocks };
+  return next;
 }
 
 export function applyLookToAllFrames(
@@ -437,7 +635,11 @@ export function applyLookToAllFrames(
 ): Frame[] {
   const look = frames[sourceIndex];
   if (!look || frames.length <= 1) return frames;
-  return frames.map((frame) => applyLookToFrame(frame, look, orientation));
+  return frames.map((frame, index) =>
+    index === sourceIndex
+      ? frame
+      : applyLookToFrame(frame, look, orientation),
+  );
 }
 
 /** Sorted unique indices that fall inside `length`. */
@@ -500,22 +702,6 @@ export function removeFramesAt(
     frames: next,
     activeIndex: Math.min(firstRemoved, next.length - 1),
   };
-}
-
-/** Apply `sourceIndex` look onto each target index (picture/mosaic stay per frame). */
-export function applyLookToFrames(
-  frames: Frame[],
-  sourceIndex: number,
-  targetIndices: number[],
-  orientation: Orientation,
-): Frame[] {
-  const look = frames[sourceIndex];
-  if (!look) return frames;
-  const targets = new Set(normalizeFrameIndices(targetIndices, frames.length));
-  if (targets.size === 0) return frames;
-  return frames.map((frame, index) =>
-    targets.has(index) ? applyLookToFrame(frame, look, orientation) : frame,
-  );
 }
 
 export function applyPastedSettings(
