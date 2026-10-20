@@ -687,10 +687,12 @@ export function buildMergedLayoutFromImage(
     ),
   );
 
+  // Imports always fill the canvas — a leftover procedural Fill Amount
+  // (e.g. copied via Apply Look) must not punch holes during remesh.
   return buildBlocksFromIndexedGrid(
     indexedGrid,
     colors,
-    settings,
+    { ...settings, fillAmount: 100 },
     rng,
     true,
   );

@@ -500,6 +500,44 @@ function run(): void {
     pastedEdit.imageSource?.dataUrl === editB.imageSource?.dataUrl,
     "hand-edit paste keeps the destination picture",
   );
+
+  // Density on the look without a remesh used to shrink tiles into the corner.
+  const denseLook = importedFrame("dense-look", importColors);
+  denseLook.settings = { ...denseLook.settings, density: 6, hueShift: 15 };
+  const sparseDest = importedFrame("sparse-dest", importColors);
+  sparseDest.settings = { ...sparseDest.settings, density: 2 };
+  const denserApplied = applyLookToFrame(sparseDest, denseLook, "landscape");
+  assert(
+    denserApplied.settings.density === 2,
+    "without a cached photo, apply look keeps destination density so tiles still fill",
+  );
+  assert(
+    denserApplied.settings.hueShift === 15,
+    "without a cached photo, non-layout look settings still copy",
+  );
+  assert(
+    denserApplied.blocks[0]?.width === sparseDest.blocks[0]?.width,
+    "without a cached photo, tile geometry stays put",
+  );
+
+  const sameColorsDest = importedFrame("same-colors", importColors);
+  sameColorsDest.settings = {
+    ...sameColorsDest.settings,
+    density: 2,
+    colors: [...denseLook.settings.colors],
+    colorAmounts: [...(denseLook.settings.colorAmounts ?? [34, 33, 33])],
+  };
+  sameColorsDest.blocks = denseLook.blocks.map((block) => ({ ...block }));
+  // Fast path: matching swatches + higher look density must not orphan tiles.
+  const fastDense = applyLookToFrame(sameColorsDest, denseLook, "landscape");
+  assert(
+    fastDense.settings.density === 2,
+    "fast-path apply look keeps destination density when the photo is not cached",
+  );
+  assert(
+    fastDense.settings.hueShift === 15,
+    "fast-path apply look still copies non-layout settings",
+  );
 }
 
 run();

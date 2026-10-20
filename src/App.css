@@ -699,6 +699,7 @@ html.normal-hover .palette-gallery__item:hover .palette-gallery__label {
 
 html.normal-hover .controls-panel__tab:hover:not(.is-active),
 html.normal-hover .headline-disclosure:hover,
+html.normal-hover .panel-credit__s:hover,
 html.normal-hover .panel-credit__author:hover,
 html.normal-hover .panel-credit__source:hover,
 html.normal-hover .panel-credit__social a:hover {
@@ -1043,10 +1044,13 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
 
 /* Personal S-mark from Cyborg splash — follows --chrome with the theme. */
 .panel-credit__s {
+  appearance: none;
   display: block;
   width: calc(48px * 198 / 248.77);
   height: 48px;
   margin: 0 auto 24px;
+  padding: 0;
+  border: none;
   color: var(--chrome);
   background-color: currentColor;
   -webkit-mask-image: url("./assets/s-logo.svg");
@@ -1057,6 +1061,8 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
   mask-position: center;
   -webkit-mask-size: contain;
   mask-size: contain;
+  cursor: var(--cursor-pointer);
+  transition: color 0.1s linear;
 }
 
 /* Gap 2: last copy → social icons. */
@@ -1103,6 +1109,7 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
   transition: color 0.1s linear;
 }
 
+.panel-credit__s:hover,
 .panel-credit__author:hover,
 .panel-credit__source:hover {
   color: #fff;
@@ -1135,6 +1142,7 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .panel-credit__s:hover,
   .panel-credit__author:hover,
   .panel-credit__source:hover,
   .panel-credit__social a:hover {

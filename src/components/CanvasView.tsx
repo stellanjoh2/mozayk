@@ -1472,6 +1472,7 @@ type TimelineProps = {
   onRemove: (indices: number[]) => void;
   onCopyStyle: (index: number) => void;
   onPasteStyle: (indices: number[]) => void;
+  onApplyStyleToAll: (index: number) => void;
   onRestoreColors: (indices: number[]) => void;
   canPasteStyle: boolean;
   canAddFrame: boolean;
@@ -1493,6 +1494,7 @@ export function Timeline({
   onRemove,
   onCopyStyle,
   onPasteStyle,
+  onApplyStyleToAll,
   onRestoreColors,
   canPasteStyle,
   canAddFrame,
@@ -2365,9 +2367,9 @@ export function Timeline({
             playUiSound("ok");
             onPasteStyle(menu.indices);
           }}
-          onPasteStyleToAll={() => {
+          onApplyStyleToAll={() => {
             playUiSound("ok");
-            onPasteStyle(frames.map((_, index) => index));
+            onApplyStyleToAll(menu.index);
           }}
           onRestoreColors={() => {
             playUiSound("ok");

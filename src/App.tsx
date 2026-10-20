@@ -1924,6 +1924,7 @@ export default function App() {
           onRemove={handleRemoveFrame}
           onCopyStyle={handleCopyStyle}
           onPasteStyle={handlePasteStyle}
+          onApplyStyleToAll={(index) => void handleApplyLookToAllFrames(index)}
           onRestoreColors={handleRestoreColors}
           canPasteStyle={canPasteStyle}
           canAddFrame={frames.length < MAX_FRAMES}

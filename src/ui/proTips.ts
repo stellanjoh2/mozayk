@@ -66,6 +66,7 @@ const ENABLED_KEY = "mozayk-pro-tips-enabled";
 const VOICE_KEY = "mozayk-pro-tips-voice";
 export const PRO_TIPS_ENABLED_EVENT = "mozayk-pro-tips-enabled";
 export const PRO_TIPS_VOICE_EVENT = "mozayk-pro-tips-voice";
+export const PRO_TIPS_PAUSE_EVENT = "mozayk-pro-tips-pause";
 
 function loadEnabled(): boolean {
   try {
@@ -129,6 +130,26 @@ resetSeenIfCatalogExhausted();
 export function getProTipsEnabled(): boolean {
   ensureCatalogVersion();
   return tipsEnabled;
+}
+
+/** Hide/stop tip playback while a fullscreen overlay (e.g. About) is up. */
+let tipsPauseCount = 0;
+
+export function areProTipsPaused(): boolean {
+  return tipsPauseCount > 0;
+}
+
+export function pauseProTips(): () => void {
+  tipsPauseCount += 1;
+  if (tipsPauseCount === 1) {
+    window.dispatchEvent(new Event(PRO_TIPS_PAUSE_EVENT));
+  }
+  return () => {
+    tipsPauseCount = Math.max(0, tipsPauseCount - 1);
+    if (tipsPauseCount === 0) {
+      window.dispatchEvent(new Event(PRO_TIPS_PAUSE_EVENT));
+    }
+  };
 }
 
 export function setProTipsEnabled(next: boolean): void {

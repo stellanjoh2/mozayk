@@ -7,11 +7,13 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import {
+  areProTipsPaused,
   getProTipsEnabled,
   getProTipsVoiceAssist,
   markProTipSeen,
   nextUnseenProTip,
   PRO_TIPS_ENABLED_EVENT,
+  PRO_TIPS_PAUSE_EVENT,
   setProTipsEnabled,
   type ProTip,
 } from "../ui/proTips";
@@ -117,6 +119,7 @@ function isAbort(error: unknown): boolean {
 
 export function ProTipToast({ enabled = true }: ProTipToastProps) {
   const [prefsOn, setPrefsOn] = useState(getProTipsEnabled);
+  const [paused, setPaused] = useState(areProTipsPaused);
   /** Bumps whenever tips prefs/catalog reset so the async loop restarts. */
   const [loopGen, setLoopGen] = useState(0);
   const [tip, setTip] = useState<ProTip | null>(null);
@@ -131,7 +134,7 @@ export function ProTipToast({ enabled = true }: ProTipToastProps) {
   const loopAbortRef = useRef<AbortController | null>(null);
   const tipAbortRef = useRef<AbortController | null>(null);
 
-  const active = enabled && prefsOn;
+  const active = enabled && prefsOn && !paused;
 
   useEffect(() => {
     const sync = () => {
@@ -140,6 +143,12 @@ export function ProTipToast({ enabled = true }: ProTipToastProps) {
     };
     window.addEventListener(PRO_TIPS_ENABLED_EVENT, sync);
     return () => window.removeEventListener(PRO_TIPS_ENABLED_EVENT, sync);
+  }, []);
+
+  useEffect(() => {
+    const sync = () => setPaused(areProTipsPaused());
+    window.addEventListener(PRO_TIPS_PAUSE_EVENT, sync);
+    return () => window.removeEventListener(PRO_TIPS_PAUSE_EVENT, sync);
   }, []);
 
   useLayoutEffect(() => {
@@ -169,6 +178,7 @@ export function ProTipToast({ enabled = true }: ProTipToastProps) {
       tipAbortRef.current = null;
       loopAbortRef.current = null;
       pendingRef.current = null;
+      stopVoiceSound();
       setTip(null);
       setCardOpen(false);
       setTextFading(false);

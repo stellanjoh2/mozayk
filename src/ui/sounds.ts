@@ -27,7 +27,7 @@ const FILES = {
 } as const;
 
 const HOVER_SELECTOR =
-  ".panel-btn, .button-row button, .timeline__controls button, .canvas-stage-control-btn, .frame-context-menu__item, .ui-icon-btn, .controls-panel__tab, .palette-panel__tab, .palette-panel__close, .palette-gallery__item, .timeline-thumb, .ui-switch, .headline-disclosure, .about-overlay__content a, .logo-creator__chrome button, .panel-credit__author, .panel-credit__source, .panel-credit__social a";
+  ".panel-btn, .button-row button, .timeline__controls button, .canvas-stage-control-btn, .frame-context-menu__item, .ui-icon-btn, .controls-panel__tab, .palette-panel__tab, .palette-panel__close, .palette-gallery__item, .timeline-thumb, .ui-switch, .headline-disclosure, .about-overlay__content a, .logo-creator__chrome button, .panel-credit__s, .panel-credit__author, .panel-credit__source, .panel-credit__social a";
 
 export type UiSound = keyof typeof FILES;
 
@@ -352,19 +352,8 @@ export function setUiSoundsVolume(volume: number): void {
   savePrefs();
 }
 
-/** Mute tip typewriter clicks (e.g. while About is typing). */
-let tipTypewriterPauseCount = 0;
-
-export function pauseTipTypewriterSound(): () => void {
-  tipTypewriterPauseCount += 1;
-  return () => {
-    tipTypewriterPauseCount = Math.max(0, tipTypewriterPauseCount - 1);
-  };
-}
-
 export function playUiSound(name: UiSound): void {
   if (!prefs.enabled || prefs.volume <= 0) return;
-  if (name === "typewriterTip" && tipTypewriterPauseCount > 0) return;
   if (!isSliderSound(name) && !isVoiceSound(name) && isSliderEngaged()) return;
   if (name === "hover") {
     const now = performance.now();
@@ -396,12 +385,7 @@ export function playUiSound(name: UiSound): void {
     }
   }
   void bufferFor(name).then((buf) => {
-    if (
-      !buf ||
-      !prefs.enabled ||
-      prefs.volume <= 0 ||
-      (name === "typewriterTip" && tipTypewriterPauseCount > 0)
-    ) {
+    if (!buf || !prefs.enabled || prefs.volume <= 0) {
       if (isSliderSound(name)) releaseSliderSound(token);
       return;
     }

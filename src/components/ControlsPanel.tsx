@@ -2919,7 +2919,15 @@ export function ControlsPanel({
       </div>
 
       <footer className="panel-credit">
-        <span className="panel-credit__s" aria-hidden="true" />
+        <button
+          type="button"
+          className="panel-credit__s"
+          aria-label="About Stellan Johansson"
+          onClick={() => {
+            playUiSound("ok");
+            setAboutOpen(true);
+          }}
+        />
         <p className="panel-credit__copy">
           Mozayk is created by
           <br />

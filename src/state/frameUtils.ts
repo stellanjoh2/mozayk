@@ -3,6 +3,7 @@ import {
   defaultMaxCellSize,
   defaultMinCellSize,
   gridScale,
+  isDensityOff,
   maxHeightSliderMax,
   maxWidthSliderMax,
 } from "../grid/density";
@@ -11,6 +12,7 @@ import { transposeBlocks } from "../grid/gridMath";
 import {
   generateLayout,
   generateRandomPalette,
+  IMPORTED_LAYOUT_SETTING_KEYS,
   LAYOUT_SETTING_KEYS,
   pickWeightedColor,
   randomizeColors,
@@ -452,6 +454,43 @@ function recolorPhotoBlocksToLook(
 }
 
 /**
+ * Density / fill / scale-blend must match tile coordinates or the mosaic
+ * paints into a corner of the canvas (higher density + old tiles).
+ */
+function withDestinationImportedLayout(
+  settings: FrameSettings,
+  destination: FrameSettings,
+): FrameSettings {
+  return {
+    ...settings,
+    density: destination.density,
+    fillAmount: destination.fillAmount,
+    scaleBlend: destination.scaleBlend,
+  };
+}
+
+/** Remesh from the photo, or fall back to layout knobs that match existing tiles. */
+function ensureImportedGeometryMatchesSettings(
+  frame: Frame,
+  orientation: Orientation,
+  layoutFallback: FrameSettings,
+): Frame {
+  if (!frame.imageSource || isDensityOff(frame.settings.density)) return frame;
+  const { columns, rows } = getGridCounts(orientation, frame.settings.density);
+  if (columns <= 0 || rows <= 0) return frame;
+  const ext = gridExtentsFromBlocks(frame.blocks);
+  if (ext.columns === columns && ext.rows === rows) return frame;
+
+  if (getCachedSourceImage(frame.imageSource.dataUrl)) {
+    return relayoutImportedFrame(frame, orientation, frameLayoutRng(frame));
+  }
+  return {
+    ...frame,
+    settings: withDestinationImportedLayout(frame.settings, layoutFallback),
+  };
+}
+
+/**
  * Copy style from `look` onto `frame`. Keeps this frame's picture.
  *
  * Imports always reset to the full photo palette first, then re-apply the
@@ -489,6 +528,12 @@ export function applyLookToFrame(
       return { ...frame, settings, ...overlays };
     }
 
+    const layoutChanged = settingsKeyChanged(
+      IMPORTED_LAYOUT_SETTING_KEYS,
+      frame.settings,
+      settings,
+    );
+
     // Idempotent fast path: already on this look's swatches + threshold.
     if (
       frame.settings.colors.length === lookColors.length &&
@@ -511,10 +556,30 @@ export function applyLookToFrame(
         },
         ...overlays,
       };
-      if (shapeSettingsChanged(frame.settings, next.settings)) {
+      if (layoutChanged) {
+        if (getCachedSourceImage(frame.imageSource.dataUrl)) {
+          next = relayoutImportedFrame(
+            next,
+            orientation,
+            frameLayoutRng(frame),
+          );
+        } else {
+          next = {
+            ...next,
+            settings: withDestinationImportedLayout(
+              next.settings,
+              frame.settings,
+            ),
+          };
+        }
+      } else if (shapeSettingsChanged(frame.settings, next.settings)) {
         next = { ...next, blocks: rerollShapes(frame.blocks, next.settings) };
       }
-      return next;
+      return ensureImportedGeometryMatchesSettings(
+        next,
+        orientation,
+        frame.settings,
+      );
     }
 
     const photoBase = resetImportedFrameToPhoto(frame);
@@ -568,7 +633,9 @@ export function applyLookToFrame(
       };
       next = relayoutImportedFrame(next, orientation, frameLayoutRng(frame));
     } else {
-      // No photo in cache: classify from the photo-coloured mosaic.
+      // No photo in cache: recolor in place. Keep this frame's layout knobs
+      // when the look would change them — density without a remesh shrinks
+      // the mosaic into the top-left corner of the canvas.
       let imageSource = next.imageSource!;
       if (lookColors.length < imageSource.paletteRgb.length) {
         imageSource = { ...imageSource, colorCount: lookColors.length };
@@ -579,11 +646,14 @@ export function applyLookToFrame(
       if (lookTheme && lookTheme.length >= lookColors.length) {
         imageSource = { ...imageSource, themeColors: [...lookTheme] };
       }
+      const nextSettings = layoutChanged
+        ? withDestinationImportedLayout(next.settings, frame.settings)
+        : next.settings;
       next = {
         ...next,
         imageSource,
         settings: {
-          ...next.settings,
+          ...nextSettings,
           colors: lookColors,
           colorAmounts,
           colorsLocked,
@@ -600,7 +670,11 @@ export function applyLookToFrame(
     if (shapeSettingsChanged(frame.settings, next.settings)) {
       next = { ...next, blocks: rerollShapes(next.blocks, next.settings) };
     }
-    return next;
+    return ensureImportedGeometryMatchesSettings(
+      next,
+      orientation,
+      frame.settings,
+    );
   }
 
   let next: Frame = {

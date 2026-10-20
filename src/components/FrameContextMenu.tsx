@@ -28,7 +28,7 @@ type FrameContextMenuProps = {
   canDelete: boolean;
   onCopyStyle: () => void;
   onPasteStyle: () => void;
-  onPasteStyleToAll: () => void;
+  onApplyStyleToAll: () => void;
   onRestoreColors: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
@@ -46,7 +46,7 @@ export function FrameContextMenu({
   canDelete,
   onCopyStyle,
   onPasteStyle,
-  onPasteStyleToAll,
+  onApplyStyleToAll,
   onRestoreColors,
   onDuplicate,
   onDelete,
@@ -60,9 +60,9 @@ export function FrameContextMenu({
     onCloseRef.current();
   });
   const multi = selectionCount > 1;
-  // Clipboard → every frame: only when a single frame is the focus and there
-  // are others to receive it (multi-select already has “Paste to Selected”).
-  const showPasteToAll = !multi && frameCount > 1;
+  // This frame’s look → every other: only when a single frame is the focus and
+  // there are others to receive it (multi-select already has “Paste to Selected”).
+  const showApplyToAll = !multi && frameCount > 1;
 
   const { contextSafe } = useGSAP(
     () => {
@@ -205,15 +205,14 @@ export function FrameContextMenu({
       >
         {multi ? "Paste Style to Selected" : "Paste Style"}
       </button>
-      {showPasteToAll ? (
+      {showApplyToAll ? (
         <button
           type="button"
           role="menuitem"
           className="frame-context-menu__item"
-          disabled={!canPaste}
-          onClick={() => runThenClose(onPasteStyleToAll)}
+          onClick={() => runThenClose(onApplyStyleToAll)}
         >
-          Paste Style to All Frames
+          Apply Style to All Frames
         </button>
       ) : null}
       <button

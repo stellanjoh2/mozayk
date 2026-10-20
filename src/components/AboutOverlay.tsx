@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { pauseFrost } from "../ui/frostPause";
-import { pauseTipTypewriterSound, playUiSound } from "../ui/sounds";
+import { pauseProTips } from "../ui/proTips";
+import { playUiSound } from "../ui/sounds";
 import { TypewriterReveal } from "./TypewriterReveal";
 
 const ABOUT_TEXT =
@@ -11,7 +12,8 @@ const LINKEDIN_URL = "https://www.linkedin.com/in/stellanj/";
 const MOBYGAMES_URL = "https://www.mobygames.com/person/289121/stellan-johansson/credits/";
 const X_URL = "https://x.com/johstell";
 const ORBY_URL = "https://orby.studio/";
-const ABOUT_LINKS_TEXT = "LinkedIn · MobyGames · X · Orby";
+const ULTRAPILLED_URL = "https://ultrapilled.com/";
+const ABOUT_LINKS_TEXT = "LinkedIn · MobyGames · X · Orby · Ultrapilled";
 
 type AboutOverlayProps = {
   open: boolean;
@@ -58,10 +60,10 @@ export function AboutOverlay({ open, onClose }: AboutOverlayProps) {
     return pauseFrost();
   }, [mounted]);
 
-  // Tip typewriter clicks stack badly under About's own type clicks.
+  // Tips sit under the frost and keep typing/speaking otherwise.
   useEffect(() => {
     if (!mounted) return;
-    return pauseTipTypewriterSound();
+    return pauseProTips();
   }, [mounted]);
 
   if (!mounted) return null;
@@ -108,6 +110,7 @@ export function AboutOverlay({ open, onClose }: AboutOverlayProps) {
               { text: "MobyGames", href: MOBYGAMES_URL },
               { text: "X", href: X_URL },
               { text: "Orby", href: ORBY_URL },
+              { text: "Ultrapilled", href: ULTRAPILLED_URL },
             ]}
           />
           <button
