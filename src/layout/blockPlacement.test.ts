@@ -127,20 +127,20 @@ function run(): void {
       { col: 1, row: 0 },
       { col: 2, row: 0 },
     ],
-    { col: 0, row: 0 },
+    { width: 1, height: 1 },
   );
-  assert(loops.length === 1, "horizontal grab-cell band merges to one loop");
+  assert(loops.length === 1, "horizontal 1×1 band merges to one loop");
   assert(loops[0].length >= 4, "loop traces the outer boundary");
 
-  // Grab shift moves the OK cells with the held point inside the piece.
-  const shifted = buildDropZoneLoops(
+  // Adjacent origins for a 2×1 share an edge — one island covering cols 0–2.
+  const adjacent = buildDropZoneLoops(
     [
       { col: 0, row: 0 },
       { col: 1, row: 0 },
     ],
-    { col: 1, row: 0 },
+    { width: 2, height: 1 },
   );
-  assert(shifted.length === 1, "grab-shifted band still one loop");
+  assert(adjacent.length === 1, "adjacent 2×1 footprints merge to one loop");
 
   // Ring of 1×1 slots around a missing centre — outer + hole loops.
   const ringSlots: GridSlot[] = [];
@@ -150,18 +150,18 @@ function run(): void {
       ringSlots.push({ col, row });
     }
   }
-  const ringLoops = buildDropZoneLoops(ringSlots, { col: 0, row: 0 });
+  const ringLoops = buildDropZoneLoops(ringSlots, { width: 1, height: 1 });
   assert(ringLoops.length === 2, "drop zone keeps a hole loop for the void cell");
 
-  // Disconnected origins must not glue into one OK island via footprint overhang.
+  // Far-apart origins stay separate even when the piece is wider than 1.
   const sparse = buildDropZoneLoops(
     [
       { col: 0, row: 0 },
       { col: 5, row: 0 },
     ],
-    { col: 0, row: 0 },
+    { width: 2, height: 2 },
   );
-  assert(sparse.length === 2, "sparse origins stay separate OK islands");
+  assert(sparse.length === 2, "sparse footprints stay separate OK islands");
 
   console.log("blockPlacement.test.ts: all passed");
 }

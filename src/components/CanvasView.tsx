@@ -344,8 +344,11 @@ export function CanvasView({
     if (!selectedBlock || dropTargets.length === 0) {
       return [];
     }
-    // Grab-aligned cursor cells — footprint unions painted false OK corridors.
-    return buildDropZoneLoops(dropTargets, grabOffsetRef.current);
+    // Piece footprints — green matches where the held shape can cover.
+    return buildDropZoneLoops(dropTargets, {
+      width: selectedBlock.width,
+      height: selectedBlock.height,
+    });
   }, [selectedBlock, dropTargets]);
 
   useEffect(() => {

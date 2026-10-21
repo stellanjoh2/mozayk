@@ -259,17 +259,21 @@ function edgeId(edge: GridEdge): string {
 }
 
 /**
- * Cells where the cursor can sit to drop, given the grab offset inside the piece.
- * (Not the full piece footprint — footprint unions falsely merge disconnected slots.)
+ * Union of every legal piece footprint. Adjacent origins merge into one zone;
+ * far-apart origins stay separate islands. Obstacles stay as holes (evenodd fill).
  */
 export function getDropTargetCellSet(
   dropTargets: GridSlot[],
-  grabCol = 0,
-  grabRow = 0,
+  width: number,
+  height: number,
 ): Set<string> {
   const cells = new Set<string>();
   for (const slot of dropTargets) {
-    cells.add(cellKey(slot.col + grabCol, slot.row + grabRow));
+    for (let row = 0; row < height; row++) {
+      for (let col = 0; col < width; col++) {
+        cells.add(cellKey(slot.col + col, slot.row + row));
+      }
+    }
   }
   return cells;
 }
@@ -337,10 +341,10 @@ export function chainDropZoneBoundaryLoops(edges: GridEdge[]): GridCorner[][] {
 
 export function buildDropZoneLoops(
   dropTargets: GridSlot[],
-  grab: { col: number; row: number } = { col: 0, row: 0 },
+  size: { width: number; height: number } = { width: 1, height: 1 },
 ): GridCorner[][] {
   if (dropTargets.length === 0) return [];
-  const cells = getDropTargetCellSet(dropTargets, grab.col, grab.row);
+  const cells = getDropTargetCellSet(dropTargets, size.width, size.height);
   const edges = buildDropZoneBoundaryEdges(cells);
   return chainDropZoneBoundaryLoops(edges);
 }
