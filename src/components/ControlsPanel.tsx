@@ -832,7 +832,6 @@ export function ControlsPanel({
     if (tab === panelTab) return;
     setPanelTab(tab);
     if (tab === "export") setExportOpen({ ...EXPORT_OPEN_DEFAULT });
-    panelRef.current?.scrollTo({ top: 0 });
   };
   const toggleExportFormat = (format: ExportFormat) => {
     setExportOpen((prev) => ({ ...prev, [format]: !prev[format] }));
@@ -1004,6 +1003,7 @@ export function ControlsPanel({
     />
     <aside ref={panelRef} className="controls-panel">
       <div className="controls-panel__zoom">
+      <div className="controls-panel__sticky">
       <header className="controls-panel__head">
         <BrandLogo
           className="controls-panel__logo"
@@ -1020,7 +1020,7 @@ export function ControlsPanel({
         role="tablist"
         aria-label="Panel"
         onPointerDown={(event) => {
-          // Sticky tabs: default focus scrolls them to their layout position (logo visible).
+          // Sticky chrome: default focus scrolls it to its layout position.
           if (
             event.button === 0 &&
             (event.target as HTMLElement).closest('[role="tab"]')
@@ -1069,6 +1069,7 @@ export function ControlsPanel({
           Settings
         </button>
         <span ref={tabLineRef} className="controls-panel__tab-line" aria-hidden />
+      </div>
       </div>
 
       <div className="controls-panel__body">

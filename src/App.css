@@ -749,6 +749,16 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
   flex: 1 0 auto;
 }
 
+.controls-panel__sticky {
+  position: sticky;
+  top: 0;
+  /* Above .has-hint:hover (z-index 60) so scrolled-under buttons can't steal tab hits. */
+  z-index: 70;
+  margin: 0 -20px;
+  padding: 0 20px;
+  background: var(--panel);
+}
+
 .controls-panel__head {
   display: flex;
   align-items: center;
@@ -757,15 +767,10 @@ html.normal-hover .color-swatch:hover:not(:disabled) .color-swatch__hex {
 }
 
 .controls-panel__tabs {
-  position: sticky;
-  top: 0;
-  /* Above .has-hint:hover (z-index 60) so scrolled-under buttons can't steal tab hits. */
-  z-index: 70;
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   margin: 0 -20px;
   padding: 0 20px;
-  background: var(--panel);
   border-bottom: 1px solid var(--panel-border);
 }
 
