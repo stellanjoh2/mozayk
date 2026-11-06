@@ -7,16 +7,19 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
-    <title>mozayk</title>
+    <title>mozayk — mosaic generator</title>
     <meta
       name="description"
-      content="Browser-based mosaic generator for abstract grid compositions, animation, and image-driven layouts."
+      content="Browser-based mosaic generator for abstract grid compositions, animation, and image-driven layouts. Free, no account — runs entirely in your browser."
     />
+    <meta name="theme-color" content="#000000" />
     <link rel="canonical" href="https://mozayk.design/" />
-    <meta property="og:title" content="mozayk" />
+    <meta property="og:site_name" content="mozayk" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:title" content="mozayk — mosaic generator" />
     <meta
       property="og:description"
-      content="Browser-based mosaic generator for abstract grid compositions, animation, and image-driven layouts."
+      content="Browser-based mosaic generator for abstract grid compositions, animation, and image-driven layouts. Free, no account — runs entirely in your browser."
     />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://mozayk.design/" />
@@ -28,10 +31,39 @@
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="mozayk mosaic generator" />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="mozayk — mosaic generator" />
+    <meta
+      name="twitter:description"
+      content="Browser-based mosaic generator for abstract grid compositions, animation, and image-driven layouts. Free, no account — runs entirely in your browser."
+    />
     <meta
       name="twitter:image"
       content="https://mozayk.design/share-image.jpg"
     />
+    <meta name="twitter:image:alt" content="mozayk mosaic generator" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "mozayk",
+        "url": "https://mozayk.design/",
+        "description": "Browser-based mosaic generator for abstract grid compositions, animation, and image-driven layouts.",
+        "applicationCategory": "DesignApplication",
+        "operatingSystem": "Any",
+        "browserRequirements": "Requires JavaScript",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "image": "https://mozayk.design/share-image.jpg",
+        "creator": {
+          "@type": "Person",
+          "name": "Stellan Johansson",
+          "url": "https://github.com/stellanjoh2"
+        }
+      }
+    </script>
     <script>
       try {
         var t = localStorage.getItem("mozayk-chrome-theme");
@@ -114,6 +146,17 @@
   <body>
     <div id="entry-veil" aria-hidden="true"></div>
     <div id="root"></div>
+    <noscript>
+      <main>
+        <h1>mozayk</h1>
+        <p>
+          Browser-based mosaic generator for abstract grid compositions,
+          animation, and image-driven layouts. Free, no account — runs entirely
+          in your browser at
+          <a href="https://mozayk.design/">mozayk.design</a>.
+        </p>
+      </main>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
