@@ -4,6 +4,8 @@
   display: block;
   width: 100%;
   height: auto;
+  /* Keep AA / subpixel fringe from being clipped by the wrapper box. */
+  overflow: visible;
   cursor: var(--cursor-default);
   -webkit-tap-highlight-color: transparent;
 }
@@ -12,5 +14,9 @@
   display: block;
   width: 100%;
   height: auto;
+  /* Padded viewBox (-0.5 bleed). aspect-ratio stops Safari flooring
+     height:auto by ~1px and cropping the flush bottom tile row on phones. */
+  aspect-ratio: 145 / 95.5;
+  overflow: visible;
   pointer-events: none;
 }
